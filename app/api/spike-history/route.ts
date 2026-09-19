@@ -77,7 +77,8 @@ async function pooled<T,R>(items:T[],limit:number,fn:(x:T)=>Promise<R>){
 export async function POST(req:NextRequest){
   if(!(await isAuthed())) return unauthorized();
   const body=await req.json().catch(()=>({items:[]}));
-  const items:Item[]=(Array.isArray(body?.items)?body.items:[]).slice(0,25).map((x:any)=>({code:String(x?.code||''),market:x?.market==='KOSDAQ'?'KOSDAQ':'KOSPI'})).filter(x=>/^\d{6}$/.test(x.code));
+  const raw:any[]=Array.isArray(body?.items)?body.items:[];
+  const items:Item[]=raw.slice(0,25).map((x:any):Item=>({code:String(x?.code||''),market:x?.market==='KOSDAQ'?'KOSDAQ':'KOSPI'})).filter((x:Item)=>/^\d{6}$/.test(x.code));
   if(!items.length) return NextResponse.json({error:'종목 코드가 없습니다.'},{status:400});
   const rows=await pooled(items,6,one);
   return NextResponse.json({rows,updatedAt:new Date().toISOString()},{headers:{'Cache-Control':'no-store'}});
