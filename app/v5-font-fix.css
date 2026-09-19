@@ -46,6 +46,27 @@
 }
 .newsList a:hover{background:#e7f4ff}
 
+/* Custom historical date interval */
+.dateRangeBox{
+  margin:8px 0 18px;
+  padding:15px;
+  background:#0a1726;
+  border:1px solid #29415d;
+  border-radius:15px;
+}
+.dateRangeBox.active{border-color:#42c9ff;box-shadow:inset 0 0 0 1px rgba(66,201,255,.22)}
+.dateRangeTitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.dateRangeTitle b{display:block;color:#edf7ff;font-size:16px}
+.dateRangeTitle small{display:block;margin-top:4px;color:#91a8c0;line-height:1.45}
+.dateRangeTitle button{border:1px solid #37516e;background:#10263d;color:#d9ecff;border-radius:10px;padding:8px 10px;white-space:nowrap}
+.dateRangeGrid{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-top:13px}
+.dateRangeGrid label{display:grid;gap:6px}
+.dateRangeGrid label span{color:#a9bfd5;font-size:12px;font-weight:800}
+.dateRangeGrid input{width:100%;min-height:46px;border:1px solid #3a5572;border-radius:12px;background:#07111e;color:#f1f8ff;padding:10px 12px;color-scheme:dark}
+.dateRangeGrid i{font-style:normal;color:#8fa5bf;font-weight:900;padding-bottom:13px}
+.dateRangeBox p{margin:9px 0 0;color:#63d9c3;font-size:12px;line-height:1.5}
+.dateRangeBox p.rangeError{color:#ff9cab}
+
 /* Keep coloured status numbers visible after the base text override. */
 .v5metric strong.hot{color:#c62828}
 .v5metric.risk strong{color:#6b3eb5}
@@ -57,4 +78,8 @@
   .v5flow article small{font-size:12px}
   .marketChoice.v5choices button,.actionRow button{font-size:15px;font-weight:800}
   .v5name b{font-size:16px}
+  .dateRangeTitle{display:grid;grid-template-columns:1fr auto}
+  .dateRangeTitle small{font-size:11px}
+  .dateRangeGrid{grid-template-columns:1fr 18px 1fr;gap:6px}
+  .dateRangeGrid input{padding:9px 7px;font-size:13px;min-height:44px}
 }
