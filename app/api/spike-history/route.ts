@@ -52,9 +52,15 @@ async function yahoo(item:Item){
 }
 
 async function naver(item:Item){
-  const r=await fetchRetry(`https://m.stock.naver.com/api/stock/${item.code}/price?pageSize=260&page=1`,1);
-  const j=await r.json();
-  const rows=(Array.isArray(j)?j:[]).map((x:any)=>({date:String(x?.localTradedAt||''),close:num(x?.closePrice),rate:num(x?.fluctuationsRatio)})).filter((x:any)=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&x.close>0).slice(0,240);
+  const all:any[]=[];
+  for(let page=1;page<=3;page++){
+    const r=await fetchRetry(`https://m.stock.naver.com/api/stock/${item.code}/price?pageSize=100&page=${page}`,1);
+    const j=await r.json();
+    if(!Array.isArray(j)||!j.length) break;
+    all.push(...j);
+    if(j.length<100) break;
+  }
+  const rows=all.map((x:any)=>({date:String(x?.localTradedAt||''),close:num(x?.closePrice),rate:num(x?.fluctuationsRatio)})).filter((x:any)=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&x.close>0).slice(0,240);
   if(rows.length<20) throw new Error('Naver history too short');
   const spikes:Spike[]=rows.filter((x:any)=>x.rate>=10).map((x:any)=>({date:x.date,rate:Number(x.rate.toFixed(2)),close:x.close}));
   return {spikes,tradingDays:Math.min(240,rows.length),source:'Naver Finance fallback'};
