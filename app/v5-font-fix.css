@@ -1,0 +1,60 @@
+/* V5 mobile readability override: Korean-first font + stronger contrast on light cards */
+.v5app{
+  font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Arial,sans-serif;
+  font-weight:500;
+  letter-spacing:-0.012em;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+.v5app button,.v5app input,.v5app textarea,.v5app select{
+  font-family:inherit;
+  font-weight:600;
+}
+.v5app h1,.v5app h2,.v5app h3,.v5app strong,.v5app .v5name b{
+  font-family:inherit;
+  font-weight:800;
+}
+
+/* Light sections must never inherit the dark-theme white text color. */
+.v5flow article,.v5row{
+  background:#eaf6ff;
+  color:#172033;
+  border-color:#cfe1f2;
+}
+.v5flow article span,.v5name b,.v5metric strong{
+  color:#172033;
+}
+.v5flow article small,.v5name small,.v5metric span,.v5metric small{
+  color:#53657c;
+}
+.v5metric{border-left-color:#cbdbea}
+
+.customBox textarea{
+  background:#f0f8ff;
+  color:#172033;
+  border-color:#c8dced;
+}
+.scoreGuide span,.checkRow,.detailGrid>div,.spikeChips span{
+  background:#eef8ff;
+  color:#172033;
+  border-color:#cfe1f2;
+}
+.newsList a{
+  background:#f3f9ff;
+  color:#172033;
+  border-color:#d4e3f0;
+}
+.newsList a:hover{background:#e7f4ff}
+
+/* Keep coloured status numbers visible after the base text override. */
+.v5metric strong.hot{color:#c62828}
+.v5metric.risk strong{color:#6b3eb5}
+
+@media(max-width:680px){
+  .v5app{font-size:15px}
+  .v5hero p{font-size:14px;line-height:1.7}
+  .v5flow article span{font-size:14px}
+  .v5flow article small{font-size:12px}
+  .marketChoice.v5choices button,.actionRow button{font-size:15px;font-weight:800}
+  .v5name b{font-size:16px}
+}
