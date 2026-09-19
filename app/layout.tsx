@@ -1,4 +1,5 @@
 import './globals.css';
 import './v4.css';
-export const metadata={title:'과거 급등 전조 레이더 V4',description:'V2 방식으로 KOSPI500/KOSDAQ300을 선택해 과거 급등 전조를 현재 신호와 비교하는 개인 레이더'};
+import './v5.css';
+export const metadata={title:'급등 전조 사전탐지 레이더 V5',description:'가격이 아직 크게 움직이기 전 거래량·이평·모멘텀·과거 급등 유사도·뉴스·수급을 종합하는 개인용 사전신호 레이더'};
 export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="ko"><body>{children}</body></html>}
