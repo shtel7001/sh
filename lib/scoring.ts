@@ -16,6 +16,7 @@ export function volumeScore(bars:Bar[], idx=bars.length-1){
   if(ratio>=1.5) reasons.push(`20일 평균 대비 거래량 ${ratio.toFixed(1)}배`);
   const dayPct=pct(cur.close,bars[idx-1].close);
   if(ratio>=2 && dayPct<3){s+=4; reasons.push(`가격 반응 ${dayPct.toFixed(1)}%로 제한된 상태에서 거래량 선행`);}
+  if(ratio>=3 && dayPct>=-2 && dayPct<=2.5){s+=2; reasons.push('거래량은 급증했지만 가격은 아직 크게 반응하지 않음');}
   const recent=bars.slice(Math.max(20,idx-4),idx+1); const repeat=recent.filter((b,k)=>{
     const j=idx-recent.length+1+k; const a=avg(bars.slice(j-20,j).map(x=>x.volume)); return a>0&&b.volume/a>=1.5;
   }).length;
@@ -39,14 +40,33 @@ export function chartScore(bars:Bar[],idx=bars.length-1){
   return {score:Math.min(15,s),reasons};
 }
 
-export function spikePenalty(bars:Bar[]){ const r=priceReturns(bars); let p=0; const reasons:string[]=[];
-  if(r.r1>=10){p-=10;reasons.push(`1일 +${r.r1.toFixed(1)}% 급등 감점`);} if(r.r3>=15){p-=8;reasons.push(`3일 +${r.r3.toFixed(1)}% 급등 감점`);} if(r.r5>=20){p-=7;reasons.push(`5일 +${r.r5.toFixed(1)}% 급등 감점`);} if(r.r20>=30){p-=5;reasons.push(`20일 +${r.r20.toFixed(1)}% 급등 감점`);} return {penalty:Math.max(-30,p),reasons}; }
+export function spikePenalty(bars:Bar[]){
+  const r=priceReturns(bars); let p=0; const reasons:string[]=[];
+  if(r.r1>=10){p-=35;reasons.push(`1일 +${r.r1.toFixed(1)}% 급등: 이미 반영 구간 강한 감점`);}
+  else if(r.r1>=7){p-=25;reasons.push(`1일 +${r.r1.toFixed(1)}% 상승: 추격 방지 감점`);}
+  else if(r.r1>=5){p-=15;reasons.push(`1일 +${r.r1.toFixed(1)}% 상승: 선행 후보 감점`);}
+  else if(r.r1>=3){p-=6;reasons.push(`1일 +${r.r1.toFixed(1)}% 상승: 일부 가격 반영`);}
+
+  if(r.r3>=15){p-=20;reasons.push(`3일 +${r.r3.toFixed(1)}% 급등: 단기 과열 감점`);}
+  else if(r.r3>=10){p-=12;reasons.push(`3일 +${r.r3.toFixed(1)}% 상승 감점`);}
+  else if(r.r3>=6){p-=5;reasons.push(`3일 +${r.r3.toFixed(1)}% 상승: 일부 반영`);}
+
+  if(r.r5>=20){p-=15;reasons.push(`5일 +${r.r5.toFixed(1)}% 급등 감점`);}
+  else if(r.r5>=12){p-=10;reasons.push(`5일 +${r.r5.toFixed(1)}% 상승 감점`);}
+  else if(r.r5>=8){p-=5;reasons.push(`5일 +${r.r5.toFixed(1)}% 상승: 선행성 약화`);}
+
+  if(r.r20>=30){p-=5;reasons.push(`20일 +${r.r20.toFixed(1)}% 상승 감점`);}
+
+  if(r.r1>=-2.5&&r.r1<3&&r.r5>=-5&&r.r5<6){reasons.push(`가격 미반영 구간: 1일 ${r.r1.toFixed(1)}%, 5일 ${r.r5.toFixed(1)}%`);}
+  return {penalty:Math.max(-60,p),reasons};
+}
 
 export function stage(score:number){return score>=85?'강한 전조':score>=70?'전조 집중':score>=50?'이상징후':score>=30?'관심':'관찰';}
 
 export function currentPriceSignal(bars:Bar[]){
   const v=volumeScore(bars),c=chartScore(bars),pen=spikePenalty(bars),r=priceReturns(bars); const last=bars.at(-1)!;
-  return {currentPrice:last.close,changePct:r.r1,ret5:r.r5,volumeScore:v.score,chartScore:c.score,penalty:pen.penalty,reasons:[...v.reasons,...c.reasons,...pen.reasons],volumeRatio:v.ratio};
+  const preSpikeEligible=r.r1<5&&r.r3<10&&r.r5<12;
+  return {currentPrice:last.close,changePct:r.r1,ret5:r.r5,volumeScore:v.score,chartScore:c.score,penalty:pen.penalty,reasons:[...v.reasons,...c.reasons,...pen.reasons],volumeRatio:v.ratio,preSpikeEligible};
 }
 
 export type SpikeThresholds={d1:number;d3:number;d5:number;d10:number};
@@ -57,7 +77,7 @@ export function backtestBars(bars:Bar[],t:SpikeThresholds){
     const p0=bars[i-1].close; const r1=pct(bars[i].close,p0),r3=pct(bars[i+2].close,p0),r5=pct(bars[i+4].close,p0),r10=pct(bars[i+9].close,p0);
     if(r1>=t.d1||r3>=t.d3||r5>=t.d5||r10>=t.d10){
       const snap:any={date:bars[i].date,spikePct:Math.max(r1,r3,r5,r10)};
-      for(const off of [30,20,10,5,3,1]){ const j=i-off; if(j>=65){const v=volumeScore(bars,j),c=chartScore(bars,j);snap[`d${off}`]={score:Math.round(((v.score+c.score)/40)*100),volume:v.score,chart:c.score};}}
+      for(const off of [60,30,20,10,5,3,1]){ const j=i-off; if(j>=65){const v=volumeScore(bars,j),c=chartScore(bars,j);snap[`d${off}`]={score:Math.round(((v.score+c.score)/40)*100),volume:v.score,chart:c.score};}}
       let volLead=false,chartLead=false; for(let j=Math.max(65,i-20);j<i;j++){if(volumeScore(bars,j).score>=8)volLead=true;if(chartScore(bars,j).score>=5)chartLead=true;}
       snap.leads={volume:volLead,chart:chartLead}; events.push(snap); cooldown=i+7;
     }
