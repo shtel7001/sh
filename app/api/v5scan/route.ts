@@ -10,6 +10,7 @@ const avg=(xs:number[])=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:0;
 const clamp=(n:number,min=0,max=100)=>Math.max(min,Math.min(max,n));
 const pct=(a:number,b:number)=>b?((a/b)-1)*100:0;
 const sma=(bars:Bar[],n:number,i=bars.length-1)=>i+1<n?null:avg(bars.slice(i-n+1,i+1).map(x=>x.close));
+const dateRe=/^\d{4}-\d{2}-\d{2}$/;
 
 function rsi14(bars:Bar[],idx=bars.length-1){
   if(idx<15)return 50;
@@ -139,15 +140,23 @@ function scoreNow(bars:Bar[],events:any[]){
   };
 }
 
-async function one(stock:UniverseStock,period:number,t:SpikeThresholds){
+async function one(stock:UniverseStock,period:number,t:SpikeThresholds,startDate?:string,endDate?:string){
   try{
-    const need=Math.max(300,period+140);
+    const customRange=Boolean(startDate&&endDate);
+    const spanDays=customRange?Math.ceil((new Date(`${endDate}T00:00:00Z`).getTime()-new Date(`${startDate}T00:00:00Z`).getTime())/86400000)+1:0;
+    const approxTradingDays=Math.ceil(spanDays*0.72);
+    const need=Math.max(300,period+140,customRange?approxTradingDays+180:0);
     const bars=await fetchYahooBars(stock.code,stock.market,need);
+    const allEvents=backtestBars(bars,t);
     const cutoff=bars[Math.max(0,bars.length-period)]?.date||'0000-00-00';
-    const events=backtestBars(bars,t).filter((e:any)=>e.date>=cutoff).slice(-20);
+    const events=(customRange
+      ?allEvents.filter((e:any)=>e.date>=startDate!&&e.date<=endDate!)
+      :allEvents.filter((e:any)=>e.date>=cutoff)
+    ).slice(-80);
     const now=scoreNow(bars,events);
     return {
       ...stock,...now,dataStatus:'ok',detectedAt:new Date().toISOString(),spikeCount:events.length,
+      searchStartDate:customRange?startDate:null,searchEndDate:customRange?endDate:null,searchMode:customRange?'date-range':'trading-days',
       lastSpikeDate:events.at(-1)?.date||null,lastSpikePct:events.at(-1)?.spikePct??null,
       spikeDates:events.map((e:any)=>({date:e.date,pct:+Number(e.spikePct||0).toFixed(2)}))
     };
@@ -161,9 +170,18 @@ export async function POST(req:Request){
   const body=await req.json().catch(()=>null);
   const stocks:UniverseStock[]=body?.stocks||[];
   const period=Math.max(30,Math.min(240,Number(body?.period??180)));
+  const startDate=typeof body?.startDate==='string'&&dateRe.test(body.startDate)?body.startDate:undefined;
+  const endDate=typeof body?.endDate==='string'&&dateRe.test(body.endDate)?body.endDate:undefined;
+  const customRange=Boolean(startDate&&endDate);
+  if((body?.startDate||body?.endDate)&&!customRange)return NextResponse.json({error:'시작일과 종료일을 모두 올바르게 입력해 주세요.'},{status:400});
+  if(customRange&&startDate!>endDate!)return NextResponse.json({error:'시작일은 종료일보다 앞선 날짜여야 합니다.'},{status:400});
+  if(customRange){
+    const span=Math.ceil((new Date(`${endDate}T00:00:00Z`).getTime()-new Date(`${startDate}T00:00:00Z`).getTime())/86400000)+1;
+    if(span>1096)return NextResponse.json({error:'직접 날짜 검색 구간은 최대 3년까지 선택할 수 있습니다.'},{status:400});
+  }
   const t:SpikeThresholds={d1:Math.max(3,Math.min(30,Number(body?.spikePct??10))),d3:99,d5:99,d10:99};
   if(!Array.isArray(stocks)||stocks.length>12)return NextResponse.json({error:'한 번에 최대 12종목까지 분석합니다.'},{status:400});
   const out:any[]=[];
-  for(let i=0;i<stocks.length;i+=4)out.push(...await Promise.all(stocks.slice(i,i+4).map(s=>one(s,period,t))));
-  return NextResponse.json({results:out,period,spikePct:t.d1});
+  for(let i=0;i<stocks.length;i+=4)out.push(...await Promise.all(stocks.slice(i,i+4).map(s=>one(s,period,t,startDate,endDate))));
+  return NextResponse.json({results:out,period,spikePct:t.d1,startDate:startDate||null,endDate:endDate||null,searchMode:customRange?'date-range':'trading-days'});
 }
