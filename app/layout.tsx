@@ -1,3 +1,3 @@
 import './globals.css';
-export const metadata={title:'급등 전조 학습 레이더 V3',description:'급등 후 뉴스가 아니라, 급등 전 이상징후를 찾습니다.'};
+export const metadata={title:'기관·외국인 초기매집 레이더 V6',description:'KOSPI 500 + KOSDAQ 300에서 기관·외국인 초기매집 패턴을 점수화해 Top100을 표시합니다.'};
 export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="ko"><body>{children}</body></html>}
