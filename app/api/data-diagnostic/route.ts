@@ -15,6 +15,14 @@ async function jsonProbe(name:string,url:string,kind:'array'|'trend'|'yahoo'){
     return {name,status:r.status,ok:r.ok,count,hasNext:j?.result?.hasNext??null};
   }catch(e:any){return {name,status:0,ok:false,count:0,error:e?.message||String(e)}}
 }
+async function htmlProbe(){
+  try{
+    const r=await fetch('https://finance.naver.com/item/frgn.naver?code=005930&page=1',{headers:{'user-agent':UA,'accept':'text/html,*/*'},cache:'no-store'});
+    const text=await r.text();
+    const dates=text.match(/\d{4}\.\d{2}\.\d{2}/g)||[];
+    return {name:'legacyFlowHtml',status:r.status,ok:r.ok,dateMatches:new Set(dates).size,length:text.length};
+  }catch(e:any){return {name:'legacyFlowHtml',status:0,ok:false,dateMatches:0,error:e?.message||String(e)}}
+}
 
 export async function GET(){
   const p2=Math.floor(Date.now()/1000)+86400;
@@ -22,8 +30,10 @@ export async function GET(){
   const results=await Promise.all([
     jsonProbe('universe50','https://stock.naver.com/api/domestic/market/stock/default?tradeType=KRX&marketType=KOSPI&orderType=marketSum&startIdx=0&pageSize=50','array'),
     jsonProbe('trendDefault','https://m.stock.naver.com/front-api/stock/domestic/trend?code=005930','trend'),
-    jsonProbe('trend20','https://m.stock.naver.com/front-api/stock/domestic/trend?code=005930&page=1&pageSize=20','trend'),
-    jsonProbe('price260','https://m.stock.naver.com/api/stock/005930/price?pageSize=260&page=1','array'),
+    htmlProbe(),
+    jsonProbe('price100p1','https://m.stock.naver.com/api/stock/005930/price?pageSize=100&page=1','array'),
+    jsonProbe('price100p2','https://m.stock.naver.com/api/stock/005930/price?pageSize=100&page=2','array'),
+    jsonProbe('price100p3','https://m.stock.naver.com/api/stock/005930/price?pageSize=100&page=3','array'),
     jsonProbe('yahoo2y',`https://query1.finance.yahoo.com/v8/finance/chart/005930.KS?period1=${p1}&period2=${p2}&interval=1d&events=history&includeAdjustedClose=true`,'yahoo'),
   ]);
   return NextResponse.json({results,at:new Date().toISOString()},{headers:{'Cache-Control':'no-store'}});
