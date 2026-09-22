@@ -12,10 +12,21 @@ export function analyzeDaily(bars:Bar[],s:Settings){
  let maxBelow=0,run=0;for(let k=Math.max(4,i-19);k<=i;k++){if(b[k].close<(ma5[k]||0)){run++;maxBelow=Math.max(maxBelow,run)}else run=0}
  const prevBelow=i>4?b[i-1].close<(ma5[i-1]||0):false;const gap=(b[i].close/m5-1)*100;const ma20Rise=(m20/prev20-1)*100;const ma20Slope=slopePct(ma20.slice(Math.max(19,i-9),i+1).filter((x):x is number=>typeof x==='number'));
  const recentDip=below>=1&&below<=s.maxBelowDays;const justReclaim=below===0&&prevBelow&&gap<=0.8;const near5=gap>=-s.gapPct&&gap<=0.8;
- const pass=maxBelow<=s.maxBelowDays&&ma20Rise>0&&ma20Slope>0&&near5&&(recentDip||justReclaim);
+
+ let spike:any=null;
+ for(let k=Math.max(1,i-4);k<=i;k++){
+  const prev=b[k-1].close;if(!prev)continue;
+  const risePct=(b[k].close/prev-1)*100;
+  const turnover=b[k].close*b[k].volume;
+  if(risePct>=5&&turnover>=1_000_000_000){
+   if(!spike||risePct>spike.risePct)spike={date:b[k].date,risePct,turnover,close:b[k].close,volume:b[k].volume};
+  }
+ }
+ const spike5dPass=!!spike;
+ const pass=maxBelow<=s.maxBelowDays&&ma20Rise>0&&ma20Slope>0&&near5&&(recentDip||justReclaim)&&spike5dPass;
  let score=0;if(maxBelow<=s.maxBelowDays)score+=25;if(ma20Rise>0)score+=20;if(ma20Slope>0)score+=10;if(recentDip||justReclaim)score+=20;if(Math.abs(gap)<=1)score+=15;else if(Math.abs(gap)<=s.gapPct)score+=8;if(b[i].close>m20)score+=10;
- const reasons:string[]=[];if(maxBelow<=s.maxBelowDays)reasons.push(`20일 내 5일선 하회 연속 최대 ${maxBelow}일`);if(ma20Rise>0)reasons.push(`20일선 ${s.ma20CompareDays}거래일 대비 +${ma20Rise.toFixed(2)}%`);if(recentDip)reasons.push(`현재 5일선 아래 ${below}일째`);if(justReclaim)reasons.push('직전 5일선 하회 후 재돌파');reasons.push(`5일선 괴리 ${gap.toFixed(2)}%`);
- return{pass,score:Math.min(score,100),close:b[i].close,ma5:m5,ma20:m20,gapPct:gap,belowDays:below,maxBelow20:maxBelow,ma20RisePct:ma20Rise,ma20SlopePct:ma20Slope,justReclaim,reasons,lastDate:b[i].date};
+ const reasons:string[]=[];if(maxBelow<=s.maxBelowDays)reasons.push(`20일 내 5일선 하회 연속 최대 ${maxBelow}일`);if(ma20Rise>0)reasons.push(`20일선 ${s.ma20CompareDays}거래일 대비 +${ma20Rise.toFixed(2)}%`);if(recentDip)reasons.push(`현재 5일선 아래 ${below}일째`);if(justReclaim)reasons.push('직전 5일선 하회 후 재돌파');if(spike)reasons.push(`최근 5거래일 급등 ${spike.risePct.toFixed(2)}% · 거래대금 ${(spike.turnover/100000000).toFixed(1)}억원`);reasons.push(`5일선 괴리 ${gap.toFixed(2)}%`);
+ return{pass,score:Math.min(score,100),close:b[i].close,ma5:m5,ma20:m20,gapPct:gap,belowDays:below,maxBelow20:maxBelow,ma20RisePct:ma20Rise,ma20SlopePct:ma20Slope,justReclaim,spike5dPass,spikeDate:spike?.date||null,spikePct:spike?.risePct??null,spikeTurnover:spike?.turnover??null,reasons,lastDate:b[i].date};
 }
 
 function pivots(b:Bar[]){const out:{i:number;low:number}[]=[];for(let i=2;i<b.length-2;i++){if(b[i].low<=b[i-1].low&&b[i].low<=b[i-2].low&&b[i].low<=b[i+1].low&&b[i].low<=b[i+2].low)out.push({i,low:b[i].low})}return out}
