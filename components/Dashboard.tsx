@@ -1,42 +1,317 @@
 'use client';
-import {useEffect,useMemo,useState} from 'react';
-import * as XLSX from 'xlsx';
-import PriceChart from './PriceChart';
 
-type Stock={name:string;code:string;market:'KOSPI'|'KOSDAQ';currentPrice:number|null;changePct:number|null;marketCap:number|null;sector:string|null;theme:string|null};
-type Row=Stock&{ret5?:number;volumeScore?:number|null;newsScore?:number|null;supplyScore?:number|null;chartScore?:number|null;disclosureScore?:number|null;sectorScore?:number|null;penalty?:number;reasons?:string[];newsReasons?:string[];supplyReasons?:string[];news?:any[];detectedAt?:string;dataStatus?:string;error?:string;events?:any[];stats?:any;finalScore?:number;coverage?:number;stage?:string};
-type Tab='top'|'all'|'30'|'50'|'70'|'learn'|'signals'|'track'|'settings';
-const maxes:{[k:string]:number}={volumeScore:25,newsScore:20,supplyScore:15,chartScore:15,disclosureScore:15,sectorScore:10};
-function calc(r:Row){let raw=0,max=0;for(const [k,m] of Object.entries(maxes)){const v=(r as any)[k];if(typeof v==='number'){raw+=v;max+=m;}}const normalized=max?raw/max*100:0;const final=Math.max(0,Math.min(100,normalized+(r.penalty||0)));return {...r,finalScore:Math.round(final*10)/10,coverage:Math.round(max),stage:final>=85?'강한 전조':final>=70?'전조 집중':final>=50?'이상징후':final>=30?'관심':'관찰'};}
-const fmt=(n:any,d=0)=>typeof n==='number'&&Number.isFinite(n)?n.toLocaleString('ko-KR',{maximumFractionDigits:d}):'데이터 없음';
-const pct=(n:any)=>typeof n==='number'?`${n>=0?'+':''}${n.toFixed(2)}%`:'데이터 없음';
+import { useMemo, useRef, useState } from 'react';
 
-export default function Dashboard(){
- const [tab,setTab]=useState<Tab>('top'),[universe,setUniverse]=useState<Stock[]>([]),[rows,setRows]=useState<Row[]>([]),[query,setQuery]=useState(''),[busy,setBusy]=useState(false),[progress,setProgress]=useState({done:0,total:0,ok:0,fail:0,start:0}),[period,setPeriod]=useState(120),[thr,setThr]=useState({d1:5,d3:8,d5:10,d10:15}),[msg,setMsg]=useState(''),[selected,setSelected]=useState<Row|null>(null),[bars,setBars]=useState<any[]>([]),[tracking,setTracking]=useState<any[]>([]);
- useEffect(()=>{try{const r=localStorage.getItem('psr_v3_latest');if(r)setRows(JSON.parse(r));const d=localStorage.getItem('psr_v3_tracking');if(d)setTracking(JSON.parse(d));const u=localStorage.getItem('psr_v3_universe');if(u){const x=JSON.parse(u);if(Date.now()-x.ts<6*3600000)setUniverse(x.stocks)}}catch{}},[]);
- async function loadUniverse(force=false){if(universe.length&&!force)return universe;setMsg('네이버 금융에서 KOSPI 500 + KOSDAQ 300 종목목록 수집 중…');const r=await fetch('/api/universe');const j=await r.json();if(!r.ok)throw new Error(j.error||'종목목록 수집 실패');setUniverse(j.stocks||[]);localStorage.setItem('psr_v3_universe',JSON.stringify({ts:Date.now(),stocks:j.stocks||[]}));if(j.errors?.length)setMsg(`종목목록 ${j.stocks.length}개 수집. 일부 페이지 오류 ${j.errors.length}건`);else setMsg(`종목목록 ${j.stocks.length}개 수집 완료`);return j.stocks as Stock[];}
- async function scan(){setBusy(true);setRows([]);setMsg('분석 준비 중…');try{const stocks=await loadUniverse();if(!stocks.length)throw new Error('분석할 종목이 없습니다.');const started=Date.now();setProgress({done:0,total:stocks.length,ok:0,fail:0,start:started});let all:Row[]=[];for(let i=0;i<stocks.length;i+=12){const batch=stocks.slice(i,i+12);const r=await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({stocks:batch,period,thresholds:thr})});const j=await r.json();if(!r.ok)throw new Error(j.error||'분석 API 실패');all=[...all,...j.results.map((x:Row)=>calc(x))];const ok=all.filter(x=>x.dataStatus==='ok').length;setRows([...all].sort((a,b)=>(b.finalScore||0)-(a.finalScore||0)));setProgress({done:all.length,total:stocks.length,ok,fail:all.length-ok,start:started});setMsg(`${all.length} / ${stocks.length} 분석 완료`);}const pre=[...all].filter(x=>x.dataStatus==='ok').sort((a,b)=>(b.finalScore||0)-(a.finalScore||0)).slice(0,40);setMsg('상위 후보 뉴스·수급 보강 중…');for(let i=0;i<pre.length;i+=20){const pack=pre.slice(i,i+20);const r=await fetch('/api/enrich',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({stocks:pack})});if(!r.ok)continue;const j=await r.json();const map=new Map((j.results||[]).map((x:any)=>[x.code,x]));all=all.map(x=>{const e:any=map.get(x.code);return e?calc({...x,...e}):x;});setRows([...all].sort((a,b)=>(b.finalScore||0)-(a.finalScore||0)));}all=[...all].sort((a,b)=>(b.finalScore||0)-(a.finalScore||0));setRows(all);localStorage.setItem('psr_v3_latest',JSON.stringify(all));saveDetections(all.slice(0,20));setMsg(`분석 완료: 성공 ${all.filter(x=>x.dataStatus==='ok').length}, 실패 ${all.filter(x=>x.dataStatus!=='ok').length}`);}catch(e){setMsg(e instanceof Error?e.message:'분석 실패');}finally{setBusy(false)}}
- function saveDetections(top:Row[]){const day=new Date().toISOString().slice(0,10);let old:any[]=[];try{old=JSON.parse(localStorage.getItem('psr_v3_tracking')||'[]')}catch{}const keys=new Set(old.map(x=>`${x.date}-${x.code}`));for(const r of top){const k=`${day}-${r.code}`;if(!keys.has(k))old.push({date:day,code:r.code,name:r.name,market:r.market,price:r.currentPrice,score:r.finalScore});}old=old.slice(-120);localStorage.setItem('psr_v3_tracking',JSON.stringify(old));setTracking(old);}
- async function logout(){await fetch('/api/auth/logout',{method:'POST'});location.href='/login'}
- const filtered=useMemo(()=>{let a=rows.filter(r=>!query||r.name.includes(query)||r.code.includes(query));if(tab==='top')return a.filter(r=>r.dataStatus==='ok').slice(0,20);if(tab==='30')return a.filter(r=>(r.finalScore||0)>=30);if(tab==='50')return a.filter(r=>(r.finalScore||0)>=50);if(tab==='70')return a.filter(r=>(r.finalScore||0)>=70);return a;},[rows,query,tab]);
- function exportXlsx(){const src=filtered.length?filtered:rows;const data=src.map(r=>({종목명:r.name,종목코드:r.code,시장:r.market,현재가:r.currentPrice,등락률:r.changePct,최근5일상승률:r.ret5,최종점수:r.finalScore,거래량점수:r.volumeScore,뉴스점수:r.newsScore,수급점수:r.supplyScore,차트점수:r.chartScore,공시점수:r.disclosureScore,섹터점수:r.sectorScore,급등감점:r.penalty,데이터커버리지:r.coverage,포착이유:[...(r.reasons||[]),...(r.newsReasons||[]),...(r.supplyReasons||[])].join(' | '),뉴스:(r.news||[]).map((n:any)=>`${n.date?.slice(0,10)} ${n.title} ${n.link}`).join('\n'),섹터:r.sector||'데이터 없음',테마:r.theme||'데이터 없음',탐지일:r.detectedAt?.slice(0,10)||''}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'전조레이더');XLSX.writeFile(wb,`급등전조학습레이더V3_${new Date().toISOString().slice(0,10)}.xlsx`);}
- async function openDetail(r:Row){setSelected(r);setBars([]);try{const x=await fetch(`/api/detail?code=${r.code}&market=${r.market}`);const j=await x.json();if(x.ok)setBars(j.bars||[]);}catch{}}
- const events=useMemo(()=>rows.flatMap(r=>(r.events||[]).map((e:any)=>({...e,name:r.name,code:r.code,market:r.market}))).sort((a,b)=>b.date.localeCompare(a.date)),[rows]);
- const leadStats=useMemo(()=>{const pack=(key:'volume'|'chart')=>{const ss=rows.map(r=>r.stats?.[key]).filter(Boolean);const a=ss.reduce((o:any,x:any)=>({tp:o.tp+x.tp,fp:o.fp+x.fp,fn:o.fn+x.fn,tn:o.tn+x.tn,signalCount:o.signalCount+x.signalCount,sumReturn:o.sumReturn+x.sumReturn,maxDrawdown:Math.min(o.maxDrawdown,x.maxDrawdown),medians:[...o.medians,x.medianReturn]}),{tp:0,fp:0,fn:0,tn:0,signalCount:0,sumReturn:0,maxDrawdown:0,medians:[]});const precision=a.tp+a.fp?a.tp/(a.tp+a.fp)*100:0,recall=a.tp+a.fn?a.tp/(a.tp+a.fn)*100:0,fpr=a.fp+a.tn?a.fp/(a.fp+a.tn)*100:0;const med=[...a.medians].sort((x:number,y:number)=>x-y);return {...a,precision,recall,fpr,avgReturn:a.signalCount?a.sumReturn/a.signalCount:0,medianReturn:med.length?med[Math.floor(med.length/2)]:0};};return {n:events.length,volumeLead:events.length?events.filter(e=>e.leads?.volume).length/events.length*100:0,chartLead:events.length?events.filter(e=>e.leads?.chart).length/events.length*100:0,volume:pack('volume'),chart:pack('chart')};},[events,rows]);
- async function refreshTracking(){const recent=tracking.slice(-25);if(!recent.length)return;setMsg('탐지 후 1/3/5/10/20거래일 성과 계산 중…');const r=await fetch('/api/performance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({detections:recent})});const j=await r.json();if(r.ok){setTracking(j.results||[]);setMsg('탐지 후 성과 갱신 완료');}}
- const elapsed=progress.start?Math.round((Date.now()-progress.start)/1000):0;
- return <main className="app"><header className="hero"><div><div className="eyebrow">KOREA PRE-SPIKE LEARNING RADAR V3</div><h1>급등 전조 학습 레이더 V3</h1><p>급등 후 뉴스가 아니라, 급등 전 이상징후를 찾습니다.</p></div><button className="ghost" onClick={logout}>로그아웃</button></header>
- <nav className="tabs">{([['top','오늘의 전조 TOP20'],['all','전체 800종목'],['30','30점 이상'],['50','50점 이상'],['70','70점 이상'],['learn','과거 급등 학습'],['signals','신호별 성과'],['track','탐지 후 성과'],['settings','설정']] as [Tab,string][]).map(([k,v])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{v}</button>)}</nav>
- <section className="toolbar"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="종목명/코드 검색"/><button className="primary" onClick={scan} disabled={busy}>{busy?'분석 중…':'800종목 분석 시작'}</button><button onClick={()=>loadUniverse(true)} disabled={busy}>종목목록 새로고침</button><button onClick={exportXlsx} disabled={!rows.length}>Excel .xlsx</button></section>
- {(busy||progress.done>0)&&<section className="progress"><div className="progressHead"><b>{progress.done} / {progress.total||800} 분석 완료</b><span>성공 {progress.ok} · 실패 {progress.fail} · {elapsed}초</span></div><div className="bar"><i style={{width:`${progress.total?progress.done/progress.total*100:0}%`}}/></div></section>}
- {msg&&<div className="status">{msg}</div>}
- {tab==='settings'?<Settings period={period} setPeriod={setPeriod} thr={thr} setThr={setThr}/>:tab==='learn'?<Learning events={events}/>:tab==='signals'?<Signals stats={leadStats}/>:tab==='track'?<Tracking rows={tracking} refresh={refreshTracking}/>:<Results title={tab==='top'?'아직 크게 오르지 않은 급등 전조 TOP 20':tab==='all'?'전체 분석 종목':`${tab}점 이상`} rows={filtered} open={openDetail}/>} 
- {selected&&<Detail row={selected} bars={bars} close={()=>setSelected(null)}/>}<footer>이 점수는 상승 확률이 아닙니다. 과거 급등 전 반복된 이상 패턴을 현재 시장에서 탐지하는 학습용 지표입니다.</footer></main>
+type UniverseStock = {
+  rank: number;
+  name: string;
+  code: string;
+  market: 'KOSPI';
+  currentPrice: number | null;
+  marketCap: number | null;
+};
+
+type NewsItem = { title: string; link: string; publishedAt: string | null };
+type Spike = { date: string; pct: number; preNews: 'YES' | 'NO' | 'UNKNOWN'; leadDays: number | null; headline: string | null };
+type RadarRow = UniverseStock & {
+  ok: boolean;
+  error?: string;
+  latestDate?: string;
+  close?: number;
+  latestChangePct?: number;
+  volumeRatio?: number;
+  momentum3Pct?: number;
+  momentum5Pct?: number;
+  ma5?: number;
+  ma20?: number;
+  spikeCount: number;
+  spikes: Spike[];
+  baseScore: number;
+  score: number;
+  reasons: string[];
+  newsStatus: 'OK' | 'SKIPPED' | 'ERROR';
+  newsSource?: string;
+  recentNewsCount: number;
+  latestNews: NewsItem[];
+};
+
+type Stage = { state: 'idle' | 'running' | 'done' | 'failed'; count: number; message?: string };
+
+const STAGES = 10;
+const CHUNK = 50;
+const fmt = (n?: number | null) => n == null || !Number.isFinite(n) ? '-' : Math.round(n).toLocaleString('ko-KR');
+const pct = (n?: number | null) => n == null || !Number.isFinite(n) ? '-' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function capLabel(v?: number | null) {
+  if (v == null || !Number.isFinite(v)) return '-';
+  if (v >= 100000) return `${(v / 10000).toFixed(1)}조`;
+  return `${Math.round(v).toLocaleString('ko-KR')}억`;
 }
-function Score({v,max}:{v:any,max:number}){return <span className={typeof v==='number'?'score':'score missing'}>{typeof v==='number'?`${v}/${max}`:'없음'}</span>}
-function Results({title,rows,open}:{title:string;rows:Row[];open:(r:Row)=>void}){return <section><div className="sectionTitle"><h2>{title}</h2><span>{rows.length}종목</span></div>{!rows.length?<div className="empty">아직 분석 결과가 없습니다.</div>:<div className="cards">{rows.map((r,i)=><article className="stockCard" key={`${r.market}-${r.code}`} onClick={()=>open(r)}><div className="rank">{i+1}</div><div className="stockMain"><div><b>{r.name}</b><span>{r.code} · {r.market}</span></div><div className="price"><b>{fmt(r.currentPrice)}</b><span className={(r.changePct||0)>=0?'up':'down'}>{pct(r.changePct)}</span></div></div><div className="scoreHero"><strong>{fmt(r.finalScore,1)}</strong><span>{r.stage} · 데이터 {r.coverage||0}%</span></div><div className="miniGrid"><label>5일 <b>{pct(r.ret5)}</b></label><label>거래량 <Score v={r.volumeScore} max={25}/></label><label>뉴스 <Score v={r.newsScore} max={20}/></label><label>수급 <Score v={r.supplyScore} max={15}/></label><label>차트 <Score v={r.chartScore} max={15}/></label><label>공시 <Score v={r.disclosureScore} max={15}/></label><label>섹터 <Score v={r.sectorScore} max={10}/></label><label>급등감점 <b>{r.penalty||0}</b></label></div>{r.dataStatus==='error'&&<div className="errorBox">데이터 수집 실패: {r.error}</div>}<div className="detected">탐지 {r.detectedAt?.slice(0,16).replace('T',' ')||'-'}</div></article>)}</div>}</section>}
-function Settings({period,setPeriod,thr,setThr}:any){return <section className="panel"><h2>설정</h2><h3>분석기간</h3><div className="choice">{[30,60,90,120].map(x=><button className={period===x?'active':''} key={x} onClick={()=>setPeriod(x)}>최근 {x}거래일</button>)}</div><h3>급등 사례 기준</h3><div className="settingsGrid">{[['d1','1거래일'],['d3','3거래일 누적'],['d5','5거래일 누적'],['d10','10거래일 누적']].map(([k,l])=><label key={k}>{l}<div><input type="range" min="1" max="30" value={thr[k]} onChange={e=>setThr({...thr,[k]:Number(e.target.value)})}/><b>+{thr[k]}%</b></div></label>)}</div><div className="note">기본값 5% / 8% / 10% / 15%. 과거 이벤트의 D-60~D-1만 사용하며 미래 데이터는 점수 계산에 넣지 않습니다.</div></section>}
-function Learning({events}:{events:any[]}){return <section className="panel"><div className="sectionTitle"><h2>과거 급등 학습</h2><span>{events.length} 이벤트</span></div><div className="tableWrap"><table><thead><tr><th>종목</th><th>급등일</th><th>급등률</th><th>D-30</th><th>D-20</th><th>D-10</th><th>D-5</th><th>D-3</th><th>D-1</th></tr></thead><tbody>{events.slice(0,500).map((e,i)=><tr key={i}><td>{e.name}<small>{e.code}</small></td><td>{e.date}</td><td>{pct(e.spikePct)}</td>{[30,20,10,5,3,1].map(x=><td key={x}>{e[`d${x}`]?.score??'-'}</td>)}</tr>)}</tbody></table></div>{!events.length&&<div className="empty">분석을 실행하면 Yahoo 과거가격으로 급등 사례가 자동 생성됩니다.</div>}</section>}
-function Signals({stats}:{stats:any}){const R=({name,x,lead}:{name:string,x:any,lead:number})=><article className="metricCard"><h3>{name}</h3><div className="metricGrid"><span>급등 전 선행률 <b>{lead.toFixed(1)}%</b></span><span>Precision <b>{x.precision.toFixed(1)}%</b></span><span>Recall <b>{x.recall.toFixed(1)}%</b></span><span>False Positive <b>{x.fpr.toFixed(1)}%</b></span><span>평균 향후 10일 수익률 <b>{pct(x.avgReturn)}</b></span><span>중앙값 향후 10일 수익률 <b>{pct(x.medianReturn)}</b></span><span>최대낙폭 <b>{pct(x.maxDrawdown)}</b></span><span>신호 표본 <b>{x.signalCount}</b></span></div></article>;return <section className="panel"><h2>신호별 성과</h2><div className="stats"><article><span>급등 사례</span><b>{stats.n}</b></article><article><span>거래량 선행</span><b>{stats.volumeLead.toFixed(1)}%</b></article><article><span>차트 선행</span><b>{stats.chartLead.toFixed(1)}%</b></article></div><R name="거래량 이상 신호" x={stats.volume} lead={stats.volumeLead}/><R name="차트 선행 신호" x={stats.chart} lead={stats.chartLead}/><div className="note">가격·거래량 신호는 급등 구간과 비급등 대조군을 함께 계산합니다. 뉴스·공시·섹터의 과거시점 통계는 역사 데이터 API가 연결되기 전까지 임의 생성하지 않습니다. 자동 가중치 변경은 충분한 표본이 쌓인 뒤 적용하도록 분리되어 있습니다.</div></section>}
-function Tracking({rows,refresh}:{rows:any[];refresh:()=>void}){return <section className="panel"><div className="sectionTitle"><h2>탐지 후 성과</h2><button onClick={refresh}>성과 갱신</button></div><div className="tableWrap"><table><thead><tr><th>탐지일</th><th>종목</th><th>점수</th><th>1일</th><th>3일</th><th>5일</th><th>10일</th><th>20일</th><th>20일 MFE</th><th>20일 MAE</th></tr></thead><tbody>{rows.slice().reverse().map((r,i)=><tr key={i}><td>{r.date}</td><td>{r.name}<small>{r.code}</small></td><td>{r.score}</td>{[1,3,5,10,20].map(x=><td key={x}>{r[`r${x}`]===undefined?'-':pct(r[`r${x}`])}</td>)}<td>{r.mfe20===undefined?'-':pct(r.mfe20)}</td><td>{r.mae20===undefined?'-':pct(r.mae20)}</td></tr>)}</tbody></table></div>{!rows.length&&<div className="empty">TOP20 탐지 결과가 저장되면 이후 1·3·5·10·20거래일 성과를 추적합니다.</div>}</section>}
-function Detail({row,bars,close}:{row:Row;bars:any[];close:()=>void}){const reasons=[...(row.reasons||[]),...(row.newsReasons||[]),...(row.supplyReasons||[])];return <div className="modalBack" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><button className="close" onClick={close}>×</button><div className="eyebrow">SIGNAL DETAIL</div><h2>{row.name} <small>{row.code} · {row.market}</small></h2><div className="detailHero"><div><span>Pre-Spike Score</span><b>{fmt(row.finalScore,1)}</b><small>{row.stage} · 데이터 커버리지 {row.coverage}%</small></div><div><span>현재가</span><b>{fmt(row.currentPrice)}</b><small>{pct(row.changePct)} · 5일 {pct(row.ret5)}</small></div></div><h3>이 종목을 포착한 이유</h3>{reasons.length?<ul className="reasons">{reasons.map((x,i)=><li key={i}>{x}</li>)}</ul>:<div className="empty">계산 가능한 선행 신호가 충분하지 않습니다.</div>}<div className="miniGrid detailScores"><label>거래량 <Score v={row.volumeScore} max={25}/></label><label>뉴스 <Score v={row.newsScore} max={20}/></label><label>수급 <Score v={row.supplyScore} max={15}/></label><label>차트 <Score v={row.chartScore} max={15}/></label><label>공시 <Score v={row.disclosureScore} max={15}/></label><label>섹터 <Score v={row.sectorScore} max={10}/></label><label>급등 감점 <b>{row.penalty||0}</b></label><label>최종 <b>{row.finalScore}</b></label></div><h3>최근 120거래일</h3><PriceChart bars={bars} marks={(row.events||[]).map((e:any)=>e.date)}/><h3>뉴스</h3>{row.news?.length?<div className="newsList">{row.news.map((n:any,i:number)=><a key={i} href={n.link} target="_blank" rel="noreferrer"><time>{n.date?.slice(0,10)}</time>{n.title}</a>)}</div>:<div className="empty">뉴스 데이터 없음 또는 API 미연결</div>}<h3>섹터 / 테마</h3><p>{row.sector||'데이터 없음'} / {row.theme||'데이터 없음'}</p></section></div>}
+
+function naverStock(code: string) {
+  return `https://finance.naver.com/item/main.naver?code=${code}`;
+}
+function naverNews(name: string) {
+  return `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(name)}`;
+}
+function yahoo(code: string) {
+  return `https://finance.yahoo.com/quote/${code}.KS/`;
+}
+
+export default function Dashboard() {
+  const [rows, setRows] = useState<RadarRow[]>([]);
+  const [stages, setStages] = useState<Stage[]>(Array.from({ length: STAGES }, () => ({ state: 'idle', count: 0 })));
+  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState('대기 중 · KOSPI 시가총액 상위 500종목을 50개씩 10단계로 분석합니다.');
+  const [query, setQuery] = useState('');
+  const [lookbackDays, setLookbackDays] = useState(60);
+  const [spikePct, setSpikePct] = useState(5);
+  const [newsLeadDays, setNewsLeadDays] = useState(3);
+  const [candidateMin, setCandidateMin] = useState(55);
+  const [sortMode, setSortMode] = useState<'score' | 'spike' | 'volume'>('score');
+  const universeRef = useRef<UniverseStock[]>([]);
+  const abortRef = useRef(false);
+
+  const completed = rows.filter((r) => r.ok).length;
+  const surged = rows.filter((r) => r.ok && r.spikeCount > 0).length;
+  const candidates = rows.filter((r) => r.ok && r.score >= candidateMin && (r.latestChangePct ?? 0) < spikePct).length;
+  const failedStages = stages.map((s, i) => s.state === 'failed' ? i + 1 : null).filter(Boolean) as number[];
+
+  const candidateRows = useMemo(() => rows
+    .filter((r) => r.ok && r.score >= candidateMin && (r.latestChangePct ?? 0) < spikePct)
+    .sort((a, b) => b.score - a.score || (b.volumeRatio ?? 0) - (a.volumeRatio ?? 0)), [rows, candidateMin, spikePct]);
+
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const out = rows.filter((r) => !q || r.name.toLowerCase().includes(q) || r.code.includes(q));
+    out.sort((a, b) => {
+      if (sortMode === 'spike') return b.spikeCount - a.spikeCount || b.score - a.score;
+      if (sortMode === 'volume') return (b.volumeRatio ?? 0) - (a.volumeRatio ?? 0);
+      return b.score - a.score || b.spikeCount - a.spikeCount;
+    });
+    return out;
+  }, [rows, query, sortMode]);
+
+  function updateStage(i: number, patch: Partial<Stage>) {
+    setStages((prev) => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+  }
+
+  async function fetchUniverse() {
+    setStatus('네이버 금융 기준 KOSPI 시가총액 상위 종목을 수집하는 중…');
+    const r = await fetch('/api/radar/universe', { cache: 'no-store' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j?.error || 'KOSPI 500 종목목록 수집 실패');
+    const stocks = (j.stocks || []) as UniverseStock[];
+    if (stocks.length < 400) throw new Error(`종목목록이 ${stocks.length}개만 수집되었습니다.`);
+    universeRef.current = stocks.slice(0, 500);
+    return universeRef.current;
+  }
+
+  async function runStage(stageIndex: number, stocks: UniverseStock[], retry = 0) {
+    if (abortRef.current) return;
+    const slice = stocks.slice(stageIndex * CHUNK, (stageIndex + 1) * CHUNK);
+    if (!slice.length) {
+      updateStage(stageIndex, { state: 'done', count: 0, message: '대상 없음' });
+      return;
+    }
+    updateStage(stageIndex, { state: 'running', count: 0, message: retry ? `재시도 ${retry}/2` : '분석 중' });
+    try {
+      const r = await fetch('/api/radar/batch', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ stocks: slice, lookbackDays, spikePct, newsLeadDays }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+      const got = (j.rows || []) as RadarRow[];
+      setRows((prev) => {
+        const map = new Map(prev.map((x) => [x.code, x]));
+        got.forEach((x) => map.set(x.code, x));
+        const merged = Array.from(map.values());
+        try { sessionStorage.setItem('kospi-news-radar-v2-results', JSON.stringify(merged)); } catch {}
+        return merged;
+      });
+      updateStage(stageIndex, { state: 'done', count: got.filter((x) => x.ok).length, message: `${j.meta?.elapsedMs ? (j.meta.elapsedMs / 1000).toFixed(1) : '?'}초` });
+    } catch (e) {
+      if (retry < 2 && !abortRef.current) {
+        updateStage(stageIndex, { state: 'running', message: `오류 · ${retry + 1}차 재시도 대기` });
+        await wait(1200 * (retry + 1));
+        return runStage(stageIndex, stocks, retry + 1);
+      }
+      updateStage(stageIndex, { state: 'failed', count: 0, message: e instanceof Error ? e.message : '분석 실패' });
+    }
+  }
+
+  async function start(fullReset = true) {
+    if (running) return;
+    abortRef.current = false;
+    setRunning(true);
+    if (fullReset) {
+      setRows([]);
+      setStages(Array.from({ length: STAGES }, () => ({ state: 'idle', count: 0 })));
+      try { sessionStorage.removeItem('kospi-news-radar-v2-results'); } catch {}
+    }
+    try {
+      const stocks = universeRef.current.length ? universeRef.current : await fetchUniverse();
+      for (let i = 0; i < STAGES; i++) {
+        if (abortRef.current) break;
+        setStatus(`${i + 1}/10단계 분석 중 · ${i * 50 + 1}~${Math.min((i + 1) * 50, stocks.length)}위`);
+        await runStage(i, stocks);
+      }
+      setStatus(abortRef.current ? '분석을 중지했습니다.' : '분석 완료 · 실패 구간이 있으면 해당 구간만 다시 시도할 수 있습니다.');
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function retryFailed() {
+    if (running || !failedStages.length) return;
+    setRunning(true);
+    abortRef.current = false;
+    try {
+      const stocks = universeRef.current.length ? universeRef.current : await fetchUniverse();
+      for (const n of failedStages) {
+        setStatus(`미수집 ${n}단계 재분석 중…`);
+        await runStage(n - 1, stocks);
+      }
+      setStatus('미수집 구간 재분석을 마쳤습니다.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  function stop() {
+    abortRef.current = true;
+    setStatus('현재 단계가 끝나면 분석을 중지합니다.');
+  }
+
+  async function exportExcel() {
+    if (!rows.length) return;
+    const XLSX = await import('xlsx');
+    const flat = visibleRows.map((r) => ({
+      순위: r.rank,
+      종목명: r.name,
+      종목코드: r.code,
+      종가: r.close ?? '',
+      당일등락률: r.latestChangePct ?? '',
+      거래량배수20일: r.volumeRatio ?? '',
+      3일모멘텀: r.momentum3Pct ?? '',
+      5일모멘텀: r.momentum5Pct ?? '',
+      MA5: r.ma5 ?? '',
+      MA20: r.ma20 ?? '',
+      [`${lookbackDays}일내_${spikePct}%이상_급등횟수`]: r.spikeCount,
+      관찰점수: r.score,
+      최근뉴스건수: r.recentNewsCount,
+      급등전뉴스: r.spikes.map((s) => `${s.date} ${s.pct}%:${s.preNews}${s.leadDays == null ? '' : `(${s.leadDays}일전)`}`).join(' | '),
+      판단근거: r.reasons.join(', '),
+      최신뉴스: r.latestNews.map((n) => n.title).join(' | '),
+      네이버증권: naverStock(r.code),
+      네이버뉴스: naverNews(r.name),
+      YahooFinance: yahoo(r.code),
+      오류: r.error ?? '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(flat);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'KOSPI500 Radar');
+    XLSX.writeFile(wb, `KOSPI500_뉴스급등레이더_${new Date().toISOString().slice(0, 10)}.xlsx`, { compression: true });
+  }
+
+  return (
+    <main className="appShell">
+      <header className="topbar">
+        <div className="brandMark">◉</div>
+        <div className="brandCopy">
+          <b>코스피 뉴스 급등 레이더 V2</b>
+          <span>NEWS × PRICE × VOLUME</span>
+        </div>
+        <button className="ghostBtn" onClick={() => start(true)} disabled={running}>⌕ 지금 새로 분석</button>
+      </header>
+
+      <section className="hero">
+        <div className="eyebrow">NEWS × PRICE × VOLUME</div>
+        <h1>급등 전에 뉴스는<br className="mobileBreak"/> 먼저 움직였는가?</h1>
+        <p>KOSPI 시가총액 상위 500종목을 50개씩 안정적으로 수집하고, Yahoo Finance 일봉과 네이버 뉴스를 교차검증합니다. 실패한 구간은 자동 재시도하며 임의 값은 만들지 않습니다.</p>
+      </section>
+
+      <section className="statGrid">
+        <div className="statCard"><span>수집 완료</span><strong>{completed}<em>/ 500</em></strong><small>종목</small></div>
+        <div className="statCard"><span>{spikePct}%↑ 급등주</span><strong>{surged}<em>종목</em></strong><small>최근 {lookbackDays}거래일</small></div>
+        <div className="statCard"><span>다음 거래일 후보</span><strong>{candidates}<em>종목</em></strong><small>관찰점수 {candidateMin}+</small></div>
+      </section>
+
+      <section className="stagePanel">
+        <div className="stageHead">
+          <div><b>500종목 수집·분석 진행상황</b><span>{status}</span></div>
+          {running ? <button className="warnBtn" onClick={stop}>중지</button> : <button className="miniBtn" onClick={() => start(false)}>이어 분석</button>}
+        </div>
+        <div className="stageGrid">
+          {stages.map((s, i) => <div key={i} className={`stage ${s.state}`} title={s.message || ''}>
+            <span>{i + 1}</span><b>{s.state === 'done' ? '완료' : s.state === 'running' ? '진행' : s.state === 'failed' ? '실패' : '대기'}</b><small>{s.count || ''}</small>
+          </div>)}
+        </div>
+        {failedStages.length > 0 && <div className="retryBox">
+          <div><b>미수집 구간 {failedStages.join(', ')}단계</b><span>다른 구간 결과는 유지한 채 실패 구간만 다시 수집합니다.</span></div>
+          <button onClick={retryFailed} disabled={running}>미수집만 재시도</button>
+        </div>}
+      </section>
+
+      <section className="controls">
+        <div className="control"><label>검색 기간</label><div><input type="number" min={20} max={240} value={lookbackDays} onChange={(e) => setLookbackDays(Number(e.target.value) || 60)}/><span>거래일</span></div></div>
+        <div className="control"><label>급등 기준</label><div><input type="number" min={2} max={20} step={0.5} value={spikePct} onChange={(e) => setSpikePct(Number(e.target.value) || 5)}/><span>% 이상</span></div></div>
+        <div className="control"><label>선행 뉴스 구간</label><div><input type="number" min={1} max={10} value={newsLeadDays} onChange={(e) => setNewsLeadDays(Number(e.target.value) || 3)}/><span>일 전</span></div></div>
+        <div className="control"><label>후보 최소점수</label><div><input type="number" min={30} max={90} value={candidateMin} onChange={(e) => setCandidateMin(Number(e.target.value) || 55)}/><span>점</span></div></div>
+      </section>
+
+      <section className="candidateSection">
+        <div className="sectionTitle"><div><span>TOMORROW WATCH</span><h2>다음 거래일 주목 후보</h2><p>점수는 예측 확률이 아니라 가격·거래량·최근 뉴스 기반 관찰 우선순위입니다.</p></div><div className="scorePill">{candidateRows.length} 종목</div></div>
+        {!candidateRows.length ? <div className="emptyState">분석을 시작하면 조건에 맞는 후보가 여기에 표시됩니다.</div> : <div className="candidateGrid">
+          {candidateRows.slice(0, 20).map((r, idx) => <article className="candidateCard" key={r.code}>
+            <div className="rankBadge">#{idx + 1}</div>
+            <div className="candidateName"><div><h3>{r.name}</h3><span>{r.code} · 시총 {capLabel(r.marketCap)}</span></div><strong>{r.score}<small>점</small></strong></div>
+            <div className="metricRow"><span>등락 <b className={(r.latestChangePct ?? 0) >= 0 ? 'up' : 'down'}>{pct(r.latestChangePct)}</b></span><span>거래량 <b>{r.volumeRatio?.toFixed(2) ?? '-'}배</b></span><span>최근뉴스 <b>{r.recentNewsCount}건</b></span></div>
+            <div className="tags">{r.reasons.slice(0, 6).map((x) => <i key={x}>{x}</i>)}</div>
+            <div className="linkRow"><a href={naverStock(r.code)} target="_blank" rel="noreferrer">네이버증권</a><a href={naverNews(r.name)} target="_blank" rel="noreferrer">네이버뉴스</a><a href={yahoo(r.code)} target="_blank" rel="noreferrer">Yahoo</a></div>
+          </article>)}
+        </div>}
+      </section>
+
+      <section className="resultsSection">
+        <div className="sectionTitle compact"><div><span>SURGE HISTORY</span><h2>급등 전 뉴스 검증</h2></div></div>
+        <div className="toolbar">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="종목명 또는 코드 검색"/>
+          <select value={sortMode} onChange={(e) => setSortMode(e.target.value as typeof sortMode)}><option value="score">점수순</option><option value="spike">급등횟수순</option><option value="volume">거래량순</option></select>
+          <button onClick={exportExcel} disabled={!rows.length}>엑셀 저장</button>
+        </div>
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>종목</th><th>현재 지표</th><th>급등 이력</th><th>급등 전 뉴스</th><th>점수/근거</th><th>링크</th></tr></thead>
+            <tbody>
+              {visibleRows.map((r) => <tr key={r.code} className={!r.ok ? 'errorRow' : ''}>
+                <td><b>{r.name}</b><small>{r.code} · #{r.rank}</small></td>
+                <td>{r.ok ? <><span className={(r.latestChangePct ?? 0) >= 0 ? 'up' : 'down'}>{pct(r.latestChangePct)}</span><small>거래량 {r.volumeRatio?.toFixed(2) ?? '-'}배 · 3일 {pct(r.momentum3Pct)}</small></> : <span className="errorText">{r.error || '수집 실패'}</span>}</td>
+                <td><b>{r.spikeCount}회</b>{r.spikes.slice(0, 3).map((s) => <small key={s.date}>{s.date} · +{s.pct.toFixed(1)}%</small>)}</td>
+                <td>{r.spikes.length ? r.spikes.slice(0, 3).map((s) => <small key={s.date} className={`newsFlag ${s.preNews.toLowerCase()}`}>{s.preNews === 'YES' ? `있음 · ${s.leadDays}일 전` : s.preNews === 'NO' ? '확인 안 됨' : '뉴스 미수집'}{s.headline ? ` · ${s.headline}` : ''}</small>) : <span className="muted">급등 이력 없음</span>}</td>
+                <td><b>{r.score}점</b><small>{r.reasons.slice(0, 5).join(' · ') || '-'}</small></td>
+                <td><a href={naverStock(r.code)} target="_blank" rel="noreferrer">증권</a><a href={naverNews(r.name)} target="_blank" rel="noreferrer">뉴스</a></td>
+              </tr>)}
+              {!visibleRows.length && <tr><td colSpan={6}><div className="emptyState small">아직 분석 결과가 없습니다.</div></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="launchPanel">
+        <div><span>FULL SCAN</span><h2>KOSPI 500 분석 시작</h2><p>네이버 금융 시가총액 순위와 Yahoo Finance 실제 일봉을 사용합니다. 수집 실패 종목은 임의 값으로 대체하지 않습니다.</p></div>
+        <button className="primaryBtn" onClick={() => start(true)} disabled={running}>{running ? '분석 진행 중…' : 'KOSPI 500 분석 시작'}</button>
+      </section>
+
+      <footer>
+        <p>개인용 데이터 분석 도구 · 투자 판단은 사용자의 책임입니다. 뉴스 선행 여부는 수집 가능한 기사 날짜를 기준으로 계산되며 뉴스 누락 가능성이 있습니다.</p>
+        <form action="/api/auth/logout" method="post"><button>로그아웃</button></form>
+      </footer>
+    </main>
+  );
+}
