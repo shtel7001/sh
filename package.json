@@ -1,5 +1,5 @@
 {
-  "name": "krx-5ma-pullback-rebound-radar-20260922",
+  "name": "krx-downtrend-5ma20ma-retest-radar-20260923",
   "version": "1.0.0",
   "private": true,
   "scripts": {"dev":"next dev","build":"next build","start":"next start"},

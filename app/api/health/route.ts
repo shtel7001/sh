@@ -1,8 +1,19 @@
 import {NextResponse} from 'next/server';
+import {analyzeDaily,type Settings} from '@/lib/pattern';
 import {fetchDailyBars} from '@/lib/market';
-import {analyzeDaily,type Settings} from '@/lib/rebound';
-export const runtime='nodejs';export const maxDuration=60;export const dynamic='force-dynamic';
-async function getJson(url:string,referer:string){const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(url,{signal:c.signal,headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json,*/*','Referer':referer},cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json()}finally{clearTimeout(t)}}
-function arr(j:any){if(Array.isArray(j))return j;for(const k of ['stocks','items','stockList','data'])if(Array.isArray(j?.[k]))return j[k];if(Array.isArray(j?.result?.stocks))return j.result.stocks;if(Array.isArray(j?.result?.items))return j.result.items;return []}
-const defaults:Settings={searchDays:10,cycleWindowDays:60,minCycles:2,touchTolerancePct:1,profitZonePct:2,minSwingPct:5,minTrendSlopePct:0,longSupportPct:4,recentHighDays:15,minPullbackPct:3,near5MaxPct:3,below5MaxPct:5,near20Pct:6,maxPositionPct:70,currentLowOnly:true,useIntraday:false,intradayBars:6,intradayMinSlopePct:0};
-export async function GET(){const out:any={ok:true,checkedAt:new Date().toISOString(),providers:{},sample:{}};try{const k=await getJson('https://m.stock.naver.com/api/stocks/marketValue/KOSPI?page=1&pageSize=10','https://m.stock.naver.com/');out.providers.naverKospi={ok:true,rows:arr(k).length};if(!out.providers.naverKospi.rows)out.ok=false}catch(e){out.ok=false;out.providers.naverKospi={ok:false,error:e instanceof Error?e.message:'error'}}try{const q=await getJson('https://m.stock.naver.com/api/stocks/marketValue/KOSDAQ?page=1&pageSize=10','https://m.stock.naver.com/');out.providers.naverKosdaq={ok:true,rows:arr(q).length};if(!out.providers.naverKosdaq.rows)out.ok=false}catch(e){out.ok=false;out.providers.naverKosdaq={ok:false,error:e instanceof Error?e.message:'error'}}try{const now=Math.floor(Date.now()/1000),past=now-40*86400;const y=await getJson(`https://query1.finance.yahoo.com/v8/finance/chart/005930.KS?period1=${past}&period2=${now+86400}&interval=1d`,'https://finance.yahoo.com/');out.providers.yahoo={ok:!!y?.chart?.result?.[0],bars:y?.chart?.result?.[0]?.timestamp?.length||0};if(!out.providers.yahoo.ok||!out.providers.yahoo.bars)out.ok=false}catch(e){out.ok=false;out.providers.yahoo={ok:false,error:e instanceof Error?e.message:'error'}}try{const d=await fetchDailyBars('062040','KOSPI','yahoo',140),a:any=analyzeDaily(d.bars,defaults);out.sample={code:'062040',name:'산일전기',source:d.source,bars:d.bars.length,last:d.bars.at(-1),pass:!!a.pass,score:a.score,trendPass:a.trendPass,cyclePass:a.cyclePass,lowPass:a.lowPass,cycleCount:a.cycleCount,pullbackPct:a.pullbackPct,currentVsMa5Pct:a.currentVsMa5Pct,currentVsMa20Pct:a.currentVsMa20Pct,ma20SlopePct:a.ma20SlopePct,signalDate:a.signalDate,error:a.error};}catch(e){out.sample={code:'062040',ok:false,error:e instanceof Error?e.message:'sample error'}}return NextResponse.json(out,{headers:{'Cache-Control':'no-store'}})}
+export const runtime='nodejs';
+export const maxDuration=30;
+
+const settings:Settings={searchDays:40,downtrendDays:150,near20Pct:4,minDeclinePct:8,minNegativeMa20Ratio:50,minDowntrendR2:.05,requireStepDown:true,requireMa5Above20Now:true};
+function synthetic(){
+  const bars:any[]=[];let p=100000;
+  for(let i=0;i<170;i++){p*=.9975;bars.push({date:new Date(2025,0,i+1).toISOString(),open:p,high:p*1.01,low:p*.99,close:p,volume:100000+i});}
+  for(let i=0;i<18;i++){p*=1.012;bars.push({date:new Date(2025,6,i+1).toISOString(),open:p*.995,high:p*1.01,low:p*.99,close:p,volume:160000+i});}
+  for(let i=0;i<9;i++){p*=.996;bars.push({date:new Date(2025,7,i+1).toISOString(),open:p*1.002,high:p*1.008,low:p*.992,close:p,volume:120000+i});}
+  return analyzeDaily(bars,settings);
+}
+export async function GET(){
+  const syn=synthetic();let live:any={ok:false};
+  try{const f=await fetchDailyBars('120110','KOSPI','yahoo',240);live={ok:f.bars.length>=150,source:f.source,bars:f.bars.length,last:f.bars.at(-1)?.date}}catch(e){live={ok:false,error:e instanceof Error?e.message:'live fetch failed'}}
+  return NextResponse.json({ok:!!syn.crossPass&&live.ok,synthetic:{pass:syn.pass,crossPass:syn.crossPass,downtrendPass:syn.downtrendPass,near20Pass:syn.near20Pass,score:syn.score},live,ts:new Date().toISOString()});
+}
