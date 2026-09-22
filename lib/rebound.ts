@@ -1,51 +1,7 @@
 import type {Bar} from './market';
-
-export type Settings={maxBelowDays:number;gapPct:number;ma20CompareDays:number;supportTolPct:number;bottomTolPct:number};
-const avg=(a:number[])=>a.reduce((s,v)=>s+v,0)/a.length;
+export type Settings={lookbackDays:number;belowMinDays:number;belowMaxDays:number;surgeMinPct:number;surgeAboveMaPct:number;correctionMinDays:number;correctionMaxDays:number;correctionMaxDailyRisePct:number;correctionMaxDrawdownPct:number;reboundMinDay:number;reboundMaxDay:number;reboundMinPct:number;reboundAboveMaPct:number;latestOnly:boolean;maxDaysAfterRebound:number;useIntraday:boolean;intradayBars:number;intradayMinSlopePct:number;intradayMinRiseFromLowPct:number};
+const avg=(a:number[])=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0, pct=(a:number,b:number)=>b?((a/b)-1)*100:0, round=(n:number,d=2)=>Number(n.toFixed(d));
 function sma(b:Bar[],n:number,i:number){if(i<n-1)return null;return avg(b.slice(i-n+1,i+1).map(x=>x.close))}
 function slopePct(a:number[]){if(a.length<2)return 0;const n=a.length;let sx=0,sy=0,sxy=0,sxx=0;for(let i=0;i<n;i++){sx+=i;sy+=a[i];sxy+=i*a[i];sxx+=i*i}const d=n*sxx-sx*sx;if(!d)return 0;const m=(n*sxy-sx*sy)/d;return m/(avg(a)||1)*100}
-
-export function analyzeDaily(bars:Bar[],s:Settings){
- const b=bars.filter(x=>Number.isFinite(x.close));const n=b.length;if(n<75)return{pass:false,error:'일봉 75개 미만'};
- const ma5=b.map((_,i)=>sma(b,5,i));const ma20=b.map((_,i)=>sma(b,20,i));const i=n-1;const m5=ma5[i]!;const m20=ma20[i]!;const prev20=ma20[Math.max(19,i-s.ma20CompareDays)]!;
- let below=0;for(let k=i;k>=4;k--){if(b[k].close<(ma5[k]||0))below++;else break}
- let maxBelow=0,run=0;for(let k=Math.max(4,i-19);k<=i;k++){if(b[k].close<(ma5[k]||0)){run++;maxBelow=Math.max(maxBelow,run)}else run=0}
- const prevBelow=i>4?b[i-1].close<(ma5[i-1]||0):false;const gap=(b[i].close/m5-1)*100;const ma20Rise=(m20/prev20-1)*100;const ma20Slope=slopePct(ma20.slice(Math.max(19,i-9),i+1).filter((x):x is number=>typeof x==='number'));
- const recentDip=below>=1&&below<=s.maxBelowDays;const justReclaim=below===0&&prevBelow&&gap<=0.8;const near5=gap>=-s.gapPct&&gap<=0.8;
-
- let spike:any=null;
- for(let k=Math.max(1,i-4);k<=i;k++){
-  const prev=b[k-1].close;if(!prev)continue;
-  const risePct=(b[k].close/prev-1)*100;
-  const turnover=b[k].close*b[k].volume;
-  if(risePct>=5&&turnover>=1_000_000_000){
-   if(!spike||risePct>spike.risePct)spike={date:b[k].date,risePct,turnover,close:b[k].close,volume:b[k].volume};
-  }
- }
- const spike5dPass=!!spike;
- const pass=maxBelow<=s.maxBelowDays&&ma20Rise>0&&ma20Slope>0&&near5&&(recentDip||justReclaim)&&spike5dPass;
- let score=0;if(maxBelow<=s.maxBelowDays)score+=25;if(ma20Rise>0)score+=20;if(ma20Slope>0)score+=10;if(recentDip||justReclaim)score+=20;if(Math.abs(gap)<=1)score+=15;else if(Math.abs(gap)<=s.gapPct)score+=8;if(b[i].close>m20)score+=10;
- const reasons:string[]=[];if(maxBelow<=s.maxBelowDays)reasons.push(`20일 내 5일선 하회 연속 최대 ${maxBelow}일`);if(ma20Rise>0)reasons.push(`20일선 ${s.ma20CompareDays}거래일 대비 +${ma20Rise.toFixed(2)}%`);if(recentDip)reasons.push(`현재 5일선 아래 ${below}일째`);if(justReclaim)reasons.push('직전 5일선 하회 후 재돌파');if(spike)reasons.push(`최근 5거래일 급등 ${spike.risePct.toFixed(2)}% · 거래대금 ${(spike.turnover/100000000).toFixed(1)}억원`);reasons.push(`5일선 괴리 ${gap.toFixed(2)}%`);
- return{pass,score:Math.min(score,100),close:b[i].close,ma5:m5,ma20:m20,gapPct:gap,belowDays:below,maxBelow20:maxBelow,ma20RisePct:ma20Rise,ma20SlopePct:ma20Slope,justReclaim,spike5dPass,spikeDate:spike?.date||null,spikePct:spike?.risePct??null,spikeTurnover:spike?.turnover??null,reasons,lastDate:b[i].date};
-}
-
-function pivots(b:Bar[]){const out:{i:number;low:number}[]=[];for(let i=2;i<b.length-2;i++){if(b[i].low<=b[i-1].low&&b[i].low<=b[i-2].low&&b[i].low<=b[i+1].low&&b[i].low<=b[i+2].low)out.push({i,low:b[i].low})}return out}
-export function analyze30m(bars:Bar[],s:Settings){
- const b=bars.filter(x=>Number.isFinite(x.close));const n=b.length;if(n<70)return{pass:false,error:'30분봉 70개 미만'};const i=n-1;
- const m5=sma(b,5,i)!;const m20=sma(b,20,i)!;const m60=sma(b,60,i)!;const m300=sma(b,300,i);const ma5Slope=slopePct(Array.from({length:5},(_,j)=>sma(b,5,i-4+j)||b[i-4+j].close));
- const supports:{name:string;value:number}[]=[{name:'20',value:m20},{name:'60',value:m60}];if(typeof m300==='number')supports.push({name:'300',value:m300});
- let support='';let supportDist=999;const recentLows=b.slice(-8).map(x=>x.low);
- for(const item of supports){const d=Math.min(...recentLows.map(x=>Math.abs(x/item.value-1)*100));if(d<=s.supportTolPct&&b[i].close>=item.value*0.995&&d<supportDist){support=`30분 ${item.name}이평 지지`;supportDist=d}}
- const local=b.slice(-48);const ps=pivots(local);let dbl=false;let dbInfo='';
- outer:for(let a=0;a<ps.length;a++){
-  for(let c=a+1;c<ps.length;c++){
-   const p1=ps[a],p2=ps[c];const sep=p2.i-p1.i;if(sep<4||sep>26)continue;
-   const diff=Math.abs(p2.low/p1.low-1)*100;const higher=p2.low>=p1.low*0.99;if(diff>s.bottomTolPct||!higher)continue;
-   const neckline=Math.max(...local.slice(p1.i,p2.i+1).map(x=>x.high));
-   if(b[i].close>=neckline*0.985&&ma5Slope>0){dbl=true;dbInfo=`30분 쌍바닥(${diff.toFixed(2)}%) + 우상향`;break outer}
-  }
- }
- const rising=ma5Slope>0&&b[i].close>=m5*0.995;const pass=rising&&(!!support||dbl);let score=0;if(rising)score+=30;if(support)score+=30;if(dbl)score+=40;if(b[i].close>m20)score+=10;
- const reasons:string[]=[];if(rising)reasons.push(`30분 5이평 기울기 +${ma5Slope.toFixed(3)}%/bar`);if(support)reasons.push(`${support} · 오차 ${supportDist.toFixed(2)}%`);if(dbl)reasons.push(dbInfo);
- return{pass,score:Math.min(score,100),close:b[i].close,ma5:m5,ma20:m20,ma60:m60,ma300:m300,ma5SlopePct:ma5Slope,support:support||null,supportDistPct:support?supportDist:null,doubleBottom:dbl,reasons,lastDate:b[i].date};
-}
+export function analyzeDaily(raw:Bar[],s:Settings){const b=raw.filter(x=>Number.isFinite(x.close)&&x.close>0).sort((a,c)=>a.date.localeCompare(c.date)),n=b.length;if(n<Math.max(20,s.belowMinDays+8))return{pass:false,error:'일봉 이력 부족',score:0};const ma5=b.map((_,i)=>sma(b,5,i)),windowStart=Math.max(4,n-s.lookbackDays),found:any[]=[];function streak(end:number){let count=0,start=end;for(let i=end;i>=0&&count<=s.belowMaxDays;i--){const m=ma5[i];if(!m||b[i].close>=m)break;count++;start=i}return{count,start}}for(let surge=windowStart;surge<n-1;surge++){const m5=ma5[surge],prev=b[surge-1];if(!m5||!prev?.close)continue;const st=streak(surge-1);if(st.start<windowStart||st.count<s.belowMinDays||st.count>s.belowMaxDays)continue;const surgePct=pct(b[surge].close,prev.close),surgeAbove=pct(b[surge].close,m5);if(surgePct<s.surgeMinPct||surgeAbove<s.surgeAboveMaPct)continue;for(let rebound=surge+s.reboundMinDay;rebound<=Math.min(n-1,surge+s.reboundMaxDay);rebound++){const correction=b.slice(surge+1,rebound),correctionDays=correction.length;if(correctionDays<s.correctionMinDays||correctionDays>s.correctionMaxDays||!correction.length)continue;let valid=true,peak=b[surge].high||b[surge].close,trough=b[surge].low||b[surge].close;for(let i=surge+1;i<rebound;i++){const d=pct(b[i].close,b[i-1].close);if(d>s.correctionMaxDailyRisePct||b[i].close>b[surge].close*(1+s.correctionMaxDailyRisePct/100))valid=false;peak=Math.max(peak,b[i].high||b[i].close);trough=Math.min(trough,b[i].low||b[i].close)}if(!valid)continue;const maxDrawdown=Math.abs(Math.min(0,pct(trough,peak)));if(maxDrawdown>s.correctionMaxDrawdownPct)continue;const rm5=ma5[rebound];if(!rm5)continue;const reboundPct=pct(b[rebound].close,b[rebound-1].close),reboundAbove=pct(b[rebound].close,rm5);if(reboundPct<s.reboundMinPct||reboundAbove<s.reboundAboveMaPct)continue;const daysAfter=n-1-rebound;if(s.latestOnly&&daysAfter!==0)continue;if(!s.latestOnly&&daysAfter>s.maxDaysAfterRebound)continue;const cur=b[n-1],curM5=ma5[n-1];if(!curM5)continue;const currentVsMa=pct(cur.close,curM5),correctionPct=pct(correction[correction.length-1].close,b[surge].close);const score=Math.max(0,Math.min(100,45+Math.min(20,(surgePct-s.surgeMinPct)*2)+Math.min(15,reboundPct*3)+Math.min(10,Math.max(0,currentVsMa)*2)+Math.min(10,st.count-s.belowMinDays)));found.push({pass:true,score:round(score,1),belowDays:st.count,stayStartDate:b[st.start].date,surgeDate:b[surge].date,surgePct:round(surgePct),surgeAboveMaPct:round(surgeAbove),correctionDays,correctionPct:round(correctionPct),maxDrawdownPct:round(maxDrawdown),reboundDate:b[rebound].date,reboundDay:rebound-surge,reboundPct:round(reboundPct),reboundAboveMaPct:round(reboundAbove),daysAfterRebound:daysAfter,lastDate:cur.date,close:cur.close,ma5:curM5,currentVsMa5Pct:round(currentVsMa),latestChangePct:round(pct(cur.close,b[n-2].close)),reasons:[`5일선 아래 ${st.count}일 연속 체류`,`급등일 ${round(surgePct)}% · 5일선 상회 ${round(surgeAbove)}%`,`${correctionDays}일 조정 · 최대낙폭 ${round(maxDrawdown)}%`,`급등 후 ${rebound-surge}일째 ${round(reboundPct)}% 반등`]})}}if(!found.length)return{pass:false,score:0,error:'조건 불충족'};found.sort((a,c)=>String(c.reboundDate).localeCompare(String(a.reboundDate))||c.score-a.score);return found[0]}
+export function analyze30m(raw:Bar[],s:Settings){const b=raw.filter(x=>Number.isFinite(x.close)&&x.close>0).sort((a,c)=>a.date.localeCompare(c.date)),n=b.length,use=Math.max(3,Math.min(s.intradayBars,n));if(n<Math.max(10,use+5))return{pass:false,error:'30분봉 이력 부족',score:0};const closes=b.slice(-use).map(x=>x.close),slope=slopePct(closes),low=Math.min(...b.slice(-use).map(x=>x.low||x.close)),riseFromLow=pct(b[n-1].close,low),m5=sma(b,5,n-1)!,above5=pct(b[n-1].close,m5),higherLast=b[n-1].close>=b[n-2].close,pass=slope>=s.intradayMinSlopePct&&riseFromLow>=s.intradayMinRiseFromLowPct&&above5>=0&&higherLast,score=Math.max(0,Math.min(100,40+Math.min(35,slope*350)+Math.min(25,riseFromLow*5)));return{pass,score:round(score,1),slopePct:round(slope,4),riseFromLowPct:round(riseFromLow),aboveMa5Pct:round(above5),barsUsed:use,lastDate:b[n-1].date,reasons:pass?[`30분봉 최근 ${use}개 기울기 +${round(slope,4)}%/bar`,`최근 저점 대비 +${round(riseFromLow)}% · 5일선 위`]:[]}}

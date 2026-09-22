@@ -1,24 +1,9 @@
 import {NextResponse} from 'next/server';
 import {isAuthed,unauthorized} from '@/lib/guard';
-import {fetchYahooBars,fetchYahoo30m,type UniverseStock} from '@/lib/market';
+import {fetchDailyBars,fetchYahoo30m,type UniverseStock} from '@/lib/market';
 import {analyzeDaily,analyze30m,type Settings} from '@/lib/rebound';
 export const runtime='nodejs';export const maxDuration=60;
-
-async function one(stock:UniverseStock,s:Settings){
- try{
-  const dailyBars=await fetchYahooBars(stock.code,120);
-  const daily=analyzeDaily(dailyBars,s);
-  if(!daily.pass)return{...stock,dataStatus:'ok',match:false,daily,intraday:null,score:daily.score||0};
-  const intraday=analyze30m(await fetchYahoo30m(stock.code),s);
-  const match=!!intraday.pass;const score=Math.round(((daily.score||0)*0.6+(intraday.score||0)*0.4)*10)/10;
-  return{...stock,currentPrice:daily.close??stock.currentPrice,dataStatus:'ok',match,daily,intraday,score,reasons:[...(daily.reasons||[]),...(intraday.reasons||[])],chartBars:match?dailyBars.slice(-60):[]};
- }catch(e){return{...stock,dataStatus:'error',match:false,error:e instanceof Error?e.message:'분석 실패',score:0}}
-}
-export async function POST(req:Request){
- if(!await isAuthed())return unauthorized();
- const b=await req.json().catch(()=>null);const stocks:UniverseStock[]=Array.isArray(b?.stocks)?b.stocks:[];
- if(!stocks.length||stocks.length>16)return NextResponse.json({error:'한 번에 1~16종목을 분석합니다.'},{status:400});
- const s:Settings={maxBelowDays:Math.min(5,Math.max(1,Number(b?.settings?.maxBelowDays??3))),gapPct:Math.min(5,Math.max(.5,Number(b?.settings?.gapPct??2.5))),ma20CompareDays:Math.min(20,Math.max(3,Number(b?.settings?.ma20CompareDays??8))),supportTolPct:Math.min(4,Math.max(.3,Number(b?.settings?.supportTolPct??1.5))),bottomTolPct:Math.min(5,Math.max(.5,Number(b?.settings?.bottomTolPct??2)))};
- const out:any[]=[];for(let i=0;i<stocks.length;i+=8)out.push(...await Promise.all(stocks.slice(i,i+8).map(x=>one(x,s))));
- return NextResponse.json({results:out,settings:s});
-}
+const clamp=(v:unknown,min:number,max:number,fallback:number)=>Math.min(max,Math.max(min,Number.isFinite(Number(v))?Number(v):fallback));
+function settings(x:any):Settings{return{lookbackDays:clamp(x?.lookbackDays,10,60,20),belowMinDays:clamp(x?.belowMinDays,1,30,10),belowMaxDays:clamp(x?.belowMaxDays,1,40,20),surgeMinPct:clamp(x?.surgeMinPct,.5,30,5),surgeAboveMaPct:clamp(x?.surgeAboveMaPct,0,15,0),correctionMinDays:clamp(x?.correctionMinDays,1,10,1),correctionMaxDays:clamp(x?.correctionMaxDays,1,10,3),correctionMaxDailyRisePct:clamp(x?.correctionMaxDailyRisePct,0,10,1.5),correctionMaxDrawdownPct:clamp(x?.correctionMaxDrawdownPct,1,30,12),reboundMinDay:clamp(x?.reboundMinDay,1,10,2),reboundMaxDay:clamp(x?.reboundMaxDay,1,10,4),reboundMinPct:clamp(x?.reboundMinPct,0,20,1),reboundAboveMaPct:clamp(x?.reboundAboveMaPct,0,15,0),latestOnly:x?.latestOnly!==false,maxDaysAfterRebound:clamp(x?.maxDaysAfterRebound,0,10,2),useIntraday:x?.useIntraday!==false,intradayBars:clamp(x?.intradayBars,3,20,6),intradayMinSlopePct:clamp(x?.intradayMinSlopePct,0,.5,.03),intradayMinRiseFromLowPct:clamp(x?.intradayMinRiseFromLowPct,0,10,.5)}}
+async function one(stock:UniverseStock,s:Settings){try{const dailyFetched=await fetchDailyBars(stock.code,stock.market,'yahoo',120),daily=analyzeDaily(dailyFetched.bars,s);if(!daily.pass)return{...stock,dataStatus:'ok',match:false,daily,intraday:null,score:daily.score||0,source:dailyFetched.source};let intraday:any=null;if(s.useIntraday){try{intraday=analyze30m(await fetchYahoo30m(stock.code,stock.market),s)}catch(e){intraday={pass:false,error:e instanceof Error?e.message:'30분봉 수집 실패',score:0}}}const match=!!daily.pass&&(!s.useIntraday||!!intraday?.pass),score=Math.round((s.useIntraday?((daily.score||0)*.82+(intraday?.score||0)*.18):(daily.score||0))*10)/10;return{...stock,currentPrice:daily.close??stock.currentPrice,dataStatus:'ok',match,daily,intraday,score,source:dailyFetched.source,reasons:[...(daily.reasons||[]),...(intraday?.reasons||[])],chartBars:match?dailyFetched.bars.slice(-60):[]}}catch(e){return{...stock,dataStatus:'error',match:false,error:e instanceof Error?e.message:'분석 실패',score:0}}}
+export async function POST(req:Request){if(!await isAuthed())return unauthorized();const b=await req.json().catch(()=>null),stocks:UniverseStock[]=Array.isArray(b?.stocks)?b.stocks:[];if(!stocks.length||stocks.length>24)return NextResponse.json({error:'한 번에 1~24종목을 분석합니다.'},{status:400});const s=settings(b?.settings);if(s.belowMinDays>s.belowMaxDays||s.correctionMinDays>s.correctionMaxDays||s.reboundMinDay>s.reboundMaxDay)return NextResponse.json({error:'최소값이 최대값보다 큽니다.'},{status:400});const out:any[]=[];for(let i=0;i<stocks.length;i+=6)out.push(...await Promise.all(stocks.slice(i,i+6).map(x=>one(x,s))));return NextResponse.json({results:out,settings:s})}
