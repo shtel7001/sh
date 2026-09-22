@@ -6,11 +6,12 @@ export const runtime='nodejs';export const maxDuration=60;
 
 async function one(stock:UniverseStock,s:Settings){
  try{
-  const daily=analyzeDaily(await fetchYahooBars(stock.code,120),s);
+  const dailyBars=await fetchYahooBars(stock.code,120);
+  const daily=analyzeDaily(dailyBars,s);
   if(!daily.pass)return{...stock,dataStatus:'ok',match:false,daily,intraday:null,score:daily.score||0};
   const intraday=analyze30m(await fetchYahoo30m(stock.code),s);
   const match=!!intraday.pass;const score=Math.round(((daily.score||0)*0.6+(intraday.score||0)*0.4)*10)/10;
-  return{...stock,currentPrice:daily.close??stock.currentPrice,dataStatus:'ok',match,daily,intraday,score,reasons:[...(daily.reasons||[]),...(intraday.reasons||[])]};
+  return{...stock,currentPrice:daily.close??stock.currentPrice,dataStatus:'ok',match,daily,intraday,score,reasons:[...(daily.reasons||[]),...(intraday.reasons||[])],chartBars:match?dailyBars.slice(-60):[]};
  }catch(e){return{...stock,dataStatus:'error',match:false,error:e instanceof Error?e.message:'분석 실패',score:0}}
 }
 export async function POST(req:Request){
