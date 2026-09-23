@@ -3,8 +3,13 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function checkNaverUniverse() {
-  const r = await fetch('https://m.stock.naver.com/front-api/stock/domestic/stockList?sortType=marketValue&category=KOSPI&page=1&pageSize=3', {
+async function checkNaverUniverse(category) {
+  const url = new URL('https://m.stock.naver.com/front-api/stock/domestic/stockList');
+  url.searchParams.set('sortType', 'marketValue');
+  url.searchParams.set('category', category);
+  url.searchParams.set('page', '1');
+  url.searchParams.set('pageSize', '3');
+  const r = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0',
       Accept: 'application/json, text/plain, */*',
@@ -12,11 +17,11 @@ async function checkNaverUniverse() {
     },
     cache: 'no-store',
   });
-  if (!r.ok) throw new Error(`Naver front-api ${r.status}`);
+  if (!r.ok) throw new Error(`Naver ${category} front-api ${r.status}`);
   const raw = await r.json();
   const payload = raw?.isSuccess === true ? raw.result : raw;
   const rows = Array.isArray(payload) ? payload : (payload?.stocks || []);
-  if (!rows.length) throw new Error(`Naver front-api empty${raw?.detailCode ? ` (${raw.detailCode})` : ''}`);
+  if (!rows.length) throw new Error(`Naver ${category} front-api empty${raw?.detailCode ? ` (${raw.detailCode})` : ''}`);
   return rows.slice(0, 3).map(x => ({
     code: x.itemCode || x.stockCode || x.code,
     name: x.stockName || x.itemName || x.name,
@@ -41,8 +46,12 @@ async function checkYahooDaily() {
 export async function GET() {
   const checkedAt = new Date().toISOString();
   try {
-    const [naver, yahoo] = await Promise.all([checkNaverUniverse(), checkYahooDaily()]);
-    return NextResponse.json({ ok: true, checkedAt, naver, yahoo });
+    const [kospi, kosdaq, yahoo] = await Promise.all([
+      checkNaverUniverse('KOSPI'),
+      checkNaverUniverse('KOSDAQ'),
+      checkYahooDaily(),
+    ]);
+    return NextResponse.json({ ok: true, checkedAt, kospi, kosdaq, yahoo });
   } catch (e) {
     return NextResponse.json({ ok: false, checkedAt, error: String(e?.message || e) }, { status: 500 });
   }
