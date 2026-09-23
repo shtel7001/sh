@@ -37,7 +37,7 @@ function analyze(bars:Bar[],p:Params){
  }
  return {stage:'none',reason:'급등 이후 5일선 하회 구조 불일치',latest:a[last],bars:a.slice(-25)};
 }
-async function one(stock:UniverseStock,p:Params){try{const bars=await fetchYahooBars(stock.code,'KOSDAQ',Math.max(100,p.lookback+80));const sig=analyze(bars,p);return {...stock,...sig,dataStatus:'ok'};}catch(e){return {...stock,stage:'error',dataStatus:'error',error:e instanceof Error?e.message:'가격 수집 실패'};}}
+async function one(stock:UniverseStock,p:Params){try{const bars=await fetchYahooBars(stock.code,'KOSPI',Math.max(100,p.lookback+80));const sig=analyze(bars,p);return {...stock,...sig,dataStatus:'ok'};}catch(e){return {...stock,stage:'error',dataStatus:'error',error:e instanceof Error?e.message:'가격 수집 실패'};}}
 export async function POST(req:Request){
  if(!await isAuthed())return unauthorized(); const b=await req.json().catch(()=>({})); const stocks:UniverseStock[]=Array.isArray(b?.stocks)?b.stocks:[];
  if(!stocks.length||stocks.length>24)return NextResponse.json({error:'한 번에 1~24종목을 전송하세요.'},{status:400});
