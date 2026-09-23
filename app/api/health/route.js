@@ -3,24 +3,25 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function clean(s='') {
-  return String(s).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
-}
-
 async function checkNaverUniverse() {
-  const r = await fetch('https://finance.naver.com/sise/sise_market_sum.naver?sosok=0&page=1', {
-    headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'ko-KR,ko;q=0.9' },
+  const r = await fetch('https://m.stock.naver.com/front-api/stock/domestic/stockList?sortType=marketValue&category=KOSPI&page=1&pageSize=3', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0',
+      Accept: 'application/json, text/plain, */*',
+      Referer: 'https://m.stock.naver.com/domestic/home/stockList/marketValue',
+    },
     cache: 'no-store',
   });
-  if (!r.ok) throw new Error(`Naver ${r.status}`);
-  const html = await r.text();
-  const items = [];
-  for (const m of html.matchAll(/href="\/item\/main\.naver\?code=(\d{6})"[^>]*>([^<]+)<\/a>/g)) {
-    items.push({ code: m[1], name: clean(m[2]) });
-    if (items.length >= 3) break;
-  }
-  if (!items.length) throw new Error('Naver parse empty');
-  return items;
+  if (!r.ok) throw new Error(`Naver front-api ${r.status}`);
+  const raw = await r.json();
+  const payload = raw?.isSuccess === true ? raw.result : raw;
+  const rows = Array.isArray(payload) ? payload : (payload?.stocks || []);
+  if (!rows.length) throw new Error(`Naver front-api empty${raw?.detailCode ? ` (${raw.detailCode})` : ''}`);
+  return rows.slice(0, 3).map(x => ({
+    code: x.itemCode || x.stockCode || x.code,
+    name: x.stockName || x.itemName || x.name,
+    marketValue: x.marketValue ?? x.marketSum ?? x.mks,
+  }));
 }
 
 async function checkYahooDaily() {
@@ -34,7 +35,7 @@ async function checkYahooDaily() {
   const closes = x?.indicators?.quote?.[0]?.close || [];
   const valid = closes.filter(v => Number.isFinite(Number(v)) && Number(v) > 0).map(Number);
   if (valid.length < 20) throw new Error('Yahoo daily parse short');
-  return { bars: valid.length, lastClose: valid.at(-1) };
+  return { symbol: '005930.KS', bars: valid.length, lastClose: valid.at(-1) };
 }
 
 export async function GET() {
