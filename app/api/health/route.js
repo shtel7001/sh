@@ -1,70 +1,7 @@
-import { NextResponse } from 'next/server';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-const common = {
-  'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0',
-  Accept: 'application/json, text/plain, */*',
-};
-
-async function checkDaumUniverse(market) {
-  const u = new URL('https://finance.daum.net/api/trend/market_capitalization');
-  u.searchParams.set('page', '1');
-  u.searchParams.set('perPage', '3');
-  u.searchParams.set('fieldName', 'marketCap');
-  u.searchParams.set('order', 'desc');
-  u.searchParams.set('market', market);
-  u.searchParams.set('pagination', 'true');
-  const r = await fetch(u, {
-    headers: { ...common, Referer: 'https://finance.daum.net/domestic/market_cap' },
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Daum ${market} ${r.status}`);
-  const j = await r.json();
-  const rows = j?.data || [];
-  if (!rows.length) throw new Error(`Daum ${market} empty`);
-  return rows.slice(0, 3).map(x => ({ code: x.symbolCode, name: x.name, marketCap: x.marketCap }));
-}
-
-async function checkYahooDaily() {
-  const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/005930.KS?range=2y&interval=1d&includePrePost=false&events=div%2Csplits', {
-    headers: common,
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Yahoo ${r.status}`);
-  const j = await r.json();
-  const x = j?.chart?.result?.[0];
-  const q = x?.indicators?.quote?.[0] || {};
-  const c = x?.indicators?.adjclose?.[0]?.adjclose || q.close || [];
-  const valid = c.filter(v => Number.isFinite(Number(v)) && Number(v) > 0);
-  if (valid.length < 240) throw new Error(`Yahoo only ${valid.length} bars`);
-  return { symbol: '005930.KS', bars: valid.length, lastClose: Number(valid.at(-1)) };
-}
-
-async function checkDaumDaily() {
-  const r = await fetch('https://finance.daum.net/api/charts/A005930/days?limit=250&adjusted=true', {
-    headers: { ...common, Referer: 'https://finance.daum.net/quotes/A005930' },
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Daum chart ${r.status}`);
-  const j = await r.json();
-  const rows = (j?.data || []).filter(x => Number.isFinite(Number(x.tradePrice)) && Number(x.tradePrice) > 0);
-  if (rows.length < 200) throw new Error(`Daum chart only ${rows.length} bars`);
-  return { symbol: 'A005930', bars: rows.length, lastClose: Number(rows.at(-1)?.tradePrice) };
-}
-
-export async function GET() {
-  const checkedAt = new Date().toISOString();
-  try {
-    const [kospi, kosdaq, yahoo, daumDaily] = await Promise.all([
-      checkDaumUniverse('KOSPI'),
-      checkDaumUniverse('KOSDAQ'),
-      checkYahooDaily(),
-      checkDaumDaily(),
-    ]);
-    return NextResponse.json({ ok: true, checkedAt, kospi, kosdaq, yahoo, daumDaily });
-  } catch (e) {
-    return NextResponse.json({ ok: false, checkedAt, error: String(e?.message || e) }, { status: 500 });
-  }
-}
+import {NextResponse} from 'next/server';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+const common={'User-Agent':'Mozilla/5.0 us-low-point-cycle-radar/1.0',Accept:'application/json,text/plain,*/*'};
+async function sp500(){const r=await fetch('https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv',{headers:common,cache:'no-store'});if(!r.ok)throw new Error(`S&P source ${r.status}`);const t=await r.text(),n=t.trim().split(/\r?\n/).length-1;if(n<500)throw new Error(`S&P source ${n} rows`);return{rows:n}}
+async function nasdaq(){const u=new URL('https://api.nasdaq.com/api/screener/stocks');u.searchParams.set('tableonly','true');u.searchParams.set('limit','25');u.searchParams.set('offset','0');u.searchParams.set('download','true');u.searchParams.set('exchange','nasdaq');const r=await fetch(u,{headers:{...common,Accept:'application/json, text/plain, */*',Referer:'https://www.nasdaq.com/market-activity/stocks/screener','Accept-Language':'en-US,en;q=0.9'},cache:'no-store'});if(!r.ok)throw new Error(`Nasdaq screener ${r.status}`);const j=await r.json(),rows=j?.data?.table?.rows||[];if(!rows.length)throw new Error('Nasdaq screener empty');return{rows:rows.length,sample:rows.slice(0,3).map(x=>({symbol:x.symbol,name:x.name,marketCap:x.marketCap}))}}
+async function yahoo(){const r=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=2y&interval=1d&includePrePost=false&events=div%2Csplits',{headers:common,cache:'no-store'});if(!r.ok)throw new Error(`Yahoo ${r.status}`);const j=await r.json(),x=j?.chart?.result?.[0],q=x?.indicators?.quote?.[0]||{},a=x?.indicators?.adjclose?.[0]?.adjclose||q.close||[],v=a.filter(x=>Number.isFinite(Number(x))&&Number(x)>0);if(v.length<240)throw new Error(`Yahoo ${v.length} bars`);return{symbol:'AAPL',bars:v.length,last:Number(v.at(-1))}}
+export async function GET(){const checkedAt=new Date().toISOString();try{const[s,n,y]=await Promise.all([sp500(),nasdaq(),yahoo()]);return NextResponse.json({ok:true,checkedAt,sp500:s,nasdaq:n,yahoo:y})}catch(e){return NextResponse.json({ok:false,checkedAt,error:String(e?.message||e)},{status:500})}}
