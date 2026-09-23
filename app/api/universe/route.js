@@ -1,70 +1,9 @@
-import { NextResponse } from 'next/server';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-async function daumPage(market, page, perPage = 100) {
-  const m = market === 'kosdaq' ? 'KOSDAQ' : 'KOSPI';
-  const url = new URL('https://finance.daum.net/api/trend/market_capitalization');
-  url.searchParams.set('page', String(page));
-  url.searchParams.set('perPage', String(perPage));
-  url.searchParams.set('fieldName', 'marketCap');
-  url.searchParams.set('order', 'desc');
-  url.searchParams.set('market', m);
-  url.searchParams.set('pagination', 'true');
-  const r = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0',
-      Accept: 'application/json, text/plain, */*',
-      Referer: 'https://finance.daum.net/domestic/market_cap',
-    },
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Daum ${m} ${r.status}`);
-  const j = await r.json();
-  const rows = Array.isArray(j?.data) ? j.data : [];
-  if (!rows.length) throw new Error(`Daum ${m} returned no stocks`);
-  return rows;
-}
-
-function normalize(row, market, fallbackRank) {
-  const code = String(row.symbolCode || '').replace(/^A/, '').replace(/\D/g, '');
-  if (!/^\d{6}$/.test(code)) return null;
-  const marketCapWon = Number(row.marketCap);
-  return {
-    rank: Number(row.rank) || fallbackRank,
-    code,
-    name: String(row.name || code),
-    current: Number(row.tradePrice) || null,
-    marketCapEok: Number.isFinite(marketCapWon) ? Math.round(marketCapWon / 100000000) : null,
-    market: market === 'kosdaq' ? 'KOSDAQ' : 'KOSPI',
-    yahoo: `${code}.${market === 'kosdaq' ? 'KQ' : 'KS'}`,
-  };
-}
-
-export async function GET(req) {
-  try {
-    const s = new URL(req.url).searchParams;
-    const market = s.get('market') === 'kosdaq' ? 'kosdaq' : 'kospi';
-    const limit = Math.min(500, Math.max(1, Number(s.get('limit') || 500)));
-    const perPage = 100;
-    const all = [];
-    const seen = new Set();
-    for (let p = 1; p <= Math.ceil(limit / perPage) + 1 && all.length < limit; p++) {
-      const rows = await daumPage(market, p, perPage);
-      for (const row of rows) {
-        const item = normalize(row, market, all.length + 1);
-        if (!item || seen.has(item.code)) continue;
-        seen.add(item.code);
-        all.push(item);
-        if (all.length >= limit) break;
-      }
-      if (rows.length < perPage) break;
-    }
-    all.sort((a, b) => a.rank - b.rank);
-    if (!all.length) throw new Error('종목 목록을 가져오지 못했습니다.');
-    return NextResponse.json({ ok: true, source: 'Daum market capitalization', items: all.slice(0, limit), count: Math.min(limit, all.length) });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
-  }
-}
+import {NextResponse} from 'next/server';
+import * as cheerio from 'cheerio';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+const H={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36','Accept-Language':'en-US,en;q=0.9',Accept:'text/html,application/xhtml+xml'};
+const capB=s=>{const t=String(s||'').replace(/[$,\s]/g,''),m=t.match(/^([0-9.]+)([TBMK])?$/i);if(!m)return null;const n=Number(m[1]),u=(m[2]||'B').toUpperCase(),k={T:1000,B:1,M:.001,K:.000001}[u]||1;return Number.isFinite(n)?n*k:null};
+const price=s=>{const n=Number(String(s||'').replace(/[$,]/g,''));return Number.isFinite(n)?n:null};
+const yahooSym=s=>String(s||'').trim().replace(/\./g,'-').replace(/\//g,'-');
+async function load(market){const url=market==='nasdaq'?'https://stockanalysis.com/list/nasdaq-stocks/':'https://stockanalysis.com/list/sp-500-stocks/';const label=market==='nasdaq'?'NASDAQ':'S&P 500';const r=await fetch(url,{headers:H,cache:'no-store'});if(!r.ok)throw new Error(`${label} 목록 HTTP ${r.status}`);const html=await r.text(),$=cheerio.load(html),a=[];$('table tbody tr').each((_,el)=>{const c=$(el).find('td');if(c.length<5)return;const rank=Number($(c[0]).text().replace(/[^0-9]/g,'')),code=$(c[1]).text().trim().toUpperCase(),name=$(c[2]).text().trim(),marketCapB=capB($(c[3]).text()),current=price($(c[4]).text());if(rank&&code&&name&&marketCapB!=null)a.push({rank,code,name,current,marketCapB,market:label,yahoo:yahooSym(code)})});if(a.length<490)throw new Error(`${label} 목록 파싱 ${a.length}개`);return a.sort((x,y)=>x.rank-y.rank)}
+export async function GET(req){try{const q=new URL(req.url).searchParams,market=q.get('market')==='nasdaq'?'nasdaq':'sp500',limit=Math.min(500,Math.max(1,Number(q.get('limit')||500))),items=(await load(market)).slice(0,limit);return NextResponse.json({ok:true,source:'StockAnalysis market-cap list',market,count:items.length,items})}catch(e){return NextResponse.json({ok:false,error:String(e?.message||e)},{status:500})}}
