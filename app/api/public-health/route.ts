@@ -1,4 +1,0 @@
-import { NextResponse } from 'next/server';
-import { analyzeTechnical, fetchCatalyst, fetchDailyBars } from '@/lib/nextday';
-export const runtime='nodejs';export const maxDuration=60;
-export async function GET(){try{const bars=await fetchDailyBars('005930','KOSPI',180);const technical=analyzeTechnical({name:'삼성전자',code:'005930',market:'KOSPI',currentPrice:null,changePct:null,marketCap:null,sector:null,theme:null},bars,{lookback:15,spikePct:7,spikeVolRatio:2.5,pullbackMaxDays:6,ma20Distance:8,maxTodayRise:6,minTechScore:28});const catalyst=await fetchCatalyst('005930');return NextResponse.json({ok:true,bars:bars.length,last:bars.at(-1)?.date,technicalScore:technical.technicalScore,catalystScore:catalyst.catalystScore,newsItems:catalyst.items.length});}catch(e){return NextResponse.json({ok:false,error:e instanceof Error?e.message:'health failed'},{status:500})}}
