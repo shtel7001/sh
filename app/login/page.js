@@ -8,19 +8,18 @@ export default function Login(){
   async function submit(e){
     e.preventDefault(); if(busy)return;
     const clean=code.replace(/\D/g,'').slice(0,8); setCode(clean);
-    if(clean.length!==8){setState('bad');setMsg('8자리 인증번호를 입력해 주세요.');return;}
+    if(clean.length!==8){setState('bad');setMsg('8자리 개인 인증번호를 입력해 주세요.');return;}
     setBusy(true);setMsg('인증번호를 확인하는 중입니다…');setState('');
     try{
       const r=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:clean}),cache:'no-store'});
       const j=await r.json().catch(()=>({}));
-      if(r.ok&&j.ok){setState('ok');setMsg('인증되었습니다. 이 인증번호는 이제 폐기됩니다.');location.replace('/');return;}
+      if(r.ok&&j.ok){setState('ok');setMsg('인증되었습니다. 이 PC에서는 최대 1년간 로그인 상태가 유지됩니다.');location.replace('/');return;}
       setState('bad');
-      if(j.error==='CODE_ALREADY_USED')setMsg('이미 사용되어 폐기된 인증번호입니다.');
-      else if(j.error==='TOO_MANY_ATTEMPTS')setMsg('입력 횟수가 많습니다. 잠시 후 다시 시도해 주세요.');
+      if(j.error==='TOO_MANY_ATTEMPTS')setMsg('입력 횟수가 많습니다. 잠시 후 다시 시도해 주세요.');
       else if(j.error==='AUTH_SERVICE_ERROR')setMsg('인증 서버 연결에 문제가 있습니다. 잠시 후 다시 시도해 주세요.');
       else setMsg('인증번호가 맞지 않습니다.');
     }catch{setState('bad');setMsg('네트워크 연결을 확인해 주세요.');}
     finally{setBusy(false);}
   }
-  return <><style>{css}</style><main className="auth"><section className="card"><div className="lock">1×</div><div className="ey">PRIVATE ACCESS · ONE-TIME CODE</div><h1>한국주식 저점 스크리너<br/>1회용 인증</h1><p>발급된 8자리 개인 인증번호는 한 번만 사용할 수 있습니다. 인증 후에는 이 기기에서 세션이 유지됩니다.</p><form onSubmit={submit}><input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength="8" placeholder="00000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,8))} autoFocus/><button className="btn" disabled={busy||code.length!==8}>{busy?'확인 중…':'인증하고 들어가기'}</button></form><p className={`msg ${state}`}>{msg}</p><div className="note">• 인증번호는 성공 즉시 서버에서 사용 처리됩니다.<br/>• 동일 번호 재입력은 거부됩니다.<br/>• 로그인 세션은 최대 30일 유지됩니다.<br/>• 새 기기나 세션 만료 후에는 새 인증번호가 필요합니다.</div></section></main></>;
+  return <><style>{css}</style><main className="auth"><section className="card"><div className="lock">1Y</div><div className="ey">PRIVATE ACCESS · REUSABLE CODE</div><h1>한국주식 저점 스크리너<br/>개인 인증</h1><p>8자리 개인 인증번호는 폐기되지 않으며, 다른 PC·휴대폰에서도 같은 번호로 인증할 수 있습니다.</p><form onSubmit={submit}><input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength="8" placeholder="00000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,8))} autoFocus/><button className="btn" disabled={busy||code.length!==8}>{busy?'확인 중…':'인증하고 들어가기'}</button></form><p className={`msg ${state}`}>{msg}</p><div className="note">• 같은 인증번호를 여러 PC와 휴대폰에서 사용할 수 있습니다.<br/>• 인증번호는 사용 후 폐기되지 않습니다.<br/>• 각 기기에서 인증하면 로그인 세션이 최대 365일 유지됩니다.<br/>• 쿠키 삭제·브라우저 초기화 시에는 같은 번호를 다시 입력하면 됩니다.</div></section></main></>;
 }
