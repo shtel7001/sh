@@ -1,9 +1,167 @@
-import {NextResponse} from 'next/server';
-export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=60;
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const pct=(a,b)=>b?(a/b-1)*100:0;const med=a=>{if(!a.length)return 0;const b=[...a].sort((x,y)=>x-y),m=Math.floor(b.length/2);return b.length%2?b[m]:(b[m-1]+b[m])/2};
-async function yf(host,sym,days){const u=`https://${host}/v8/finance/chart/${encodeURIComponent(sym)}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits`;const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 us-low-point-cycle-radar/1.0'},cache:'no-store'});if(!r.ok)throw new Error(`${host} ${r.status}`);const j=await r.json(),x=j?.chart?.result?.[0];if(!x)throw new Error(`${host} no data`);const q=x.indicators?.quote?.[0]||{},c=x.indicators?.adjclose?.[0]?.adjclose||q.close||[],o=[];(x.timestamp||[]).forEach((t,i)=>{const v=Number(c[i]);if(Number.isFinite(v)&&v>0)o.push({date:new Date(t*1000).toISOString().slice(0,10),close:v})});if(o.length<Math.min(days,12))throw new Error(`${host} short`);return o.slice(-days)}
-async function history(s,d){try{return{rows:await yf('query1.finance.yahoo.com',s.yahoo||s.code,d),source:'Yahoo-1'}}catch(e1){try{return{rows:await yf('query2.finance.yahoo.com',s.yahoo||s.code,d),source:'Yahoo-2'}}catch(e2){throw new Error(`${e1.message}; ${e2.message}`)}}}
-function pivots(rows){const n=rows.length,w=n<35?1:n<90?2:3,p=[];for(let i=w;i<n-w;i++){const c=rows[i].close,ns=[];for(let j=i-w;j<=i+w;j++)if(j!==i)ns.push(rows[j].close);if(ns.every(x=>c<=x)&&ns.some(x=>c<x))p.push({type:'low',idx:i,price:c});if(ns.every(x=>c>=x)&&ns.some(x=>c>x))p.push({type:'high',idx:i,price:c})}const z=[];for(const a of p){const l=z.at(-1);if(!l||l.type!==a.type)z.push(a);else if((a.type==='low'&&a.price<l.price)||(a.type==='high'&&a.price>l.price))z[z.length-1]=a}return z}
-function analyze(s,rows,proximity){if(rows.length<12)return null;const p=pivots(rows),lo=p.filter(x=>x.type==='low'),hi=p.filter(x=>x.type==='high');if(lo.length<2||hi.length<2)return null;const L=lo.slice(-5),H=hi.slice(-5),support=med(L.map(x=>x.price)),resistance=med(H.map(x=>x.price));if(!(support>0&&resistance>support))return null;const disp=(a,c)=>med(a.map(v=>Math.abs(v-c)/c*100)),lowDisp=disp(L.map(x=>x.price),support),highDisp=disp(H.map(x=>x.price),resistance),amplitude=pct(resistance,support),current=rows.at(-1).close,distance=pct(current,support),rangePos=(current-support)/(resistance-support),alt=Math.max(0,p.length-1),r5=rows.length>6?pct(current,rows.at(-6).close):0,gaps=[];for(let i=1;i<lo.length;i++)gaps.push(lo[i].idx-lo[i-1].idx);const avg=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0,gdisp=avg?med(gaps.map(g=>Math.abs(g-avg)/avg*100)):50,prox=clamp(100-Math.max(distance,0)/Math.max(proximity,.5)*100,0,100),rep=clamp(100-lowDisp*7-highDisp*3,0,100),cyc=clamp(25+alt*8-gdisp*.45,0,100),amp=clamp((amplitude-5)*4.2,0,100),score=clamp(Math.round(prox*.4+rep*.28+cyc*.17+amp*.15+(r5<0?8:0)),0,100);if(!(distance>=-5&&distance<=proximity&&rangePos<=.38&&amplitude>=7&&lowDisp<=12&&highDisp<=20&&alt>=4))return null;return{...s,current,support,resistance,distance,rangePos:rangePos*100,amplitude,lowDisp,highDisp,cycles:Math.floor(alt/2),pivotLows:lo.length,pivotHighs:hi.length,score,ret5:r5,reason:`반복저점 ${lo.length}회 · 반복고점 ${hi.length}회 · 지지선 대비 ${distance>=0?'+':''}${distance.toFixed(1)}% · 저점 편차 ${lowDisp.toFixed(1)}% · 고저 변동폭 ${amplitude.toFixed(1)}%${r5<0?' · 최근 5일 저점 방향 접근':''}`,spark:rows.slice(-60).map(r=>[r.date,r.close])}}
-async function one(s,d,p){try{const h=await history(s,d),hit=analyze(s,h.rows,p);return{ok:true,source:h.source,hit:hit?{...hit,source:h.source}:null}}catch(e){return{ok:false,code:s.code,name:s.name,error:String(e?.message||e)}}}
-export async function POST(req){try{const b=await req.json(),days=Math.min(240,Math.max(1,Number(b.days||240))),proximity=Math.min(20,Math.max(1,Number(b.proximity||7))),stocks=Array.isArray(b.stocks)?b.stocks.slice(0,20):[],z=await Promise.all(stocks.map(s=>one(s,days,proximity)));return NextResponse.json({ok:true,scanned:stocks.length,hits:z.filter(x=>x.ok&&x.hit).map(x=>x.hit),errors:z.filter(x=>!x.ok),sources:z.filter(x=>x.ok).reduce((a,x)=>(a[x.source]=(a[x.source]||0)+1,a),{})})}catch(e){return NextResponse.json({ok:false,error:String(e?.message||e)},{status:500})}}
+import { NextResponse } from 'next/server';
+
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+export const maxDuration=60;
+
+const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pct=(a,b)=>b?(a/b-1)*100:0;
+function rangeFor(N){ return N<=60?'3mo':(N<=120?'6mo':'1y'); }
+
+function parseChart(j){
+  const err=j&&j.chart&&j.chart.error;
+  if(err){ const e=new Error(err.description||err.code||'chart error'); e.fatal=true; throw e; }
+  const res=j&&j.chart&&j.chart.result&&j.chart.result[0];
+  const q=res&&res.indicators&&res.indicators.quote&&res.indicators.quote[0];
+  if(!res||!res.timestamp||!q){ const e=new Error('price data missing'); e.fatal=true; throw e; }
+  const t=[],h=[],l=[],c=[];
+  for(let i=0;i<res.timestamp.length;i++){
+    const H=q.high?.[i], L=q.low?.[i], C=q.close?.[i];
+    if(!(H>0)||!(L>0)||!(C>0)) continue;
+    t.push(res.timestamp[i]); h.push(H); l.push(L); c.push(C);
+  }
+  return {t,h,l,c};
+}
+
+async function yahoo(host,symbol,range){
+  const url=`https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d&includePrePost=false`;
+  const r=await fetch(url,{cache:'no-store',headers:{'User-Agent':UA,Accept:'application/json'}});
+  if(!r.ok){ const e=new Error(`${host} ${r.status}`); e.status=r.status; throw e; }
+  return parseChart(await r.json());
+}
+
+async function history(symbol,N){
+  const range=rangeFor(N);
+  try{ return {bars:await yahoo('query1',symbol,range),source:'Yahoo query1'}; }
+  catch(e1){
+    try{ return {bars:await yahoo('query2',symbol,range),source:'Yahoo query2'}; }
+    catch(e2){ throw new Error(`${e1.message}; ${e2.message}`); }
+  }
+}
+
+function detectPattern(bars,N,tol){
+  if(N<10) return {candidate:false};
+  const total=bars.c.length;
+  if(total<10){ const e=new Error('거래일 데이터 부족'); e.fatal=true; throw e; }
+  const n=Math.min(N,total);
+  const H=bars.h.slice(-n), L=bars.l.slice(-n), C=bars.c.slice(-n);
+  const k=Math.max(1,Math.min(8,Math.floor(n/15)));
+  const minSwing=Math.max(0.03,tol);
+  const minRange=Math.max(0.05,tol*2);
+
+  const piv=[];
+  for(let i=k;i<n-k;i++){
+    let isL=true,isH=true;
+    for(let j=i-k;j<=i+k;j++){
+      if(j===i) continue;
+      if(L[j]<L[i]) isL=false;
+      if(H[j]>H[i]) isH=false;
+    }
+    if(isL&&!isH) piv.push({i,type:'L',v:L[i]});
+    else if(isH&&!isL) piv.push({i,type:'H',v:H[i]});
+  }
+
+  const zz=[];
+  for(const p of piv){
+    const last=zz[zz.length-1];
+    if(!last){ zz.push(p); continue; }
+    if(last.type===p.type){
+      if(p.type==='L'?p.v<last.v:p.v>last.v) zz[zz.length-1]=p;
+    }else{
+      const swing=p.type==='H'?p.v/last.v-1:last.v/p.v-1;
+      if(swing>=minSwing) zz.push(p);
+    }
+  }
+  const lows=zz.filter(p=>p.type==='L'), highs=zz.filter(p=>p.type==='H');
+  if(!lows.length||!highs.length) return {candidate:false};
+
+  const price=C[n-1];
+  let bestL=null;
+  for(const a of lows){
+    const mem=lows.filter(b=>b.v>=a.v&&b.v<=a.v*(1+tol));
+    const level=mem.reduce((s,b)=>s+b.v,0)/mem.length;
+    const dist=price/level-1;
+    if(Math.abs(dist)>tol) continue;
+    const lastIdx=Math.max(...mem.map(b=>b.i));
+    const sameEpisode=(n-1-lastIdx)<=2*k;
+    const touches=mem.length+(sameEpisode?0:1);
+    if(touches<2) continue;
+    const spread=Math.max(...mem.map(b=>b.v))/a.v-1;
+    const cand={mem,level,dist,touches,spread};
+    if(!bestL||cand.touches>bestL.touches||(cand.touches===bestL.touches&&Math.abs(cand.dist)<Math.abs(bestL.dist))) bestL=cand;
+  }
+  if(!bestL) return {candidate:false};
+
+  const hs=highs.filter(p=>p.v>=bestL.level*(1+minRange));
+  if(!hs.length) return {candidate:false};
+  let bestH=null;
+  for(const a of hs){
+    const mem=hs.filter(b=>b.v<=a.v&&b.v>=a.v/(1+tol));
+    const level=mem.reduce((s,b)=>s+b.v,0)/mem.length;
+    const spread=mem.length>1?Math.max(...mem.map(b=>b.v))/Math.min(...mem.map(b=>b.v))-1:0;
+    if(!bestH||mem.length>bestH.mem.length||(mem.length===bestH.mem.length&&level>bestH.level)) bestH={mem,level,spread};
+  }
+
+  const lowSet=new Set(bestL.mem), highSet=new Set(bestH.mem);
+  let state=null,cycles=0;
+  for(const p of zz){
+    if(p.type==='L'&&lowSet.has(p)){ if(state==='H') cycles++; state='L'; }
+    else if(p.type==='H'&&highSet.has(p)){ if(state==='L') state='H'; }
+  }
+  if(state==='H') cycles++;
+  if(cycles<1) return {candidate:false};
+
+  const range=bestH.level/bestL.level-1;
+  const p=bestL.dist/tol;
+  const sProx=30*Math.max(0,p>=0?1-p:1-1.5*(-p));
+  const sCyc=25*Math.min(cycles,4)/4;
+  const sLow=10*Math.min(bestL.touches,4)/4+5*Math.max(0,1-bestL.spread/tol);
+  const sHigh=10*Math.min(bestH.mem.length,3)/3;
+  const sAmp=20*Math.min(1,range/0.25);
+  const score=clamp(Math.round(sProx+sCyc+sLow+sHigh+sAmp),0,100);
+  return {candidate:true,price,lowLevel:bestL.level,highLevel:bestH.level,lowTouches:bestL.touches,highTouches:bestH.mem.length,lowSpread:bestL.spread*100,highSpread:bestH.spread*100,dist:bestL.dist*100,range:range*100,cycles,score,spark:C.slice(-60)};
+}
+
+async function one(s,days,proximity){
+  try{
+    const h=await history(s.yahoo||s.code,days);
+    const r=detectPattern(h.bars,days,proximity/100);
+    if(!r.candidate) return {ok:true,source:h.source,hit:null};
+    const c=h.bars.c, current=r.price;
+    const ret5=c.length>5?pct(current,c[c.length-6]):0;
+    const hit={
+      ...s,
+      current,
+      support:r.lowLevel,
+      resistance:r.highLevel,
+      distance:r.dist,
+      rangePos:(current-r.lowLevel)/(r.highLevel-r.lowLevel)*100,
+      amplitude:r.range,
+      lowDisp:r.lowSpread,
+      highDisp:r.highSpread,
+      cycles:r.cycles,
+      pivotLows:r.lowTouches,
+      pivotHighs:r.highTouches,
+      score:r.score,
+      ret5,
+      reason:`반복저점 ${r.lowTouches}회 · 반복고점 ${r.highTouches}회 · 사이클 ${r.cycles}회 · 저점거리 ${r.dist>=0?'+':''}${r.dist.toFixed(1)}% · 변동폭 ${r.range.toFixed(1)}%`,
+      spark:r.spark.map((v,i)=>[i,v]),
+      source:h.source
+    };
+    return {ok:true,source:h.source,hit};
+  }catch(e){ return {ok:false,code:s.code,name:s.name,error:String(e?.message||e)}; }
+}
+
+export async function POST(req){
+  try{
+    const b=await req.json();
+    const days=clamp(Number(b.days||120),1,240);
+    const proximity=clamp(Number(b.proximity||5),1,20);
+    const stocks=Array.isArray(b.stocks)?b.stocks.slice(0,20):[];
+    const z=await Promise.all(stocks.map(s=>one(s,days,proximity)));
+    return NextResponse.json({ok:true,scanned:stocks.length,hits:z.filter(x=>x.ok&&x.hit).map(x=>x.hit),errors:z.filter(x=>!x.ok),sources:z.filter(x=>x.ok).reduce((a,x)=>(a[x.source]=(a[x.source]||0)+1,a),{})});
+  }catch(e){
+    return NextResponse.json({ok:false,error:String(e?.message||e)},{status:500});
+  }
+}
