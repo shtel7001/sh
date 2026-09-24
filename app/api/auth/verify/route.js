@@ -22,7 +22,7 @@ export async function POST(req){
 
     const body=await req.json().catch(()=>({}));
     const code=String(body.code||'').replace(/\D/g,'');
-    if(code.length!==10){
+    if(code.length!==6){
       await cache.set(failKey,String(failures+1),{ttl:900});
       return NextResponse.json({ok:false,error:'INVALID_CODE'},{status:401});
     }
@@ -34,8 +34,6 @@ export async function POST(req){
       return NextResponse.json({ok:false,error:'INVALID_CODE'},{status:401});
     }
 
-    // Runtime Cache를 사용해 모든 함수 인스턴스가 같은 사용 기록을 보도록 합니다.
-    // 동시 입력 충돌 시 마지막 claim 하나만 통과하도록 재확인합니다.
     const claim=crypto.randomUUID();
     await cache.set(USED_KEY,claim,{ttl:ttlYear});
     await new Promise(r=>setTimeout(r,180));
