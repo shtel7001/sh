@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {getCache} from '@vercel/functions';
-import {SESSION_COOKIE,createSessionToken,deriveOtp,otpEqual,sessionMaxAge,authCodeIsActive} from '../../../../lib/auth';
+import {SESSION_COOKIE,createSessionToken,deriveOtp,otpEqual,sessionMaxAge} from '../../../../lib/auth';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 
@@ -11,8 +11,6 @@ function clientKey(req){
 
 export async function POST(req){
   try{
-    if(!authCodeIsActive()) return NextResponse.json({ok:false,error:'CODE_EXPIRED'},{status:410});
-
     const cache=getCache();
     const ip=clientKey(req);
     const failKey='low-screener:auth-fails:'+ip;
@@ -34,9 +32,8 @@ export async function POST(req){
 
     await cache.set(failKey,'0',{ttl:1});
     const token=await createSessionToken();
-    const maxAge=sessionMaxAge();
-    const res=NextResponse.json({ok:true,reusable:true,expiresAt:'2027-09-24T23:59:59+09:00'});
-    res.cookies.set(SESSION_COOKIE,token,{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge});
+    const res=NextResponse.json({ok:true,reusable:true,permanentCode:true,sessionDays:365});
+    res.cookies.set(SESSION_COOKIE,token,{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:sessionMaxAge});
     return res;
   }catch(e){
     console.error('Auth verify failed',e);
