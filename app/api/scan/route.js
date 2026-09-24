@@ -1,165 +1,39 @@
-import { NextResponse } from 'next/server';
+import {NextResponse} from 'next/server';
+import {isAuthed} from '../_lib/auth';
+export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=60;
+const pct=(a,b)=>b?(a/b-1)*100:0;
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
-
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const med = (a) => {
-  if (!a.length) return 0;
-  const b = [...a].sort((x, y) => x - y);
-  const m = Math.floor(b.length / 2);
-  return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2;
-};
-const pct = (a, b) => b ? (a / b - 1) * 100 : 0;
-
-async function yahoo(sym, days) {
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits`, {
-    headers: { 'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0' },
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Yahoo ${r.status}`);
-  const j = await r.json();
-  const x = j?.chart?.result?.[0];
-  if (!x) throw new Error('Yahoo no data');
-  const q = x.indicators?.quote?.[0] || {};
-  const c = x.indicators?.adjclose?.[0]?.adjclose || q.close || [];
-  const o = [];
-  (x.timestamp || []).forEach((t, i) => {
-    const v = Number(c[i]);
-    if (Number.isFinite(v) && v > 0) o.push({ date: new Date(t * 1000).toISOString().slice(0, 10), close: v });
-  });
-  if (o.length < Math.min(days, 12)) throw new Error('Yahoo short');
-  return o.slice(-days);
+async function yahoo(sym,days){
+  const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1y&interval=1d&includePrePost=false&events=div%2Csplits`,{headers:{'User-Agent':'Mozilla/5.0 low-retest-radar/1.0'},cache:'no-store'});
+  if(!r.ok)throw new Error(`Yahoo ${r.status}`);const j=await r.json(),x=j?.chart?.result?.[0];if(!x)throw new Error('Yahoo no data');const q=x.indicators?.quote?.[0]||{};const out=[];
+  (x.timestamp||[]).forEach((t,i)=>{const open=Number(q.open?.[i]),high=Number(q.high?.[i]),low=Number(q.low?.[i]),close=Number(q.close?.[i]),volume=Number(q.volume?.[i]||0);if([open,high,low,close].every(v=>Number.isFinite(v)&&v>0))out.push({date:new Date(t*1000).toISOString().slice(0,10),open,high,low,close,volume})});
+  if(out.length<Math.min(days,12))throw new Error('Yahoo short');return out.slice(-days);
 }
-
-async function daum(code, days) {
-  const symbol = `A${code}`;
-  const limit = Math.min(260, Math.max(days + 10, 30));
-  const u = new URL(`https://finance.daum.net/api/charts/${symbol}/days`);
-  u.searchParams.set('limit', String(limit));
-  u.searchParams.set('adjusted', 'true');
-  const r = await fetch(u, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 low-point-cycle-radar/1.0',
-      Accept: 'application/json, text/plain, */*',
-      Referer: `https://finance.daum.net/quotes/${symbol}`,
-    },
-    cache: 'no-store',
-  });
-  if (!r.ok) throw new Error(`Daum chart ${r.status}`);
-  const j = await r.json();
-  const o = (j?.data || []).map((x) => ({
-    date: String(x.date || x.candleTime || '').slice(0, 10),
-    close: Number(x.tradePrice),
-  })).filter((x) => x.date && Number.isFinite(x.close) && x.close > 0);
-  o.sort((a, b) => a.date.localeCompare(b.date));
-  if (o.length < Math.min(days, 12)) throw new Error('Daum chart short');
-  return o.slice(-days);
+async function daum(code,days){
+  const symbol=`A${code}`,u=new URL(`https://finance.daum.net/api/charts/${symbol}/days`);u.searchParams.set('limit',String(Math.min(260,Math.max(days+10,30))));u.searchParams.set('adjusted','true');
+  const r=await fetch(u,{headers:{'User-Agent':'Mozilla/5.0 low-retest-radar/1.0',Accept:'application/json, text/plain, */*',Referer:`https://finance.daum.net/quotes/${symbol}`},cache:'no-store'});if(!r.ok)throw new Error(`Daum chart ${r.status}`);const j=await r.json();
+  const out=(j?.data||[]).map(x=>({date:String(x.date||x.candleTime||'').slice(0,10),open:Number(x.openingPrice||x.openPrice||x.tradePrice),high:Number(x.highPrice||x.tradePrice),low:Number(x.lowPrice||x.tradePrice),close:Number(x.tradePrice),volume:Number(x.candleAccTradeVolume||x.accTradeVolume||0)})).filter(x=>x.date&&[x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0));out.sort((a,b)=>a.date.localeCompare(b.date));if(out.length<Math.min(days,12))throw new Error('Daum chart short');return out.slice(-days);
 }
+async function history(s,days){try{return {rows:await yahoo(s.yahoo,days),source:'Yahoo'}}catch{return {rows:await daum(s.code,days),source:'Daum'}}}
 
-async function history(s, d) {
-  try {
-    return { rows: await yahoo(s.yahoo, d), source: 'Yahoo' };
-  } catch {
-    return { rows: await daum(s.code, d), source: 'Daum' };
+function analyze(s,rows,c){
+  const n=rows.length;if(n<Math.max(12,c.lowPeakGap+c.peakNowGap+3))return null;const current=rows[n-1],lastPeak=n-1-c.peakNowGap;let best=null,runningMin=Infinity;
+  for(let i=0;i<=lastPeak-c.lowPeakGap;i++){
+    const low=rows[i].low;runningMin=Math.min(runningMin,low);if(low>runningMin*1.000001)continue;
+    let peak=-Infinity,peakIdx=-1;for(let j=i+c.lowPeakGap;j<=lastPeak;j++){if(rows[j].high>peak){peak=rows[j].high;peakIdx=j}}
+    if(peakIdx<0)continue;
+    if(c.strictLow){let bad=false;for(let k=i+1;k<=peakIdx;k++){if(rows[k].low<low){bad=true;break}}if(bad)continue}
+    const rise=pct(peak,low);if(rise<c.riseMin||rise>c.riseMax)continue;const ret=pct(current.close,low);if(ret<c.retMin||ret>c.retMax)continue;const draw=pct(current.close,peak);
+    const hit={...s,current:current.close,lowPrice:low,lowDate:rows[i].date,peakPrice:peak,peakDate:rows[peakIdx].date,risePct:rise,returnPct:ret,drawdownPct:draw,lowToPeak:peakIdx-i,peakToNow:n-1-peakIdx,spark:rows.slice(-60).map(r=>[r.date,r.close])};
+    if(!best||Math.abs(hit.returnPct)<Math.abs(best.returnPct)||(Math.abs(hit.returnPct)===Math.abs(best.returnPct)&&hit.lowDate>best.lowDate))best=hit;
   }
+  return best;
 }
-
-function pivots(rows) {
-  const n = rows.length;
-  const w = n < 35 ? 1 : n < 90 ? 2 : 3;
-  const p = [];
-  for (let i = w; i < n - w; i++) {
-    const c = rows[i].close;
-    const ns = [];
-    for (let j = i - w; j <= i + w; j++) if (j !== i) ns.push(rows[j].close);
-    if (ns.every((x) => c <= x) && ns.some((x) => c < x)) p.push({ type: 'low', idx: i, price: c });
-    if (ns.every((x) => c >= x) && ns.some((x) => c > x)) p.push({ type: 'high', idx: i, price: c });
-  }
-  const z = [];
-  for (const a of p) {
-    const l = z.at(-1);
-    if (!l || l.type !== a.type) z.push(a);
-    else if ((a.type === 'low' && a.price < l.price) || (a.type === 'high' && a.price > l.price)) z[z.length - 1] = a;
-  }
-  return z;
-}
-
-function analyze(s, rows, proximity) {
-  if (rows.length < 12) return null;
-  const p = pivots(rows);
-  const lo = p.filter((x) => x.type === 'low');
-  const hi = p.filter((x) => x.type === 'high');
-  if (lo.length < 2 || hi.length < 2) return null;
-  const L = lo.slice(-5), H = hi.slice(-5);
-  const support = med(L.map((x) => x.price));
-  const resistance = med(H.map((x) => x.price));
-  if (!(support > 0 && resistance > support)) return null;
-  const disp = (a, c) => med(a.map((v) => Math.abs(v - c) / c * 100));
-  const lowDisp = disp(L.map((x) => x.price), support);
-  const highDisp = disp(H.map((x) => x.price), resistance);
-  const amplitude = pct(resistance, support);
-  const current = rows.at(-1).close;
-  const distance = pct(current, support);
-  const rangePos = (current - support) / (resistance - support);
-  const alt = Math.max(0, p.length - 1);
-  const r5 = rows.length > 6 ? pct(current, rows.at(-6).close) : 0;
-  const gaps = [];
-  for (let i = 1; i < lo.length; i++) gaps.push(lo[i].idx - lo[i - 1].idx);
-  const avg = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0;
-  const gdisp = avg ? med(gaps.map((g) => Math.abs(g - avg) / avg * 100)) : 50;
-  const prox = clamp(100 - Math.max(distance, 0) / Math.max(proximity, .5) * 100, 0, 100);
-  const rep = clamp(100 - lowDisp * 7 - highDisp * 3, 0, 100);
-  const cyc = clamp(25 + alt * 8 - gdisp * .45, 0, 100);
-  const amp = clamp((amplitude - 5) * 4.2, 0, 100);
-  const score = clamp(Math.round(prox * .4 + rep * .28 + cyc * .17 + amp * .15 + (r5 < 0 ? 8 : 0)), 0, 100);
-  if (!(distance >= -5 && distance <= proximity && rangePos <= .38 && amplitude >= 7 && lowDisp <= 12 && highDisp <= 20 && alt >= 4)) return null;
-  return {
-    ...s,
-    current,
-    support,
-    resistance,
-    distance,
-    rangePos: rangePos * 100,
-    amplitude,
-    lowDisp,
-    highDisp,
-    cycles: Math.floor(alt / 2),
-    pivotLows: lo.length,
-    pivotHighs: hi.length,
-    score,
-    ret5: r5,
-    reason: `반복저점 ${lo.length}회 · 반복고점 ${hi.length}회 · 지지선 대비 ${distance >= 0 ? '+' : ''}${distance.toFixed(1)}% · 저점 편차 ${lowDisp.toFixed(1)}% · 고저 변동폭 ${amplitude.toFixed(1)}%${r5 < 0 ? ' · 최근 5일 저점 방향 접근' : ''}`,
-    spark: rows.slice(-60).map((r) => [r.date, r.close]),
-  };
-}
-
-async function one(s, d, p) {
-  try {
-    const h = await history(s, d);
-    const hit = analyze(s, h.rows, p);
-    return { ok: true, source: h.source, hit: hit ? { ...hit, source: h.source } : null };
-  } catch (e) {
-    return { ok: false, code: s.code, name: s.name, error: String(e?.message || e) };
-  }
-}
-
-export async function POST(req) {
-  try {
-    const b = await req.json();
-    const days = Math.min(240, Math.max(1, Number(b.days || 240)));
-    const proximity = Math.min(20, Math.max(1, Number(b.proximity || 7)));
-    const stocks = Array.isArray(b.stocks) ? b.stocks.slice(0, 25) : [];
-    const z = await Promise.all(stocks.map((s) => one(s, days, proximity)));
-    return NextResponse.json({
-      ok: true,
-      scanned: stocks.length,
-      hits: z.filter((x) => x.ok && x.hit).map((x) => x.hit),
-      errors: z.filter((x) => !x.ok),
-      sources: z.filter((x) => x.ok).reduce((a, x) => { a[x.source] = (a[x.source] || 0) + 1; return a; }, {}),
-    });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
-  }
+async function one(s,c){try{const h=await history(s,c.days),hit=analyze(s,h.rows,c);return {ok:true,source:h.source,hit:hit?{...hit,source:h.source}:null}}catch(e){return {ok:false,code:s.code,name:s.name,error:String(e?.message||e)}}}
+export async function POST(req){
+  if(!isAuthed(req))return NextResponse.json({ok:false,error:'AUTH_REQUIRED'},{status:401});
+  try{const b=await req.json();const c={days:Math.min(120,Math.max(20,Number(b.days||60))),riseMin:Number(b.riseMin??10),riseMax:Number(b.riseMax??30),retMin:Number(b.retMin??-5),retMax:Number(b.retMax??10),lowPeakGap:Math.min(20,Math.max(1,Number(b.lowPeakGap||1))),peakNowGap:Math.min(20,Math.max(1,Number(b.peakNowGap||1))),strictLow:b.strictLow!==false};
+    if(c.riseMin>c.riseMax)[c.riseMin,c.riseMax]=[c.riseMax,c.riseMin];if(c.retMin>c.retMax)[c.retMin,c.retMax]=[c.retMax,c.retMin];const stocks=Array.isArray(b.stocks)?b.stocks.slice(0,25):[];const z=await Promise.all(stocks.map(s=>one(s,c)));
+    return NextResponse.json({ok:true,scanned:stocks.length,hits:z.filter(x=>x.ok&&x.hit).map(x=>x.hit),errors:z.filter(x=>!x.ok),sources:z.filter(x=>x.ok).reduce((a,x)=>(a[x.source]=(a[x.source]||0)+1,a),{})});
+  }catch(e){return NextResponse.json({ok:false,error:String(e?.message||e)},{status:500})}
 }
