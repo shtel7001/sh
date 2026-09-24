@@ -13,14 +13,13 @@ export default function Login(){
     try{
       const r=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:clean}),cache:'no-store'});
       const j=await r.json().catch(()=>({}));
-      if(r.ok&&j.ok){setState('ok');setMsg('인증되었습니다. 이 번호는 다른 PC에서도 계속 사용할 수 있습니다.');location.replace('/');return;}
+      if(r.ok&&j.ok){setState('ok');setMsg('인증되었습니다. 이 번호는 앞으로도 계속 사용할 수 있습니다.');location.replace('/');return;}
       setState('bad');
-      if(j.error==='CODE_EXPIRED')setMsg('인증번호의 1년 사용기간이 만료되었습니다.');
-      else if(j.error==='TOO_MANY_ATTEMPTS')setMsg('입력 횟수가 많습니다. 잠시 후 다시 시도해 주세요.');
+      if(j.error==='TOO_MANY_ATTEMPTS')setMsg('입력 횟수가 많습니다. 잠시 후 다시 시도해 주세요.');
       else if(j.error==='AUTH_SERVICE_ERROR')setMsg('인증 서버 연결에 문제가 있습니다. 잠시 후 다시 시도해 주세요.');
       else setMsg('인증번호가 맞지 않습니다.');
     }catch{setState('bad');setMsg('네트워크 연결을 확인해 주세요.');}
     finally{setBusy(false);}
   }
-  return <><style>{css}</style><main className="auth"><section className="card"><div className="lock">1Y</div><div className="ey">PRIVATE ACCESS · REUSABLE CODE</div><h1>저점 접근 스크리너<br/>개인 인증</h1><p>같은 6자리 개인 인증번호를 PC·휴대폰 등 여러 기기에서 반복 사용할 수 있습니다.</p><form onSubmit={submit}><input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} autoFocus/><button className="btn" disabled={busy||code.length!==6}>{busy?'확인 중…':'인증하고 들어가기'}</button></form><p className={`msg ${state}`}>{msg}</p><div className="note">• 동일 인증번호를 여러 PC·휴대폰에서 사용할 수 있습니다.<br/>• 인증번호 사용기간: 2027년 9월 24일까지.<br/>• 로그인한 기기의 세션도 최대 해당 날짜까지 유지됩니다.<br/>• 잘못된 번호를 반복 입력하면 잠시 인증이 제한됩니다.</div></section></main></>;
+  return <><style>{css}</style><main className="auth"><section className="card"><div className="lock">∞</div><div className="ey">PRIVATE ACCESS · PERMANENT REUSABLE CODE</div><h1>저점 접근 스크리너<br/>개인 인증</h1><p>같은 6자리 개인 인증번호를 PC·휴대폰 등 여러 기기에서 계속 반복 사용할 수 있습니다.</p><form onSubmit={submit}><input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength="6" placeholder="000000" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} autoFocus/><button className="btn" disabled={busy||code.length!==6}>{busy?'확인 중…':'인증하고 들어가기'}</button></form><p className={`msg ${state}`}>{msg}</p><div className="note">• 동일 인증번호를 여러 PC·휴대폰에서 반복 사용할 수 있습니다.<br/>• 인증번호 자체에는 만료일이 없습니다.<br/>• 로그인한 각 기기의 세션은 로그인 시점부터 1년간 유지됩니다.<br/>• 1년 뒤에는 같은 인증번호를 다시 입력하면 새 1년 세션이 발급됩니다.<br/>• 잘못된 번호를 반복 입력하면 잠시 인증이 제한됩니다.</div></section></main></>;
 }
