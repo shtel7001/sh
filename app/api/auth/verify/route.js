@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {getCache} from '@vercel/functions';
-import {OTP_ID,SESSION_COOKIE,createSessionToken,deriveOtp,otpEqual,sessionMaxAge} from '../../../../lib/auth';
+import {OTP_ID,SESSION_COOKIE,createSessionToken,verifyOtp,sessionMaxAge} from '../../../../lib/auth';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 
@@ -22,14 +22,13 @@ export async function POST(req){
 
     const body=await req.json().catch(()=>({}));
     const code=String(body.code||'').replace(/\D/g,'');
-    if(code.length!==6){
+    if(code.length!==8){
       await cache.set(failKey,String(failures+1),{ttl:900});
       return NextResponse.json({ok:false,error:'INVALID_CODE'},{status:401});
     }
 
     if(await cache.get(USED_KEY)) return NextResponse.json({ok:false,error:'CODE_ALREADY_USED'},{status:409});
-    const expected=await deriveOtp();
-    if(!otpEqual(code,expected)){
+    if(!(await verifyOtp(code))){
       await cache.set(failKey,String(failures+1),{ttl:900});
       return NextResponse.json({ok:false,error:'INVALID_CODE'},{status:401});
     }
