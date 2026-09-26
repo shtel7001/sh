@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Dead→Golden 60일선 저항·20일선 지지 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#6c7890;--line:#dfe6ef;--brand:#0d9488;--brand2:#0f766e;--blue:#2563eb;--red:#dc2626;--amber:#d97706;--shadow:0 10px 30px rgba(21,32,51,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1440px;margin:auto;padding:16px}.hero{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border-radius:22px;padding:24px;box-shadow:var(--shadow)}.hero h1{margin:0 0 8px;font-size:26px}.hero p{margin:0;opacity:.94;line-height:1.55}.tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.tag{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.15);font-size:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px;box-shadow:var(--shadow)}.grid{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:700}.field input,.field select{width:100%;height:42px;border:1px solid #cdd6e3;border-radius:11px;padding:0 11px;background:#fff;color:var(--ink);font-size:14px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:var(--brand);color:#fff}.secondary{background:#e9f8f6;color:var(--brand2)}.danger{background:#fff0f0;color:var(--red)}.dark{background:#172033;color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}.small{font-size:12px;color:var(--muted)}.progress{height:12px;background:#e9eef5;border-radius:999px;overflow:hidden;margin-top:12px}.bar{height:100%;width:0;background:linear-gradient(90deg,#0d9488,#22c55e);transition:.2s}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.stat{background:#f7fafc;border:1px solid var(--line);padding:12px;border-radius:13px}.stat b{display:block;font-size:22px}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;margin-top:12px;max-height:68vh}table{border-collapse:collapse;width:100%;min-width:1320px;background:#fff}th,td{padding:10px;border-bottom:1px solid #edf1f6;font-size:13px;white-space:nowrap;text-align:center}th{position:sticky;top:0;background:#f7fafc;z-index:2;color:#48566d}td.name{text-align:left;font-weight:800}.score{font-weight:900;color:var(--brand2)}.pos{color:var(--red)}.neg{color:var(--blue)}a{color:#2563eb;text-decoration:none}.empty{padding:38px;text-align:center;color:var(--muted)}.login{position:fixed;inset:0;background:linear-gradient(135deg,#0f766e,#0f172a);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}.loginbox{width:min(420px,100%);background:#fff;border-radius:22px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.3)}.loginbox h2{margin:0 0 8px}.loginbox input{width:100%;height:50px;border:1px solid #cbd5e1;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.modal{position:fixed;inset:0;background:rgba(15,23,42,.58);display:none;align-items:center;justify-content:center;padding:14px;z-index:40}.modal.show{display:flex}.modalbox{width:min(1000px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:16px}.modalhead{display:flex;justify-content:space-between;gap:10px;align-items:center}.chart{width:100%;height:360px;border:1px solid var(--line);border-radius:14px;margin-top:12px;background:#fff}.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.notice{background:#fff8e8;border:1px solid #fde5ad;color:#7c5200;padding:10px 12px;border-radius:12px;margin-top:10px;font-size:12px;line-height:1.5}
+@media(max-width:900px){.wrap{padding:10px}.hero{padding:18px;border-radius:16px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:12px}.chart{height:280px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginbox">
+    <h2>개인 인증</h2>
+    <div class="small">기존 개인 인증번호를 처음 한 번 입력하면 이 브라우저에 영구 저장됩니다. 같은 인증번호는 다른 기기에서도 계속 재사용할 수 있습니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="12" placeholder="인증번호 입력" />
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 들어가기</button>
+    <div id="loginMsg" class="small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>Dead→Golden 60일선 저항 · 20일선 지지 레이더</h1>
+    <p>고점권 이후 <b>5일선이 20일선을 데드크로스</b> → 3~12개월 뒤 <b>골든크로스</b> → <b>60일선 저항</b>을 맞고 눌린 뒤 <b>20일선 부근에서 지지</b>받는 흐름을 자동 탐색합니다.</p>
+    <div class="tagrow"><span class="tag">KOSPI · KOSDAQ</span><span class="tag">기본 조회 6개월</span><span class="tag">시작·종료일 직접 입력</span><span class="tag">네이버 일봉 기반</span><span class="tag">실제 XLSX 저장</span></div>
+  </section>
+
+  <section class="card">
+    <div class="grid">
+      <div class="field"><label>시장</label><select id="market"><option value="ALL">코스피 + 코스닥 전체</option><option>KOSPI</option><option>KOSDAQ</option></select></div>
+      <div class="field"><label>시작 날짜</label><input type="date" id="start"></div>
+      <div class="field"><label>종료 날짜</label><input type="date" id="end"></div>
+      <div class="field"><label>데드→골든 최소 개월</label><input type="number" id="minGap" min="1" max="18" step="1" value="3"></div>
+      <div class="field"><label>데드→골든 최대 개월</label><input type="number" id="maxGap" min="2" max="18" step="1" value="12"></div>
+      <div class="field"><label>특정 종목코드(선택)</label><input id="onlyCode" inputmode="numeric" maxlength="6" placeholder="예: 103590"></div>
+      <div class="field"><label>60일선 저항 허용폭 ±%</label><input type="number" id="resPct" min="0.2" max="10" step="0.1" value="3"></div>
+      <div class="field"><label>20일선 지지 허용폭 ±%</label><input type="number" id="supPct" min="0.2" max="10" step="0.1" value="3"></div>
+      <div class="field"><label>저항 후 최소 하락률 %</label><input type="number" id="dropPct" min="0.5" max="20" step="0.5" value="2"></div>
+      <div class="field"><label>최근 지지 확인 일수</label><input type="number" id="supDays" min="1" max="15" step="1" value="5"></div>
+      <div class="field"><label>한 번에 처리 종목</label><select id="batch"><option value="12">12개 · 안정</option><option value="18" selected>18개 · 보통</option><option value="24">24개 · 빠름</option></select></div>
+      <div class="field"><label>정렬</label><select id="sort"><option value="score">패턴 점수 높은 순</option><option value="support">20일선 가까운 순</option><option value="recent">지지일 최근 순</option></select></div>
+    </div>
+    <div class="actions">
+      <button class="btn secondary" onclick="setSixMonths()">최근 6개월</button>
+      <button id="runBtn" class="btn primary" onclick="runScan()">전체 스캔 시작</button>
+      <button id="stopBtn" class="btn danger" onclick="stopScan()" disabled>중지</button>
+      <button class="btn dark" onclick="exportXlsx()">엑셀(.xlsx) 저장</button>
+      <button class="btn secondary" onclick="logout()">로그아웃</button>
+    </div>
+    <div class="notice">판정 순서: ① 과거 데드크로스 ② 설정 개월 뒤 골든크로스 ③ 골든 이후 60일선 근처까지 반등 후 저항 ④ 저항 뒤 설정 폭 이상 하락 ⑤ 최근 며칠 안에 20일선 ±허용폭에서 지지. 조회기간 안의 골든크로스를 찾되, 데드크로스 확인을 위해 조회 시작일보다 더 과거 데이터도 자동으로 불러옵니다.</div>
+    <div class="progress"><div id="bar" class="bar"></div></div>
+    <div id="status" class="small" style="margin-top:8px">대기 중</div>
+    <div class="stats"><div class="stat"><span class="small">대상 종목</span><b id="stTarget">0</b></div><div class="stat"><span class="small">완료</span><b id="stDone">0</b></div><div class="stat"><span class="small">조건 일치</span><b id="stHit">0</b></div><div class="stat"><span class="small">최고 점수</span><b id="stBest">-</b></div></div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b>검색 결과</b><div class="small">행을 누르면 최근 일봉과 5·20·60일선을 함께 확인할 수 있습니다.</div></div><button class="btn secondary" onclick="sortAndRender()">현재 정렬 다시 적용</button></div>
+    <div class="tableWrap"><table><thead><tr><th>순위</th><th>점수</th><th>종목</th><th>시장</th><th>현재가</th><th>데드</th><th>골든</th><th>간격</th><th>60일선 저항</th><th>20일선 지지</th><th>20선 거리</th><th>60선 거리</th><th>저항 후 하락</th><th>20선 기울기</th><th>거래량비</th><th>링크</th></tr></thead><tbody id="tbody"><tr><td colspan="16" class="empty">아직 검색하지 않았습니다.</td></tr></tbody></table></div>
+  </section>
+</div>
+
+<div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="modalbox"><div class="modalhead"><div><b id="modalTitle"></b><div id="modalSub" class="small"></div></div><button class="btn secondary" onclick="closeModal()">닫기</button></div><canvas id="chart" class="chart"></canvas><div class="legend"><span><i class="dot" style="background:#111827"></i>종가</span><span><i class="dot" style="background:#ef4444"></i>5일선</span><span><i class="dot" style="background:#2563eb"></i>20일선</span><span><i class="dot" style="background:#16a34a"></i>60일선</span></div><div id="modalInfo" class="notice"></div></div></div>
+
+<script>
+const TOKEN_KEY='dg6020_radar_token';
+let results=[], stopFlag=false, running=false;
+function token(){return localStorage.getItem(TOKEN_KEY)||''}
+async function api(url,opt={}){opt.headers={...(opt.headers||{}),'x-auth-token':token()};if(opt.body&&!opt.headers['Content-Type'])opt.headers['Content-Type']='application/json';const r=await fetch(url,opt);if(r.status===401){localStorage.removeItem(TOKEN_KEY);document.getElementById('login').style.display='flex';throw new Error('인증이 필요합니다.')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.message||j.error||`HTTP ${r.status}`);return j}
+async function login(){const c=document.getElementById('authCode').value.trim();const m=document.getElementById('loginMsg');m.textContent='확인 중...';try{const r=await fetch('/api/dead-golden-6020?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});const j=await r.json();if(!r.ok)throw 0;localStorage.setItem(TOKEN_KEY,j.token);document.getElementById('login').style.display='none';m.textContent='';}catch{m.textContent='인증번호가 맞지 않습니다.'}}
+function logout(){localStorage.removeItem(TOKEN_KEY);location.reload()}
+async function checkAuth(){if(!token())return;try{const r=await fetch('/api/dead-golden-6020?op=auth',{headers:{'x-auth-token':token()}});const j=await r.json();if(j.ok)document.getElementById('login').style.display='none';}catch{}}
+function iso(d){return d.toISOString().slice(0,10)}
+function setSixMonths(){const e=new Date(),s=new Date(e);s.setMonth(s.getMonth()-6);document.getElementById('end').value=iso(e);document.getElementById('start').value=iso(s)}
+function cfg(){return {start:document.getElementById('start').value,end:document.getElementById('end').value,minGapMonths:+document.getElementById('minGap').value,maxGapMonths:+document.getElementById('maxGap').value,resistancePct:+document.getElementById('resPct').value,supportPct:+document.getElementById('supPct').value,minDropPct:+document.getElementById('dropPct').value,supportLookback:+document.getElementById('supDays').value}}
+function fmt(n){return Number(n||0).toLocaleString('ko-KR')}
+function cls(n){return n>0?'pos':n<0?'neg':''}
+function sortAndRender(){const s=document.getElementById('sort').value;results.sort((a,b)=>s==='support'?Math.abs(a.dist20)-Math.abs(b.dist20):s==='recent'?String(b.supportDate).localeCompare(String(a.supportDate)):b.score-a.score);render()}
+function render(){const tb=document.getElementById('tbody');if(!results.length){tb.innerHTML='<tr><td colspan="16" class="empty">조건에 맞는 종목이 아직 없습니다.</td></tr>';return}tb.innerHTML=results.map((r,i)=>`<tr onclick="openModal(${i})" style="cursor:pointer"><td>${i+1}</td><td class="score">${r.score}</td><td class="name">${r.name}<div class="small">${r.code}</div></td><td>${r.market}</td><td>${fmt(r.close)}</td><td>${r.deadDate}</td><td>${r.goldenDate}</td><td>${r.gapMonths}개월</td><td>${r.resistanceDate}<div class="small">오차 ${r.resistanceDist}%</div></td><td>${r.supportDate}</td><td class="${cls(r.dist20)}">${r.dist20>0?'+':''}${r.dist20}%</td><td class="${cls(r.dist60)}">${r.dist60>0?'+':''}${r.dist60}%</td><td class="neg">${r.dropPct}%</td><td class="${cls(r.slope20)}">${r.slope20>0?'+':''}${r.slope20}%</td><td>${r.volumeRatio}배</td><td onclick="event.stopPropagation()"><a target="_blank" href="https://finance.naver.com/item/main.naver?code=${r.code}">증권</a> · <a target="_blank" href="https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(r.name)}">뉴스</a></td></tr>`).join('')}
+function updateStats(target,done){document.getElementById('stTarget').textContent=target;document.getElementById('stDone').textContent=done;document.getElementById('stHit').textContent=results.length;document.getElementById('stBest').textContent=results.length?Math.max(...results.map(x=>x.score)):'-';document.getElementById('bar').style.width=(target?Math.min(100,done/target*100):0)+'%'}
+async function runScan(){if(running)return;const c=cfg();if(!c.start||!c.end||c.start>c.end){alert('시작일과 종료일을 확인해 주세요.');return}running=true;stopFlag=false;results=[];render();document.getElementById('runBtn').disabled=true;document.getElementById('stopBtn').disabled=false;document.getElementById('status').textContent='종목 목록 불러오는 중...';try{let list=(await api('/api/dead-golden-6020?op=stocks&market='+document.getElementById('market').value)).stocks||[];const oc=document.getElementById('onlyCode').value.trim();if(oc){list=list.filter(x=>x.code===oc);if(!list.length)list=[{code:oc,name:oc,market:'직접입력'}]}const target=list.length;updateStats(target,0);const bs=+document.getElementById('batch').value;let done=0;for(let i=0;i<list.length;i+=bs){if(stopFlag)break;const part=list.slice(i,i+bs);document.getElementById('status').textContent=`${done}/${target} 분석 중 · 현재 ${part[0]?.name||''} ~`;try{const j=await api('/api/dead-golden-6020?op=scan',{method:'POST',body:JSON.stringify({...c,stocks:part})});results.push(...(j.results||[]));sortAndRender()}catch(e){console.warn(e)}done+=part.length;updateStats(target,done)}document.getElementById('status').textContent=stopFlag?`사용자 중지 · ${done}/${target} 완료`:`완료 · ${done}개 분석, ${results.length}개 조건 일치`;}catch(e){document.getElementById('status').textContent='오류: '+e.message}finally{running=false;document.getElementById('runBtn').disabled=false;document.getElementById('stopBtn').disabled=true}}
+function stopScan(){stopFlag=true;document.getElementById('status').textContent='현재 묶음 처리 후 중지합니다...'}
+function exportXlsx(){if(!results.length){alert('저장할 결과가 없습니다.');return}if(!window.XLSX){alert('엑셀 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해 주세요.');return}const rows=results.map((r,i)=>({순위:i+1,점수:r.score,종목명:r.name,종목코드:r.code,시장:r.market,현재가:r.close,데드크로스:r.deadDate,골든크로스:r.goldenDate,'데드→골든(개월)':r.gapMonths,'60일선저항일':r.resistanceDate,'20일선지지일':r.supportDate,'20일선거리(%)':r.dist20,'60일선거리(%)':r.dist60,'저항후하락률(%)':r.dropPct,'20일선5일기울기(%)':r.slope20,거래량비:r.volumeRatio,최근거래일:r.lastDate}));const wb=XLSX.utils.book_new();const ws=XLSX.utils.json_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,'검색결과');const c=cfg();const settings=XLSX.utils.json_to_sheet([{시장:document.getElementById('market').value,시작일:c.start,종료일:c.end,최소개월:c.minGapMonths,최대개월:c.maxGapMonths,'60저항허용폭':c.resistancePct,'20지지허용폭':c.supportPct,'최소하락률':c.minDropPct,'지지확인일수':c.supportLookback}]);XLSX.utils.book_append_sheet(wb,settings,'검색조건');XLSX.writeFile(wb,`dead-golden-60-20-radar_${c.end}.xlsx`)}
+function openModal(i){const r=results[i];if(!r)return;document.getElementById('modalTitle').textContent=`${r.name} (${r.code}) · 점수 ${r.score}`;document.getElementById('modalSub').textContent=`${r.deadDate} 데드 → ${r.goldenDate} 골든 → ${r.resistanceDate} 60일선 저항 → ${r.supportDate} 20일선 지지`;document.getElementById('modalInfo').innerHTML=`현재가 <b>${fmt(r.close)}</b> · 20일선 거리 <b>${r.dist20}%</b> · 60일선 거리 <b>${r.dist60}%</b> · 저항 후 하락 <b>${r.dropPct}%</b> · 20일선 5거래일 기울기 <b>${r.slope20}%</b> · 거래량비 <b>${r.volumeRatio}배</b>`;document.getElementById('modal').classList.add('show');requestAnimationFrame(()=>drawChart(r.chart||[]))}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function drawChart(data){const c=document.getElementById('chart'),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);x.clearRect(0,0,w,h);if(data.length<2)return;const vals=[];data.forEach(p=>['close','ma5','ma20','ma60'].forEach(k=>p[k]!=null&&vals.push(p[k])));let mn=Math.min(...vals),mx=Math.max(...vals);const pad=(mx-mn)*.08||1;mn-=pad;mx+=pad;const X=i=>40+i*(w-55)/(data.length-1),Y=v=>15+(mx-v)*(h-45)/(mx-mn);x.strokeStyle='#e5e7eb';x.lineWidth=1;for(let j=0;j<5;j++){const yy=15+j*(h-45)/4;x.beginPath();x.moveTo(40,yy);x.lineTo(w-10,yy);x.stroke()}const series=[['close','#111827',2],['ma5','#ef4444',1.5],['ma20','#2563eb',2],['ma60','#16a34a',2.5]];for(const [k,col,lw] of series){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();let started=false;data.forEach((p,i)=>{if(p[k]==null)return;const xx=X(i),yy=Y(p[k]);if(!started){x.moveTo(xx,yy);started=true}else x.lineTo(xx,yy)});x.stroke()}x.fillStyle='#64748b';x.font='11px sans-serif';x.fillText(data[0].date,40,h-8);x.textAlign='right';x.fillText(data[data.length-1].date,w-10,h-8);x.textAlign='left';x.fillText(Math.round(mx).toLocaleString(),4,22);x.fillText(Math.round(mn).toLocaleString(),4,h-25)}
+setSixMonths();checkAuth();
+</script>
+</body></html>
