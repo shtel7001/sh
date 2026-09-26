@@ -1,0 +1,1 @@
+{"name":"old-spike-ma20-support-radar","version":"1.0.0","private":true,"scripts":{"vercel-build":"next build","build":"next build","dev":"next dev"},"dependencies":{"next":"^16.0.0","react":"^19.2.0","react-dom":"^19.2.0"}}
