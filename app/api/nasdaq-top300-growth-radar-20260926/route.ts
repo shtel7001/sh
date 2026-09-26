@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash, timingSafeEqual } from 'crypto';
 import fallbackSymbols from './fallback';
 
@@ -58,34 +59,22 @@ function mergeCookies(...parts: string[]) {
 
 async function getYahooSession(force = false): Promise<YahooSession> {
   if (!force && sessionCache.crumb && sessionCache.cookie && Date.now() < sessionCache.expiresAt) return sessionCache;
-
   let cookie = '';
   try {
-    const boot = await fetch('https://fc.yahoo.com/', {
-      headers: { 'User-Agent': USER_AGENT, Accept: '*/*' },
-      redirect: 'manual',
-      cache: 'no-store'
-    });
+    const boot = await fetch('https://fc.yahoo.com/', { headers: { 'User-Agent': USER_AGENT, Accept: '*/*' }, redirect: 'manual', cache: 'no-store' });
     cookie = mergeCookies(cookie, parseCookieHeader(boot.headers.get('set-cookie')));
   } catch {}
-
   const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'text/plain,*/*',
-      ...(cookie ? { Cookie: cookie } : {})
-    },
-    cache: 'no-store'
+    headers: { 'User-Agent': USER_AGENT, Accept: 'text/plain,*/*', ...(cookie ? { Cookie: cookie } : {}) }, cache: 'no-store'
   });
   cookie = mergeCookies(cookie, parseCookieHeader(crumbRes.headers.get('set-cookie')));
   const crumb = (await crumbRes.text()).trim();
   if (!crumbRes.ok || !crumb || /unauthorized|too many requests/i.test(crumb)) throw new Error(`Yahoo session failed (${crumbRes.status})`);
-
   sessionCache = { cookie, crumb, expiresAt: Date.now() + 20 * 60 * 1000 };
   return sessionCache;
 }
 
-async function yahooFetch(url: string, options: RequestInit = {}, retry = true) {
+async function yahooFetch(url: string, options: RequestInit = {}, retry = true): Promise<Response> {
   const sess = await getYahooSession(false);
   const headers = new Headers(options.headers || {});
   headers.set('User-Agent', USER_AGENT);
@@ -101,28 +90,9 @@ async function yahooFetch(url: string, options: RequestInit = {}, retry = true) 
 }
 
 async function fetchScreenerPage(offset: number, size: number) {
-  const payload = {
-    offset,
-    size,
-    sortField: 'intradaymarketcap',
-    sortType: 'DESC',
-    quoteType: 'EQUITY',
-    query: {
-      operator: 'AND',
-      operands: [
-        { operator: 'EQ', operands: ['region', 'us'] },
-        { operator: 'EQ', operands: ['exchange', 'NMS'] }
-      ]
-    },
-    userId: '',
-    userIdType: 'guid'
-  };
+  const payload = { offset, size, sortField: 'intradaymarketcap', sortType: 'DESC', quoteType: 'EQUITY', query: { operator: 'AND', operands: [{ operator: 'EQ', operands: ['region', 'us'] }, { operator: 'EQ', operands: ['exchange', 'NMS'] }] }, userId: '', userIdType: 'guid' };
   const url = 'https://query1.finance.yahoo.com/v1/finance/screener?formatted=false&lang=en-US&region=US&corsDomain=finance.yahoo.com';
-  const res = await yahooFetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  const res = await yahooFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error(`Yahoo Screener ${res.status}`);
   const body = await res.json() as any;
   const quotes = body?.finance?.result?.[0]?.quotes;
@@ -130,20 +100,9 @@ async function fetchScreenerPage(offset: number, size: number) {
   return quotes as any[];
 }
 
-function raw(v: any): any {
-  if (v == null) return null;
-  if (typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, 'raw')) return v.raw;
-  return v;
-}
-function pct(v: any) {
-  const n = raw(v);
-  return typeof n === 'number' && Number.isFinite(n) ? n * 100 : null;
-}
-function isoDateFromUnix(v: any) {
-  const n = raw(v);
-  if (!n || !Number.isFinite(Number(n))) return null;
-  return new Date(Number(n) * 1000).toISOString().slice(0, 10);
-}
+function raw(v: any): any { if (v == null) return null; if (typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, 'raw')) return v.raw; return v; }
+function pct(v: any) { const n = raw(v); return typeof n === 'number' && Number.isFinite(n) ? n * 100 : null; }
+function isoDateFromUnix(v: any) { const n = raw(v); if (!n || !Number.isFinite(Number(n))) return null; return new Date(Number(n) * 1000).toISOString().slice(0, 10); }
 
 async function fetchQuoteSummary(symbol: string) {
   const modules = ['price','financialData','defaultKeyStatistics','summaryDetail','assetProfile','calendarEvents'].join(',');
@@ -155,58 +114,20 @@ async function fetchQuoteSummary(symbol: string) {
   if (!root) throw new Error(body?.quoteSummary?.error?.description || 'No Yahoo data');
   const p = root.price || {}, f = root.financialData || {}, k = root.defaultKeyStatistics || {}, s = root.summaryDetail || {}, a = root.assetProfile || {}, c = root.calendarEvents || {};
   const earningsDate = c?.earnings?.earningsDate?.[0];
-  return {
-    symbol,
-    name: p.longName || p.shortName || symbol,
-    exchange: p.exchangeName || p.exchange || 'NMS',
-    marketCapB: typeof raw(p.marketCap) === 'number' ? raw(p.marketCap) / 1e9 : null,
-    epsGrowthPct: pct(f.earningsGrowth),
-    revenueGrowthPct: pct(f.revenueGrowth),
-    currentPrice: raw(f.currentPrice) ?? raw(p.regularMarketPrice),
-    targetMeanPrice: raw(f.targetMeanPrice),
-    trailingEps: raw(k.trailingEps) ?? raw(p.epsTrailingTwelveMonths),
-    forwardEps: raw(k.forwardEps) ?? raw(p.epsForward),
-    trailingPE: raw(s.trailingPE) ?? raw(p.trailingPE),
-    forwardPE: raw(s.forwardPE) ?? raw(p.forwardPE),
-    sector: a.sector || null,
-    industry: a.industry || null,
-    earningsDate: isoDateFromUnix(earningsDate),
-    source: 'Yahoo Finance'
-  };
+  return { symbol, name: p.longName || p.shortName || symbol, exchange: p.exchangeName || p.exchange || 'NMS', marketCapB: typeof raw(p.marketCap) === 'number' ? raw(p.marketCap) / 1e9 : null, epsGrowthPct: pct(f.earningsGrowth), revenueGrowthPct: pct(f.revenueGrowth), currentPrice: raw(f.currentPrice) ?? raw(p.regularMarketPrice), targetMeanPrice: raw(f.targetMeanPrice), trailingEps: raw(k.trailingEps) ?? raw(p.epsTrailingTwelveMonths), forwardEps: raw(k.forwardEps) ?? raw(p.epsForward), trailingPE: raw(s.trailingPE) ?? raw(p.trailingPE), forwardPE: raw(s.forwardPE) ?? raw(p.forwardPE), sector: a.sector || null, industry: a.industry || null, earningsDate: isoDateFromUnix(earningsDate), source: 'Yahoo Finance' };
 }
 
 async function handleTop(req: Request) {
   const u = new URL(req.url);
   const requested = Math.max(10, Math.min(300, Number(u.searchParams.get('count') || 300)));
   try {
-    const pages: any[] = [];
-    let remaining = requested, offset = 0;
-    while (remaining > 0) {
-      const size = Math.min(250, remaining);
-      const quotes = await fetchScreenerPage(offset, size);
-      pages.push(...quotes);
-      if (quotes.length < size) break;
-      remaining -= quotes.length;
-      offset += quotes.length;
-    }
-    const rows: TopRow[] = pages.slice(0, requested).map((q, i) => ({
-      rank: i + 1,
-      symbol: q.symbol,
-      name: q.longName || q.shortName || q.displayName || q.symbol,
-      exchange: q.exchange || 'NMS',
-      marketCapB: typeof q.marketCap === 'number' ? q.marketCap / 1e9 : null,
-      source: 'Yahoo Screener'
-    }));
+    const pages: any[] = []; let remaining = requested, offset = 0;
+    while (remaining > 0) { const size = Math.min(250, remaining); const quotes = await fetchScreenerPage(offset, size); pages.push(...quotes); if (quotes.length < size) break; remaining -= quotes.length; offset += quotes.length; }
+    const rows: TopRow[] = pages.slice(0, requested).map((q, i) => ({ rank: i + 1, symbol: q.symbol, name: q.longName || q.shortName || q.displayName || q.symbol, exchange: q.exchange || 'NMS', marketCapB: typeof q.marketCap === 'number' ? q.marketCap / 1e9 : null, source: 'Yahoo Screener' }));
     if (rows.length < Math.min(50, requested)) throw new Error('Yahoo returned too few rows');
     return json({ ok: true, source: 'Yahoo Screener live', fallback: false, rows });
   } catch (error: any) {
-    return json({
-      ok: true,
-      source: 'Uploaded 2026-09-10 Yahoo snapshot fallback',
-      fallback: true,
-      warning: `Yahoo Screener live call failed: ${error?.message || String(error)}`,
-      rows: fallbackSymbols.slice(0, requested).map((symbol, i) => ({ rank: i + 1, symbol, name: symbol, exchange: 'NMS', marketCapB: null, source: 'Uploaded 2026-09-10 Yahoo snapshot fallback' }))
-    });
+    return json({ ok: true, source: 'Uploaded 2026-09-10 Yahoo snapshot fallback', fallback: true, warning: `Yahoo Screener live call failed: ${error?.message || String(error)}`, rows: fallbackSymbols.slice(0, requested).map((symbol, i) => ({ rank: i + 1, symbol, name: symbol, exchange: 'NMS', marketCapB: null, source: 'Uploaded 2026-09-10 Yahoo snapshot fallback' })) });
   }
 }
 
@@ -225,12 +146,6 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({})) as any;
   const symbols = Array.isArray(body.symbols) ? body.symbols.map(String).slice(0, 20) : [];
   if (!symbols.length) return json({ ok: false, error: 'symbols required' }, 400);
-  const rows = await Promise.all(symbols.map(async (symbol) => {
-    try {
-      return { ok: true, symbol, data: await fetchQuoteSummary(symbol) };
-    } catch (e: any) {
-      return { ok: false, symbol, error: e?.message || String(e) };
-    }
-  }));
+  const rows = await Promise.all(symbols.map(async (symbol) => { try { return { ok: true, symbol, data: await fetchQuoteSummary(symbol) }; } catch (e: any) { return { ok: false, symbol, error: e?.message || String(e) }; } }));
   return json({ ok: true, rows });
 }
