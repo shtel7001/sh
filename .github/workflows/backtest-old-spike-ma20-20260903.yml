@@ -1,0 +1,49 @@
+name: Backtest old-spike MA20 2026-09-03
+
+on:
+  push:
+    paths:
+      - 'backtests/old_spike_ma20_20260903.py'
+      - '.github/workflows/backtest-old-spike-ma20-20260903.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check pandas pyarrow tabulate
+
+      - name: Download KRX marcap parquet data
+        run: |
+          mkdir -p backtests/data
+          curl -fL --retry 3 -o backtests/data/marcap-2025.parquet https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2025.parquet
+          curl -fL --retry 3 -o backtests/data/marcap-2026.parquet https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2026.parquet
+          ls -lh backtests/data
+
+      - name: Run historical backtest
+        run: python backtests/old_spike_ma20_20260903.py
+
+      - name: Commit backtest results
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backtests/old_spike_ma20_20260903_top10.csv backtests/old_spike_ma20_20260903_top10.md
+          if git diff --cached --quiet; then
+            echo 'No result changes to commit.'
+          else
+            git commit -m 'Add 2026-09-03 MA20 radar backtest results [skip ci]'
+            git push
+          fi
