@@ -1,15 +1,12 @@
 // @ts-nocheck
 import { createHash, timingSafeEqual } from 'crypto';
-import * as cheerio from 'cheerio';
-import iconv from 'iconv-lite';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 const ACCESS_HASH = 'c34db5fb0b0ded382c00847bfe4908f874a5e87c9cc9752d919a2cc1965ecae1';
-const UA_PC = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36';
-const UA_MOBILE = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
+const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
 
 function json(data: unknown, status = 200) {
   return Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -26,29 +23,50 @@ function authOk(req: Request) {
   return verifyCode(req.headers.get('x-access-code') || req.headers.get('x-radar-key'));
 }
 
-function n(v: unknown): number | null {
+function num(v: unknown): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (typeof v !== 'string') return null;
-  const s = v.replace(/\u00a0/g, ' ').replace(/,/g, '').replace(/[원%배억원주\s]/g, '').trim();
+  const s = v.replace(/\u00a0/g, ' ').replace(/,/g, '').replace(/[원%배주\s]/g, '').trim();
   if (!s || s === '-' || s === '--' || s === 'N/A') return null;
   const x = Number(s.replace(/^\((.*)\)$/, '-$1'));
   return Number.isFinite(x) ? x : null;
 }
 
+function marketCapEok(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const s = String(v ?? '').replace(/,/g, '').replace(/\s+/g, '');
+  if (!s) return null;
+  let total = 0, found = false;
+  const jo = s.match(/([0-9.]+)조/); if (jo) { total += Number(jo[1]) * 10000; found = true; }
+  const eok = s.match(/([0-9.]+)억/); if (eok) { total += Number(eok[1]); found = true; }
+  if (found) return Number.isFinite(total) ? total : null;
+  return num(s.replace(/억원/g, ''));
+}
+
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}, timeout = 10000) {
+async function fetchWithTimeout(url: string, timeout = 9000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeout);
-  try { return await fetch(url, { ...init, signal: ctl.signal }); }
-  finally { clearTimeout(t); }
+  try {
+    return await fetch(url, {
+      signal: ctl.signal,
+      headers: {
+        'User-Agent': UA,
+        Accept: 'application/json,text/plain,*/*',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.6',
+        Referer: 'https://m.stock.naver.com/'
+      },
+      cache: 'no-store'
+    });
+  } finally { clearTimeout(t); }
 }
 
 async function fetchJson(url: string) {
   let last = '';
   for (let i = 0; i < 3; i++) {
     try {
-      const r = await fetchWithTimeout(url, { headers: { 'User-Agent': UA_MOBILE, Accept: 'application/json,text/plain,*/*', 'Accept-Language': 'ko-KR,ko;q=0.9', Referer: 'https://m.stock.naver.com/' }, cache: 'no-store' }, 9000);
+      const r = await fetchWithTimeout(url);
       if (!r.ok) { last = `HTTP ${r.status}`; await sleep(200 * (i + 1)); continue; }
       const text = await r.text();
       if (!text.trim().startsWith('{') && !text.trim().startsWith('[')) { last = 'JSON 아닌 응답'; await sleep(200 * (i + 1)); continue; }
@@ -56,20 +74,6 @@ async function fetchJson(url: string) {
     } catch (e: any) { last = e?.message || String(e); await sleep(200 * (i + 1)); }
   }
   throw new Error(last || '네이버 JSON 수집 실패');
-}
-
-async function fetchHtml(url: string) {
-  let last = '';
-  for (let i = 0; i < 3; i++) {
-    try {
-      const r = await fetchWithTimeout(url, { headers: { 'User-Agent': UA_PC, Accept: 'text/html,application/xhtml+xml,*/*', 'Accept-Language': 'ko-KR,ko;q=0.9', Referer: 'https://finance.naver.com/' }, cache: 'no-store' }, 10000);
-      if (!r.ok) { last = `HTTP ${r.status}`; await sleep(250 * (i + 1)); continue; }
-      const b = Buffer.from(await r.arrayBuffer());
-      const ct = (r.headers.get('content-type') || '').toLowerCase();
-      return ct.includes('utf-8') ? b.toString('utf8') : iconv.decode(b, 'EUC-KR');
-    } catch (e: any) { last = e?.message || String(e); await sleep(250 * (i + 1)); }
-  }
-  throw new Error(last || '네이버 HTML 수집 실패');
 }
 
 function pickArray(j: any): any[] {
@@ -89,14 +93,14 @@ function normalizeUniverse(x: any, rank: number) {
     code,
     name,
     market: 'KOSPI',
-    currentPrice: n(x?.closePrice ?? x?.currentPrice ?? x?.nowVal ?? x?.price),
-    changePct: n(x?.fluctuationsRatio ?? x?.changeRate ?? x?.changePct ?? x?.rate),
-    marketCapEok: n(x?.marketValue ?? x?.marketCap ?? x?.marketValueAmount),
-    source: 'Naver Mobile marketValue'
+    currentPrice: num(x?.closePrice ?? x?.currentPrice ?? x?.nowVal ?? x?.price),
+    changePct: num(x?.fluctuationsRatio ?? x?.changeRate ?? x?.changePct ?? x?.rate),
+    marketCapEok: marketCapEok(x?.marketValue ?? x?.marketCap ?? x?.marketValueAmount),
+    source: 'Naver Mobile marketValue API'
   };
 }
 
-async function fetchUniverseMobile() {
+async function fetchUniverseAll() {
   const out: any[] = [];
   const seen = new Set<string>();
   for (let page = 1; page <= 20; page++) {
@@ -110,44 +114,36 @@ async function fetchUniverseMobile() {
     }
     if (!added || rows.length < 100) break;
   }
-  if (out.length < 500) throw new Error(`모바일 KOSPI 목록이 ${out.length}개뿐입니다.`);
+  if (out.length < 500) throw new Error(`KOSPI 목록이 ${out.length}개뿐입니다.`);
   return out.map((x, i) => ({ ...x, rank: i + 1 }));
 }
 
-async function fetchUniversePc() {
-  const out: any[] = [];
-  const seen = new Set<string>();
-  for (let page = 1; page <= 30; page++) {
-    const html = await fetchHtml(`https://finance.naver.com/sise/sise_market_sum.naver?sosok=0&page=${page}`);
-    const $ = cheerio.load(html);
-    let added = 0;
-    $('table.type_2 tr, table.type2 tr').each((_, tr) => {
-      const a = $(tr).find('a.tltle, a[href*="/item/main.naver?code="]').first();
-      const name = a.text().trim();
-      const code = (a.attr('href') || '').match(/code=(\d{6})/)?.[1] || '';
-      if (!code || !name || seen.has(code)) return;
-      const cells = $(tr).find('td').map((__, td) => $(td).text().replace(/\s+/g, ' ').trim()).get();
-      seen.add(code);
-      out.push({ rank: out.length + 1, code, name, market: 'KOSPI', currentPrice: n(cells[2] || ''), changePct: n(cells[4] || ''), marketCapEok: n(cells[6] || ''), source: 'Naver Finance PC market sum' });
-      added++;
-    });
-    if (!added) break;
-    if (added < 40) break;
+function infoMap(integration: any) {
+  const m: Record<string, any> = {};
+  for (const x of integration?.totalInfos || []) {
+    const k = x?.code || x?.key;
+    if (k) m[k] = x?.value ?? x?.valueRaw ?? null;
   }
-  if (out.length < 500) throw new Error(`PC KOSPI 목록이 ${out.length}개뿐입니다.`);
-  return out.map((x, i) => ({ ...x, rank: i + 1 }));
+  return m;
 }
 
-async function fetchUniverseAll() {
-  try { return { rows: await fetchUniverseMobile(), source: 'Naver Mobile marketValue API' }; }
-  catch (e1: any) {
-    try { return { rows: await fetchUniversePc(), source: 'Naver Finance PC market sum', warning: `모바일 목록 실패: ${e1?.message || e1}` }; }
-    catch (e2: any) { throw new Error(`KOSPI 전종목 수집 실패 · mobile: ${e1?.message || e1} / pc: ${e2?.message || e2}`); }
-  }
+function normLabel(s: unknown) {
+  return String(s ?? '').replace(/\s+/g, '').replace(/\([^)]*\)/g, '').toUpperCase();
 }
 
-function rowLabel(s: string) {
-  return s.replace(/\s+/g, '').replace(/\([^)]*IFRS[^)]*\)/gi, '').trim();
+function parseFinance(j: any) {
+  const f = j?.financeInfo || j || {};
+  const titles = Array.isArray(f?.trTitleList) ? f.trTitleList : [];
+  const rowList = Array.isArray(f?.rowList) ? f.rowList : [];
+  const rows: Record<string, any> = {};
+  for (const r of rowList) rows[normLabel(r?.title)] = r;
+  return { titles, rows };
+}
+
+function rowValues(fin: any, matcher: (label: string) => boolean) {
+  const entry = Object.entries(fin.rows).find(([label]) => matcher(label))?.[1] as any;
+  if (!entry) return fin.titles.map(() => null);
+  return fin.titles.map((t: any) => num(entry?.columns?.[t?.key]?.value ?? entry?.columns?.[t?.key] ?? null));
 }
 
 function growth(cur: number | null, prev: number | null) {
@@ -155,105 +151,78 @@ function growth(cur: number | null, prev: number | null) {
   return ((cur - prev) / Math.abs(prev)) * 100;
 }
 
-function lastFiniteIndex(a: (number | null)[], test?: (i: number) => boolean) {
-  for (let i = a.length - 1; i >= 0; i--) if (a[i] != null && (!test || test(i))) return i;
-  return -1;
+function latestTwoActual(fin: any, values: (number | null)[]) {
+  const idx: number[] = [];
+  for (let i = fin.titles.length - 1; i >= 0; i--) {
+    const t = fin.titles[i] || {};
+    const consensus = String(t.isConsensus ?? 'N').toUpperCase() === 'Y';
+    if (!consensus && values[i] != null) idx.push(i);
+    if (idx.length === 2) break;
+  }
+  return idx;
 }
 
-function firstFiniteIndex(a: (number | null)[], test?: (i: number) => boolean) {
-  for (let i = 0; i < a.length; i++) if (a[i] != null && (!test || test(i))) return i;
-  return -1;
+function industryName(integration: any) {
+  const v = integration?.industryCompareInfo;
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      const s = x?.industryName || x?.name || x?.industry || x?.industryNameKor;
+      if (s) return String(s);
+    }
+  } else if (v && typeof v === 'object') {
+    const s = v.industryName || v.name || v.industry || v.industryNameKor;
+    if (s) return String(s);
+  }
+  return integration?.industryName || integration?.sectorName || null;
 }
 
 async function fetchNaverDetail(code: string) {
-  const html = await fetchHtml(`https://finance.naver.com/item/main.naver?code=${encodeURIComponent(code)}`);
-  const $ = cheerio.load(html);
-  const name = $('.wrap_company h2 a, .wrap_company h2').first().text().replace(/\s+/g, ' ').trim() || code;
-  const currentPrice = n($('.no_today .blind').first().text()) ?? n($('p.no_today em span').first().text());
-  const flat = $.root().text().replace(/\s+/g, ' ');
-  const targetMeanPrice = n(flat.match(/목표주가\s*([0-9,]+)/)?.[1] || '');
-  const sector = $('a[href*="sise_group_detail.naver?type=upjong"], a[href*="sise_group_detail.naver?type=upjong"]').first().text().replace(/\s+/g, ' ').trim() || null;
+  const [integration, quarter] = await Promise.all([
+    fetchJson(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/integration`),
+    fetchJson(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/finance/quarter`)
+  ]);
 
-  let fin: any = null;
-  $('table').each((_, el) => {
-    if (fin) return;
-    const txt = $(el).text().replace(/\s+/g, '');
-    if (txt.includes('매출액') && txt.includes('EPS(원)') && txt.includes('최근분기실적')) fin = $(el);
-  });
-  if (!fin) throw new Error('주요재무정보 표를 찾지 못했습니다.');
+  const im = infoMap(integration);
+  const fin = parseFinance(quarter);
+  const revenue = rowValues(fin, label => label === '매출액' || label.startsWith('매출액'));
+  const epsQ = rowValues(fin, label => label === 'EPS' || label.startsWith('EPS'));
+  const revIdx = latestTwoActual(fin, revenue);
+  const epsIdx = latestTwoActual(fin, epsQ);
+  const latestIdx = Math.max(revIdx[0] ?? -1, epsIdx[0] ?? -1);
 
-  let annualCount = 0, quarterCount = 0;
-  fin.find('thead tr').first().find('th').each((_, th) => {
-    const t = $(th).text().replace(/\s+/g, '');
-    const c = Number($(th).attr('colspan') || 0);
-    if (t.includes('최근연간실적')) annualCount = c;
-    if (t.includes('최근분기실적')) quarterCount = c;
-  });
-
-  const dateHeaders = fin.find('thead tr').last().find('th').map((_, th) => $(th).text().replace(/\s+/g, '')).get().filter((x: string) => /\d{4}[./]\d{2}/.test(x));
-  if (!annualCount || !quarterCount || annualCount + quarterCount > dateHeaders.length + 1) {
-    if (dateHeaders.length >= 8) { annualCount = 4; quarterCount = dateHeaders.length - 4; }
-    else { annualCount = Math.max(1, Math.floor(dateHeaders.length / 2)); quarterCount = dateHeaders.length - annualCount; }
+  let currentPrice = num(integration?.dealTrendInfos?.[0]?.closePrice) ?? num(im.lastClosePrice);
+  let stockName = integration?.stockName || code;
+  if (currentPrice == null) {
+    try {
+      const basic = await fetchJson(`https://m.stock.naver.com/api/stock/${encodeURIComponent(code)}/basic`);
+      currentPrice = num(basic?.closePrice);
+      stockName = basic?.stockName || stockName;
+    } catch {}
   }
 
-  const rows: Record<string, (number | null)[]> = {};
-  fin.find('tbody tr').each((_, tr) => {
-    const label = rowLabel($(tr).find('th').first().text());
-    if (!label) return;
-    const vals = $(tr).find('td').map((__, td) => n($(td).text())).get();
-    rows[label] = vals;
-  });
-
-  const revenue = rows['매출액'] || [];
-  const eps = rows['EPS(원)'] || rows['EPS'] || [];
-  const per = rows['PER(배)'] || rows['PER'] || [];
-  if (!revenue.length && !eps.length) throw new Error('재무 수치 파싱 실패');
-
-  const allLen = Math.max(revenue.length, eps.length, per.length, annualCount + quarterCount);
-  const qStart = Math.min(annualCount, allLen);
-  const qRevenue = revenue.slice(qStart, qStart + quarterCount);
-  const qEps = eps.slice(qStart, qStart + quarterCount);
-  const qDates = dateHeaders.slice(annualCount, annualCount + quarterCount);
-  const qUsable: number[] = [];
-  for (let i = Math.max(qRevenue.length, qEps.length, qDates.length) - 1; i >= 0; i--) {
-    if (qRevenue[i] != null || qEps[i] != null) qUsable.push(i);
-    if (qUsable.length === 2) break;
-  }
-  const qi = qUsable[0] ?? -1, qj = qUsable[1] ?? -1;
-
-  const aEps = eps.slice(0, annualCount);
-  const aPer = per.slice(0, annualCount);
-  const aDates = dateHeaders.slice(0, annualCount);
-  let trailingIndex = lastFiniteIndex(aEps, i => !/\(E\)|E$/i.test(aDates[i] || ''));
-  if (trailingIndex < 0) trailingIndex = lastFiniteIndex(aEps);
-  let forwardIndex = firstFiniteIndex(aEps, i => /\(E\)|E$/i.test(aDates[i] || '') && i > trailingIndex);
-  if (forwardIndex < 0) forwardIndex = lastFiniteIndex(aEps);
-
-  let trailingPerIndex = lastFiniteIndex(aPer, i => !/\(E\)|E$/i.test(aDates[i] || ''));
-  if (trailingPerIndex < 0) trailingPerIndex = lastFiniteIndex(aPer);
-  let forwardPerIndex = firstFiniteIndex(aPer, i => /\(E\)|E$/i.test(aDates[i] || '') && i > trailingPerIndex);
-  if (forwardPerIndex < 0) forwardPerIndex = lastFiniteIndex(aPer);
-
-  const latestQuarter = qi >= 0 ? (qDates[qi] || null) : null;
-  const epsGrowthPct = qi >= 0 && qj >= 0 ? growth(qEps[qi] ?? null, qEps[qj] ?? null) : null;
-  const revenueGrowthPct = qi >= 0 && qj >= 0 ? growth(qRevenue[qi] ?? null, qRevenue[qj] ?? null) : null;
+  const targetMeanPrice = num(integration?.consensusInfo?.priceTargetMean);
+  const trailingEps = num(im.eps);
+  const forwardEps = num(im.cnsEps);
+  const trailingPE = num(im.per);
+  const forwardPE = num(im.cnsPer);
 
   return {
     code,
-    name,
+    name: stockName,
     market: 'KOSPI',
     currentPrice,
+    marketCapEok: marketCapEok(im.marketValue),
     targetMeanPrice,
     upsidePct: currentPrice && targetMeanPrice ? (targetMeanPrice / currentPrice - 1) * 100 : null,
-    epsGrowthPct,
-    revenueGrowthPct,
-    trailingEps: trailingIndex >= 0 ? aEps[trailingIndex] : null,
-    forwardEps: forwardIndex >= 0 ? aEps[forwardIndex] : null,
-    trailingPE: trailingPerIndex >= 0 ? aPer[trailingPerIndex] : null,
-    forwardPE: forwardPerIndex >= 0 ? aPer[forwardPerIndex] : null,
-    latestQuarter,
-    sector,
-    source: 'Naver Finance PC'
+    epsGrowthPct: epsIdx.length >= 2 ? growth(epsQ[epsIdx[0]], epsQ[epsIdx[1]]) : null,
+    revenueGrowthPct: revIdx.length >= 2 ? growth(revenue[revIdx[0]], revenue[revIdx[1]]) : null,
+    trailingEps,
+    forwardEps,
+    trailingPE,
+    forwardPE,
+    latestQuarter: latestIdx >= 0 ? (fin.titles[latestIdx]?.title || fin.titles[latestIdx]?.key || null) : null,
+    sector: industryName(integration),
+    source: 'Naver Mobile JSON'
   };
 }
 
@@ -262,7 +231,21 @@ async function health() {
     const j = await fetchJson('https://m.stock.naver.com/api/stocks/marketValue/KOSPI?page=1&pageSize=20');
     const u = pickArray(j);
     const d = await fetchNaverDetail('005930');
-    return json({ ok: true, universeRows: u.length, detail: { parsed: true, hasPrice: d.currentPrice != null, hasRevenueGrowth: d.revenueGrowthPct != null, hasEpsGrowth: d.epsGrowthPct != null, latestQuarter: d.latestQuarter, source: d.source } });
+    return json({
+      ok: true,
+      universeRows: u.length,
+      detail: {
+        parsed: true,
+        hasPrice: d.currentPrice != null,
+        hasRevenueGrowth: d.revenueGrowthPct != null,
+        hasEpsGrowth: d.epsGrowthPct != null,
+        hasTrailingEps: d.trailingEps != null,
+        hasForwardEps: d.forwardEps != null,
+        hasTarget: d.targetMeanPrice != null,
+        latestQuarter: d.latestQuarter,
+        source: d.source
+      }
+    });
   } catch (e: any) { return json({ ok: false, error: e?.message || String(e) }, 502); }
 }
 
@@ -276,8 +259,8 @@ export async function GET(req: Request) {
     try {
       const all = await fetchUniverseAll();
       const limit = Math.max(0, Number(u.searchParams.get('limit') || 0));
-      const rows = limit ? all.rows.slice(0, limit) : all.rows;
-      return json({ ok: true, source: all.source, warning: all.warning || null, total: all.rows.length, rows });
+      const rows = limit ? all.slice(0, limit) : all;
+      return json({ ok: true, source: 'Naver Mobile marketValue API', total: all.length, rows });
     } catch (e: any) { return json({ ok: false, error: e?.message || String(e) }, 502); }
   }
   return json({ ok: false, error: 'Unknown action' }, 400);
