@@ -24,6 +24,24 @@ const sourceRules = [
 
 const officialDomains = sourceRules.flatMap(x => x[2]);
 
+const foreignSources = [
+  { name:'Reuters', tier:1, keys:['reuters'] },
+  { name:'Bloomberg', tier:1, keys:['bloomberg'] },
+  { name:'Financial Times', tier:1, keys:['financial times','ft.com'] },
+  { name:'The Wall Street Journal', tier:1, keys:['wall street journal','wsj'] },
+  { name:'Nikkei Asia', tier:1, keys:['nikkei asia','asia.nikkei'] },
+  { name:'Associated Press', tier:1, keys:['associated press','ap news','apnews'] },
+  { name:'CNBC', tier:2, keys:['cnbc'] },
+  { name:'BBC', tier:2, keys:['bbc'] },
+  { name:'CNN', tier:2, keys:['cnn'] },
+  { name:'MarketWatch', tier:2, keys:['marketwatch'] },
+  { name:"Barron's", tier:2, keys:["barron's",'barrons'] },
+  { name:'Forbes', tier:2, keys:['forbes'] },
+  { name:'Fortune', tier:2, keys:['fortune'] },
+  { name:'The Verge', tier:2, keys:['the verge','theverge'] },
+  { name:'TechCrunch', tier:2, keys:['techcrunch'] },
+] as const;
+
 const stageRules = [
   ['참가모집', ['참가기업 모집','참가 신청','참가신청','모집 공고','delegation application','registration open','call for participants']],
   ['프로그램 공개', ['프로그램','agenda','program','schedule','세션']],
@@ -33,6 +51,8 @@ const stageRules = [
   ['MOU·협력', ['mou','업무협약','양해각서','파트너십','partnership','협력','joint venture','협약']],
   ['수주·계약', ['단일판매','공급계약','수주','계약 체결','contract','award','procurement']],
 ] as const;
+
+const englishNameCache = new Map<string,string>();
 
 function verify(code: string | null) {
   if (!code) return false;
@@ -107,6 +127,48 @@ function makeItem(c:any,title:string,desc:string,link:string,pub:string,sourceNa
   if(!ss.length) return null;
   const date=safeDate(pub);
   return {id:createHash('sha1').update(`${c.code}|${link}|${title}`).digest('hex').slice(0,18),company:c.name,code:c.code,rank:c.rank,date,title:title.replace(/\s+-\s+[^-]+$/,'').trim(),url:link,source:src.name,sourceType:src.type,official:src.official,stages:ss,score:score(src,ss,date)};
+}
+
+function foreignSource(url:string,sourceName:string){
+  const hay=`${url||''} ${sourceName||''}`.toLowerCase();
+  for(const s of foreignSources) if(s.keys.some(k=>hay.includes(k))) return s;
+  return null;
+}
+function foreignScore(tier:number,date:string){
+  let s=tier===1?58:50;
+  const age=Math.max(0,(Date.now()-new Date(date).getTime())/86400000);
+  if(age<=2)s+=12; else if(age<=7)s+=8; else if(age<=30)s+=3;
+  return Math.min(100,s);
+}
+async function englishNameForCompany(c:any){
+  const cached=englishNameCache.get(c.code); if(cached) return cached;
+  try{
+    const u=`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(c.code+'.KS')}&quotesCount=5&newsCount=0`;
+    const j=await fetchJson(u,{'Accept-Language':'en-US,en;q=0.9'});
+    const q=(j?.quotes||[]).find((x:any)=>String(x?.symbol||'').toUpperCase()===`${c.code}.KS`) || (j?.quotes||[])[0];
+    const n=String(q?.longname||q?.shortname||'').trim();
+    if(n){ englishNameCache.set(c.code,n); return n; }
+  }catch{}
+  englishNameCache.set(c.code,c.name);
+  return c.name;
+}
+async function foreignNewsForCompany(c:any,days:number){
+  try{
+    const englishName=await englishNameForCompany(c);
+    const names=englishName && englishName!==c.name ? `("${englishName}" OR "${c.name}")` : `"${c.name}"`;
+    const q=`${names} when:${days}d`;
+    const url=`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+    const xml=await fetchText(url,{'Accept-Language':'en-US,en;q=0.9'});
+    const blocks=xml.match(/<item>[\s\S]*?<\/item>/g)||[]; const out:any[]=[]; const seen=new Set<string>();
+    for(const item of blocks.slice(0,50)){
+      const title=tag(item,'title'), desc=tag(item,'description'), link=tag(item,'link'), pub=tag(item,'pubDate'); const st=sourceTag(item);
+      const media=foreignSource(st.url,st.name); if(!media) continue;
+      const date=safeDate(pub); const key=title.toLowerCase().replace(/\W+/g,' ').trim(); if(!key||seen.has(key)) continue; seen.add(key);
+      out.push({id:createHash('sha1').update(`foreign|${c.code}|${title}`).digest('hex').slice(0,18),company:c.name,englishName,code:c.code,rank:c.rank,date,title:title.replace(/\s+-\s+[^-]+$/,'').trim(),url:link,source:media.name,sourceType:'외신 주요뉴스',official:false,stages:['외신 주요뉴스'],score:foreignScore(media.tier,date)});
+      if(out.length>=5) break;
+    }
+    return out;
+  }catch{return [];}
 }
 
 async function googleNewsForCompany(c:any,days:number){
@@ -185,7 +247,10 @@ export async function GET(req:Request){
     const arr=raw.split('|').map(x=>{const [rank,code,...rest]=x.split(':'); return {rank:Number(rank),code,name:rest.join(':')};}).filter(x=>x.code&&x.name).slice(0,10);
     const dartKey=req.headers.get('x-dart-key')||'';
     const [companyParts,dart]=await Promise.all([
-      Promise.all(arr.map(async c=>{ const [general,official]=await Promise.all([googleNewsForCompany(c,days),officialWebForCompany(c,days)]); return [...official,...general]; })),
+      Promise.all(arr.map(async c=>{
+        const [general,official,foreign]=await Promise.all([googleNewsForCompany(c,days),officialWebForCompany(c,days),foreignNewsForCompany(c,days)]);
+        return [...official,...general,...foreign];
+      })),
       dartRecent(arr.map(x=>x.name),days,dartKey)
     ]);
     const items=[...companyParts.flat(),...(dart.items||[])];
@@ -194,7 +259,7 @@ export async function GET(req:Request){
       const k=`${x.company}|${x.title}`.toLowerCase().replace(/\W+/g,' ').slice(0,180);
       const old=dedup.get(k); if(!old||x.score>old.score) dedup.set(k,x);
     }
-    return json({generatedAt:new Date().toISOString(),days,count:dedup.size,items:[...dedup.values()].sort((a,b)=>b.score-a.score||+new Date(b.date)-+new Date(a.date)),dart:{enabled:dart.enabled,error:dart.error||null},sourceRules:sourceRules.map(x=>({name:x[0],type:x[1],domains:x[2]})),modes:['Google News 일반 신호','Bing 공식도메인 직접검색','OpenDART API(키 입력 시)']});
+    return json({generatedAt:new Date().toISOString(),days,count:dedup.size,items:[...dedup.values()].sort((a,b)=>b.score-a.score||+new Date(b.date)-+new Date(a.date)),dart:{enabled:dart.enabled,error:dart.error||null},sourceRules:sourceRules.map(x=>({name:x[0],type:x[1],domains:x[2]})),foreignSources:foreignSources.map(x=>x.name),modes:['Google News 일반 신호','Bing 공식도메인 직접검색','주요 외신 영문뉴스','OpenDART API(키 입력 시)']});
   }
   return json({error:'bad action'},400);
 }
