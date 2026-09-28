@@ -14,7 +14,10 @@ let universeCache:any = { at: 0, rows: [] };
 const newsCache = new Map<string,{at:number,items:any[]}>();
 
 const EVENT_QUERIES = [
+  { theme:'FDA·허가', q:'PDUFA 한국 기업 FDA 목표일 승인 결정일' },
+  { theme:'FDA·허가', q:'FDA 품목허가 심사 일정 국내 바이오 승인 예정' },
   { theme:'FDA·허가', q:'(FDA OR PDUFA OR 식약처 OR EMA OR 품목허가 OR 허가심사 OR 자문위원회) (승인 OR 결정 OR 심사 OR 일정 OR 예정)' },
+  { theme:'임상·학회', q:'국내 제약 바이오 임상 결과 발표 예정 학회 일정' },
   { theme:'임상·학회', q:'(임상 OR 3상 OR 2상 OR 탑라인 OR ASCO OR ESMO OR AACR OR SITC OR 학회) (결과 OR 발표 OR 초록 OR 데이터 OR 일정 OR 예정)' },
   { theme:'실적·IR', q:'("실적 발표" OR "기업설명회" OR IR OR NDR OR 컨퍼런스콜 OR "투자자 미팅") (예정 OR 개최 OR 일정 OR 발표)' },
   { theme:'주총·배당·증자', q:'(주주총회 OR 배당기준일 OR 권리락 OR 유상증자 OR 무상증자 OR 신주상장 OR 보호예수 OR 전환사채 OR CB OR BW) (예정 OR 일정 OR 해제 OR 상장 OR 납입)' },
@@ -143,8 +146,14 @@ function extractEventDates(text:string,refDate:string){
   while((m=fullKr.exec(text))) add(+m[1],+m[2],+m[3],'day',m[0]);
   const numeric=/(20\d{2})[-\/.](1[0-2]|0?\d)[-\/.]([0-3]?\d)/g;
   while((m=numeric.exec(text))) add(+m[1],+m[2],+m[3],'day',m[0]);
+  const range=/(?<!\d)(1[0-2]|0?\d)\s*월\s*([0-3]?\d)\s*(?:~|～|-|부터)\s*([0-3]?\d)\s*일/g;
+  while((m=range.exec(text))){ const yy=inferYear(+m[1],+m[2],ref); add(yy,+m[1],+m[2],'day',m[0]); add(yy,+m[1],+m[3],'day',m[0]); }
   const kr=/(?<!\d)(1[0-2]|0?\d)\s*월\s*([0-3]?\d)\s*일/g;
   while((m=kr.exec(text))) add(inferYear(+m[1],+m[2],ref),+m[1],+m[2],'day',m[0]);
+  const thisMonth=/(?:오는|이달)\s*([0-3]?\d)\s*일/g;
+  while((m=thisMonth.exec(text))){ let yy=ref.getUTCFullYear(),mm=ref.getUTCMonth()+1,dd=+m[1]; const cand=validDate(yy,mm,dd); if(cand && (cand.getTime()-ref.getTime())/86400000<-7){ mm+=1; if(mm===13){mm=1;yy+=1;} } add(yy,mm,dd,'day',m[0]); }
+  const nextMonth=/내달\s*([0-3]?\d)\s*일/g;
+  while((m=nextMonth.exec(text))){ let yy=ref.getUTCFullYear(),mm=ref.getUTCMonth()+2; if(mm>12){mm-=12;yy+=1;} add(yy,mm,+m[1],'day',m[0]); }
   const eng1=/\b(January|February|March|April|May|June|July|August|September|Sept|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+([0-3]?\d)(?:,\s*(20\d{2}))?/gi;
   while((m=eng1.exec(text))){ const mm=monthNum(m[1]),dd=+m[2],yy=m[3]?+m[3]:inferYear(mm,dd,ref); add(yy,mm,dd,'day',m[0]); }
   const eng2=/\b([0-3]?\d)\s+(January|February|March|April|May|June|July|August|September|Sept|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?:\s+(20\d{2}))?/gi;
@@ -191,16 +200,21 @@ async function queryNews(theme:string,q:string,lookback:number){
 }
 
 function normalizedName(s:string){ return s.replace(/[()\[\]{}㈜주식회사\s]/g,'').toLowerCase(); }
-function matchedCompanies(text:string,stocks:any[],marketSet:Set<string>){
-  const low=text.toLowerCase(); const norm=normalizedName(text); const out:any[]=[];
+function matchedCompanies(title:string,desc:string,source:string,stocks:any[],marketSet:Set<string>){
+  const text=`${title} ${desc}`; const low=text.toLowerCase(); const titleLow=title.toLowerCase(); const norm=normalizedName(text); const titleNorm=normalizedName(title); const sourceLow=(source||'').toLowerCase(); const out:any[]=[];
   for(const s of stocks){
     if(!marketSet.has(s.market)) continue;
     const n=s.name; if(!n) continue;
     let hit=false;
-    if(/^[A-Za-z0-9&. -]{2,}$/.test(n)){
+    if(n==='NAVER'){ hit=(title.includes('네이버')||desc.includes('네이버')) && !/네이버\s*(블로그|카페)/.test(title); }
+    else if(/^[A-Za-z0-9&. -]{2,}$/.test(n)){
+      if(sourceLow.includes(n.toLowerCase())) continue;
       const esc=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
       hit=new RegExp(`(^|[^A-Za-z0-9])${esc}([^A-Za-z0-9]|$)`,'i').test(text);
-    } else if(n.length>=3) hit=low.includes(n.toLowerCase()) || norm.includes(normalizedName(n));
+    } else {
+      const nn=normalizedName(n);
+      hit=nn.length<=3 ? (titleLow.includes(n.toLowerCase())||titleNorm.includes(nn)) : (low.includes(n.toLowerCase())||norm.includes(nn));
+    }
     if(hit) out.push(s);
     if(out.length>=12) break;
   }
@@ -211,7 +225,7 @@ export async function GET(req:Request){
   if(!authorized(req)) return json({ok:false,error:'UNAUTHORIZED'},401);
   const u=new URL(req.url);
   if(u.searchParams.get('mode')==='ping') return json({ok:true,auth:'valid'});
-  const lookback=Math.max(1,Math.min(60,Number(u.searchParams.get('lookback')||30)));
+  const lookback=Math.max(1,Math.min(180,Number(u.searchParams.get('lookback')||120)));
   const horizon=Math.max(1,Math.min(365,Number(u.searchParams.get('horizon')||120)));
   const marketParam=(u.searchParams.get('market')||'ALL').toUpperCase();
   const marketSet=new Set(marketParam==='KOSPI'?['KOSPI']:marketParam==='KOSDAQ'?['KOSDAQ']:['KOSPI','KOSDAQ']);
@@ -226,7 +240,7 @@ export async function GET(req:Request){
     const text=`${a.title} ${a.desc}`;
     const dates=extractEventDates(text,a.publishedAt);
     if(!dates.length) continue;
-    const companies=matchedCompanies(text,stocks,marketSet);
+    const companies=matchedCompanies(a.title,a.desc,a.source,stocks,marketSet);
     if(!companies.length) continue;
     const official=isOfficial(a.source,a.sourceUrl);
     for(const d of dates){
