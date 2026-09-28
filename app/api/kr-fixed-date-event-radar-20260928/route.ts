@@ -199,21 +199,29 @@ async function queryNews(theme:string,q:string,lookback:number){
   } catch { return []; }
 }
 
-function normalizedName(s:string){ return s.replace(/[()\[\]{}㈜주식회사\s]/g,'').toLowerCase(); }
+function escRe(s:string){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function asciiMention(text:string,name:string){
+  const re=new RegExp(`(^|[^A-Za-z0-9])${escRe(name)}([^A-Za-z0-9]|$)`,'i');
+  return re.test(text);
+}
+function koreanMention(text:string,name:string){
+  const re=new RegExp(`(^|[^가-힣A-Za-z0-9])${escRe(name)}(?=$|[^가-힣A-Za-z0-9]|은|는|이|가|의|을|를|과|와|도|에|서|로|으로|측|사|그룹|㈜)`,'i');
+  return re.test(text);
+}
 function matchedCompanies(title:string,desc:string,source:string,stocks:any[],marketSet:Set<string>){
-  const text=`${title} ${desc}`; const low=text.toLowerCase(); const titleLow=title.toLowerCase(); const norm=normalizedName(text); const titleNorm=normalizedName(title); const sourceLow=(source||'').toLowerCase(); const out:any[]=[];
+  const text=`${title} ${desc}`; const sourceLow=(source||'').toLowerCase(); const out:any[]=[];
   for(const s of stocks){
     if(!marketSet.has(s.market)) continue;
-    const n=s.name; if(!n) continue;
+    const n=String(s.name||'').trim(); if(!n) continue;
     let hit=false;
-    if(n==='NAVER'){ hit=(title.includes('네이버')||desc.includes('네이버')) && !/네이버\s*(블로그|카페)/.test(title); }
-    else if(/^[A-Za-z0-9&. -]{2,}$/.test(n)){
+    if(n==='NAVER'){
+      const bad=/(?:^|[:·|\-]\s*)네이버\s*(?:블로그|카페)\s*$/i.test(title) || /네이버\s*(?:블로그|카페)/i.test(source);
+      hit=!bad && (koreanMention(title,'네이버') || koreanMention(desc,'네이버') || asciiMention(text,'NAVER'));
+    } else if(/^[A-Za-z0-9&. -]{2,}$/.test(n)){
       if(sourceLow.includes(n.toLowerCase())) continue;
-      const esc=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-      hit=new RegExp(`(^|[^A-Za-z0-9])${esc}([^A-Za-z0-9]|$)`,'i').test(text);
+      hit=asciiMention(text,n);
     } else {
-      const nn=normalizedName(n);
-      hit=nn.length<=3 ? (titleLow.includes(n.toLowerCase())||titleNorm.includes(nn)) : (low.includes(n.toLowerCase())||norm.includes(nn));
+      hit=koreanMention(title,n) || koreanMention(desc,n);
     }
     if(hit) out.push(s);
     if(out.length>=12) break;
@@ -246,7 +254,7 @@ export async function GET(req:Request){
     for(const d of dates){
       const ed=new Date(d.date+'T00:00:00Z'); if(ed<minDate||ed>maxDate) continue;
       for(const c of companies){
-        const inTitle=a.title.toLowerCase().includes(c.name.toLowerCase()) || normalizedName(a.title).includes(normalizedName(c.name));
+        const inTitle=/^[A-Za-z0-9&. -]{2,}$/.test(c.name) ? asciiMention(a.title,c.name) : koreanMention(a.title,c.name);
         const score=eventScore({official,source:a.source,inTitle,theme:a.theme,eventDate:d.date,text});
         events.push({
           id:createHash('sha1').update(`${c.code}|${a.theme}|${d.date}|${a.title}`).digest('hex').slice(0,18),
