@@ -4,7 +4,7 @@ import {SEARCH_TERMS,WINDOW_DAYS,TASKS_PER_BATCH} from '../../../lib/naver-futur
 import {universe,tradingRange} from '../../../lib/naver-future-event/stocks';
 import {buildTasks,searchTask,health} from '../../../lib/naver-future-event/news';
 import {eventFromArticle} from '../../../lib/naver-future-event/events';
-export const runtime='nodejs';export const maxDuration=60;export const dynamic='force-dynamic';
+export const runtime='nodejs';export const preferredRegion='icn1';export const maxDuration=60;export const dynamic='force-dynamic';
 export async function GET(req:Request){const u=new URL(req.url),mode=u.searchParams.get('mode')||'batch';if(mode==='health')return json(await health());if(!authorized(req))return json({ok:false,error:'UNAUTHORIZED'},401);if(mode==='ping')return json({ok:true,auth:'valid'});
  const trades=Math.max(20,Math.min(240,Number(u.searchParams.get('trades')||240))),pageDepth=Math.max(1,Math.min(3,Number(u.searchParams.get('pageDepth')||2))),horizon=Math.max(30,Math.min(1460,Number(u.searchParams.get('horizon')||730))),range=await tradingRange(trades),{windows,tasks}=buildTasks(range,pageDepth),totalBatches=Math.ceil(tasks.length/TASKS_PER_BATCH);
  if(mode==='plan'){const stocks=await universe().catch(()=>[]);return json({ok:true,trades,pageDepth,horizon,range:{start:range.start,end:range.end},windowDays:WINDOW_DAYS,windows:windows.length,terms:SEARCH_TERMS.length,totalTasks:tasks.length,tasksPerBatch:TASKS_PER_BATCH,totalBatches,universeCount:stocks.length,searchTerms:SEARCH_TERMS})}
