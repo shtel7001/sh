@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>KR 고정일정 이벤트 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#142033;--muted:#6b778c;--line:#dfe6ef;--blue:#2563eb;--navy:#132d54;--red:#dc2626;--green:#15803d;--amber:#d97706;--soft:#eef4ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#edf4ff 0,#f7f9fc 210px,#f4f7fb 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif}button,input,select{font:inherit}.wrap{max-width:1500px;margin:auto;padding:18px}.hero{background:linear-gradient(135deg,#0d2443,#1b4e86);color:#fff;border-radius:22px;padding:22px;box-shadow:0 16px 40px rgba(19,45,84,.18)}.hero h1{margin:0 0 7px;font-size:clamp(23px,4vw,38px)}.hero p{margin:0;color:#dceaff;line-height:1.65}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:6px 10px;border-radius:999px;font-size:12px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:17px;box-shadow:0 6px 18px rgba(28,48,74,.05)}.stat{padding:16px}.stat b{display:block;font-size:25px;color:var(--navy)}.stat span{font-size:12px;color:var(--muted)}.panel{padding:15px;margin-top:14px}.controls{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1.4fr;gap:10px;align-items:end}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;padding:0 11px;background:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.btn{border:0;border-radius:11px;padding:10px 14px;font-weight:750;cursor:pointer}.primary{background:var(--blue);color:#fff}.dark{background:var(--navy);color:#fff}.light{background:#edf2f8;color:#24334b}.good{background:#eaf8ef;color:var(--green)}.themebar{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 10px;font-size:12px;cursor:pointer}.chip.active{background:#e8f0ff;border-color:#92b4ff;color:#164fb9;font-weight:800}.meta{font-size:12px;color:var(--muted);margin-top:10px}.tablewrap{overflow:auto;border-radius:14px;border:1px solid var(--line);background:#fff;margin-top:12px;max-height:68vh}table{border-collapse:separate;border-spacing:0;width:100%;min-width:1330px}th{position:sticky;top:0;background:#f0f4f9;color:#47566c;font-size:12px;z-index:1;border-bottom:1px solid var(--line)}th,td{padding:10px 9px;text-align:left;white-space:nowrap}td{border-bottom:1px solid #edf1f5;font-size:13px}.company{font-weight:800;color:#12294c}.score{font-weight:900}.high{color:var(--red)}.mid{color:var(--amber)}.low{color:#64748b}.dplus{color:#64748b}.dnear{color:var(--red);font-weight:900}.up{color:#e11d48}.down{color:#2563eb}.src{max-width:190px;overflow:hidden;text-overflow:ellipsis}.title{max-width:420px;overflow:hidden;text-overflow:ellipsis}.link{color:#155ec9;text-decoration:none}.official{display:inline-block;padding:3px 6px;border-radius:6px;background:#e8f7ec;color:#137333;font-size:10px;font-weight:800;margin-left:4px}.warn{background:#fff8e8;border:1px solid #f7d99d;border-radius:12px;padding:10px 12px;font-size:12px;color:#765315;margin-top:12px;line-height:1.55}.empty{padding:36px;text-align:center;color:var(--muted)}.loader{display:none;align-items:center;gap:8px;color:#315a92;font-size:13px;margin-top:10px}.loader.on{display:flex}.dot{width:9px;height:9px;border-radius:50%;background:#2d6cdf;animation:pulse 1s infinite alternate}@keyframes pulse{to{opacity:.25;transform:scale(.7)}}.login{position:fixed;inset:0;background:rgba(9,24,43,.68);backdrop-filter:blur(7px);z-index:20;display:flex;align-items:center;justify-content:center;padding:18px}.login.hidden{display:none}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.loginbox h2{margin:0 0 8px}.loginbox p{font-size:13px;color:var(--muted);line-height:1.6}.loginrow{display:flex;gap:8px;margin-top:14px}.loginrow input{flex:1;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font-size:18px;letter-spacing:2px}.small{font-size:11px;color:var(--muted);line-height:1.55}.error{color:#b91c1c;font-size:12px;margin-top:8px}.right{margin-left:auto}@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.controls{grid-template-columns:1fr 1fr}.wrap{padding:10px}.hero{border-radius:16px;padding:17px}.panel{padding:11px}.title{max-width:300px}}@media(max-width:520px){.controls{grid-template-columns:1fr}.grid{gap:8px}.stat{padding:12px}.stat b{font-size:21px}.btn{flex:1}.actions .right{margin-left:0}.hero p{font-size:13px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginbox">
+    <h2>개인 인증</h2>
+    <p>인증번호는 같은 번호를 계속 재사용할 수 있습니다. 이 기기에서는 한 번 인증하면 브라우저 저장공간을 지우기 전까지 자동으로 들어옵니다.</p>
+    <div class="loginrow"><input id="codeInput" inputmode="numeric" maxlength="20" placeholder="인증번호" /><button class="btn primary" onclick="doLogin()">인증</button></div>
+    <div id="loginErr" class="error"></div>
+    <p class="small">다른 PC·휴대폰에서는 같은 인증번호를 처음 한 번 입력하면 됩니다.</p>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>KR 고정일정 이벤트 레이더</h1>
+    <p>코스피·코스닥 전종목에서 <b>날짜가 미리 정해진 재료</b>를 자동 탐색합니다. FDA/PDUFA, 임상·학회, 실적·IR, 주총·배당, 정부정책·입찰, 방산·조선, 원전, 반도체·AI, 2차전지, 우주, 전시회, M&A, 지수변경, 법원·특허까지 한 화면에서 봅니다.</p>
+    <div class="badges"><span class="badge">KOSPI 전종목</span><span class="badge">KOSDAQ 전종목</span><span class="badge">정확한 날짜 추출</span><span class="badge">D-Day 자동계산</span><span class="badge">원문 링크</span><span class="badge">.xlsx 저장</span></div>
+  </section>
+
+  <section class="grid">
+    <div class="stat"><b id="sEvents">-</b><span>발견된 고정일정</span></div>
+    <div class="stat"><b id="sStocks">-</b><span>검색 종목 수</span></div>
+    <div class="stat"><b id="sNear">-</b><span>30일 이내 이벤트</span></div>
+    <div class="stat"><b id="sHigh">-</b><span>신뢰점수 75+</span></div>
+  </section>
+
+  <section class="panel">
+    <div class="controls">
+      <div class="field"><label>시장</label><select id="market"><option value="ALL">코스피 + 코스닥</option><option value="KOSPI">코스피 전종목</option><option value="KOSDAQ">코스닥 전종목</option></select></div>
+      <div class="field"><label>뉴스 탐색기간</label><select id="lookback"><option value="7">최근 7일</option><option value="14">최근 14일</option><option value="30" selected>최근 30일</option><option value="60">최근 60일</option></select></div>
+      <div class="field"><label>앞으로 일정</label><select id="horizon"><option value="30">30일</option><option value="60">60일</option><option value="120" selected>120일</option><option value="180">180일</option><option value="365">365일</option></select></div>
+      <div class="field"><label>최소 신뢰점수</label><select id="minScore"><option value="0">전체</option><option value="60" selected>60점+</option><option value="70">70점+</option><option value="75">75점+</option><option value="85">85점+</option></select></div>
+      <div class="field"><label>종목·이벤트 검색</label><input id="search" placeholder="예: HLB, FDA, 원전, 방산" oninput="render()" /></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="scan()">일정 자동검색</button>
+      <button class="btn dark" onclick="exportXlsx()">엑셀(.xlsx) 저장</button>
+      <button class="btn light" onclick="setSort('date')">날짜순</button>
+      <button class="btn light" onclick="setSort('score')">점수순</button>
+      <button class="btn good" id="autoBtn" onclick="toggleAuto()">자동새로고침 15분: ON</button>
+      <button class="btn light right" onclick="logout()">인증 초기화</button>
+    </div>
+    <div id="themes" class="themebar"></div>
+    <div id="loader" class="loader"><span class="dot"></span><span id="loadText">데이터를 모으고 있습니다...</span></div>
+    <div id="meta" class="meta"></div>
+    <div class="warn">이 레이더는 ‘날짜가 기사·공시·공식자료에 명시된 이벤트’를 우선 추출합니다. 일정 변경·연기 가능성이 있으므로 투자 판단 전에 원문, KIND/DART, 회사 IR, FDA·정부기관 발표를 다시 확인하세요.</div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>D-Day</th><th>이벤트일</th><th>점수</th><th>시장</th><th>종목</th><th>현재가</th><th>등락</th><th>테마</th><th>예정 이벤트/근거</th><th>출처</th><th>발견시각</th><th>링크</th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="12" class="empty">인증 후 자동으로 검색합니다.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<script>
+const API='/api/kr-fixed-date-event-radar-20260928';
+const STORE='kr_fixed_date_event_radar_access';
+let allEvents=[], visibleEvents=[], activeTheme='전체', sortMode='date', autoOn=true, autoTimer=null, lastMeta=null;
+const $=id=>document.getElementById(id);
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function fmt(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return '-';return Number(n).toLocaleString('ko-KR')}
+function pct(n){if(n===null||n===undefined||Number.isNaN(Number(n)))return '-';const v=Number(n);return `${v>0?'+':''}${v.toFixed(2)}%`}
+function dateTime(s){try{return new Date(s).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return s||'-'}}
+function getCode(){return localStorage.getItem(STORE)||''}
+async function doLogin(){
+  const code=$('codeInput').value.trim(); $('loginErr').textContent=''; if(!code){$('loginErr').textContent='인증번호를 입력하세요.';return}
+  try{const r=await fetch(API+'?mode=ping',{headers:{'x-access-code':code}});if(!r.ok)throw new Error();localStorage.setItem(STORE,code);$('login').classList.add('hidden');await scan()}catch{$('loginErr').textContent='인증번호가 맞지 않습니다.'}
+}
+async function boot(){
+  const code=getCode(); if(!code)return;
+  try{const r=await fetch(API+'?mode=ping',{headers:{'x-access-code':code}});if(r.ok){$('login').classList.add('hidden');await scan()}else localStorage.removeItem(STORE)}catch{}
+}
+function logout(){localStorage.removeItem(STORE);$('login').classList.remove('hidden');$('codeInput').value='';}
+async function scan(){
+  const code=getCode(); if(!code){$('login').classList.remove('hidden');return}
+  $('loader').classList.add('on');$('loadText').textContent='코스피·코스닥 전종목과 고정일정 뉴스를 검색 중입니다...';
+  const qs=new URLSearchParams({market:$('market').value,lookback:$('lookback').value,horizon:$('horizon').value});
+  try{
+    const r=await fetch(API+'?'+qs.toString(),{headers:{'x-access-code':code}}); const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||'검색 실패');
+    allEvents=j.events||[]; lastMeta=j; buildThemes(j.counts||{}); render();
+    $('meta').textContent=`마지막 검색 ${dateTime(j.generatedAt)} · 전종목 ${fmt(j.universeCount)}개 · 기사후보 ${fmt(j.articleCount)}건 · 고정일정 ${fmt(j.eventCount)}건 · 처리 ${(j.elapsedMs/1000).toFixed(1)}초`;
+  }catch(e){$('meta').textContent='검색 오류: '+(e.message||e);$('tbody').innerHTML='<tr><td colspan="12" class="empty">데이터를 가져오지 못했습니다. 잠시 후 다시 검색해 주세요.</td></tr>'}
+  finally{$('loader').classList.remove('on')}
+}
+function buildThemes(counts){
+  const keys=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  $('themes').innerHTML=['전체',...keys].map(k=>`<button class="chip ${k===activeTheme?'active':''}" onclick="theme('${esc(k)}')">${esc(k)}${k==='전체'?'':` ${counts[k]}`}</button>`).join('');
+}
+function theme(k){activeTheme=k;buildThemes(lastMeta?.counts||{});render()}
+function setSort(k){sortMode=k;render()}
+function render(){
+  const q=$('search').value.trim().toLowerCase(), min=Number($('minScore').value||0);
+  let rows=allEvents.filter(x=>x.score>=min && (activeTheme==='전체'||x.theme===activeTheme));
+  if(q)rows=rows.filter(x=>`${x.company} ${x.code} ${x.theme} ${x.title} ${x.source}`.toLowerCase().includes(q));
+  rows.sort(sortMode==='score'?(a,b)=>b.score-a.score||a.dDay-b.dDay:(a,b)=>a.dDay-b.dDay||b.score-a.score);
+  visibleEvents=rows;
+  $('sEvents').textContent=fmt(rows.length); $('sStocks').textContent=fmt(lastMeta?.universeCount||0); $('sNear').textContent=fmt(rows.filter(x=>x.dDay>=0&&x.dDay<=30).length); $('sHigh').textContent=fmt(rows.filter(x=>x.score>=75).length);
+  if(!rows.length){$('tbody').innerHTML='<tr><td colspan="12" class="empty">조건에 맞는 일정이 없습니다. 검색기간·점수·테마 조건을 넓혀보세요.</td></tr>';return}
+  $('tbody').innerHTML=rows.map(x=>{
+    const dc=x.dDay<=7&&x.dDay>=0?'dnear':'dplus'; const sc=x.score>=80?'high':x.score>=65?'mid':'low'; const ch=Number(x.changePct)>0?'up':Number(x.changePct)<0?'down':'';
+    return `<tr><td class="${dc}">${x.dDay===0?'D-DAY':x.dDay>0?'D-'+x.dDay:'D+'+Math.abs(x.dDay)}</td><td><b>${esc(x.eventDate)}</b></td><td class="score ${sc}">${x.score}</td><td>${esc(x.market)}</td><td><a class="link company" target="_blank" href="${esc(x.naver)}">${esc(x.company)}</a><br><span class="small">${esc(x.code)}</span></td><td>${fmt(x.price)}</td><td class="${ch}">${pct(x.changePct)}</td><td><span class="badge" style="background:#eef4ff;color:#164c9a;border-color:#d8e5ff">${esc(x.theme)}</span></td><td class="title" title="${esc(x.title)}">${esc(x.title)}<br><span class="small">기사 내 날짜: ${esc(x.dateText||x.eventDate)}</span></td><td class="src">${esc(x.source)}${x.official?'<span class="official">공식</span>':''}</td><td>${dateTime(x.publishedAt)}</td><td><a class="link" target="_blank" href="${esc(x.url)}">원문</a> · <a class="link" target="_blank" href="${esc(x.news)}">뉴스</a></td></tr>`
+  }).join('');
+}
+$('minScore').addEventListener('change',render);$('market').addEventListener('change',()=>{});$('lookback').addEventListener('change',()=>{});$('horizon').addEventListener('change',()=>{});
+function exportXlsx(){
+  if(!visibleEvents.length){alert('저장할 검색 결과가 없습니다.');return} if(typeof XLSX==='undefined'){alert('엑셀 모듈을 불러오지 못했습니다. 다시 접속해 주세요.');return}
+  const rows=visibleEvents.map((x,i)=>({순위:i+1,'D-Day':x.dDay===0?'D-DAY':x.dDay>0?'D-'+x.dDay:'D+'+Math.abs(x.dDay),이벤트일:x.eventDate,신뢰점수:x.score,시장:x.market,종목명:x.company,종목코드:x.code,현재가:x.price,등락률:x.changePct,시가총액_억원:x.marketCapEok,테마:x.theme,예정이벤트:x.title,출처:x.source,공식출처:x.official?'Y':'N',발견시각:x.publishedAt,원문:x.url,네이버증권:x.naver,네이버뉴스:x.news}));
+  const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(rows); ws['!cols']=[6,10,11,9,9,14,10,12,10,15,18,55,20,10,22,45,40,40].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb,ws,'고정일정');
+  const summary=[['항목','값'],['생성시각',new Date().toLocaleString('ko-KR')],['시장',$('market').selectedOptions[0].text],['뉴스 탐색기간',$('lookback').selectedOptions[0].text],['앞으로 일정',$('horizon').selectedOptions[0].text],['최소 신뢰점수',$('minScore').selectedOptions[0].text],['검색 종목 수',lastMeta?.universeCount||0],['검색 결과 수',visibleEvents.length],[],['주의','일정은 변경될 수 있으므로 원문·공시·회사 IR·공식기관에서 최종 확인']];
+  const ws2=XLSX.utils.aoa_to_sheet(summary);ws2['!cols']=[{wch:20},{wch:80}];XLSX.utils.book_append_sheet(wb,ws2,'검색조건');
+  const d=new Date(),pad=n=>String(n).padStart(2,'0'); const fn=`KR_고정일정_이벤트레이더_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.xlsx`; XLSX.writeFile(wb,fn,{compression:true});
+}
+function toggleAuto(){autoOn=!autoOn;$('autoBtn').textContent=`자동새로고침 15분: ${autoOn?'ON':'OFF'}`;$('autoBtn').className='btn '+(autoOn?'good':'light');setupAuto()}
+function setupAuto(){if(autoTimer)clearInterval(autoTimer);if(autoOn)autoTimer=setInterval(()=>{if(getCode()&&!document.hidden)scan()},15*60*1000)}
+setupAuto();boot();
+</script>
+</body>
+</html>
