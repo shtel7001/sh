@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {createHash,timingSafeEqual} from 'crypto';
 import {ACCESS_HASH,UA} from './config';
-export const clean=(s:any='')=>String(s).replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+export const clean=(s:any='')=>String(s).replace(/&nbsp;/g,' ').replace(/새\s*창\s*열림/g,' ').replace(/\s+/g,' ').trim();
 export const pad=(n:number)=>String(n).padStart(2,'0');
 export const ymd=(d:Date)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 export function parseYmd(s:string){const m=s.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})/);if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3]);return Number.isNaN(d.getTime())?null:d}
