@@ -9,48 +9,40 @@ export const dynamic = 'force-dynamic';
 const ACCESS_HASH = '0421d7067c7573fa6ff26138c1186a05d2514708f814b2549e65c2185277f6bc'; // 17382171
 const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140 Mobile Safari/537.36';
 const MARKET_CACHE_MS = 6 * 60 * 60 * 1000;
-const NEWS_CACHE_MS = 10 * 60 * 1000;
 const ARTICLE_CACHE_MS = 30 * 60 * 1000;
-const MAX_NAVER_ARTICLES = 620;
-const MAX_PUBLISHER_ARTICLES = 280;
+const MAX_NAVER_ARTICLES = 720;
 
 let universeCache:any = { at: 0, rows: [] };
-const searchCache = new Map<string,{at:number,items:any[]}>();
 const articleCache = new Map<string,{at:number,item:any}>();
 
-const EVENT_QUERIES = [
+const NAVER_BASE_QUERIES = [
+  { theme:'기타 일정', q:'예정 일정 국내 상장사' },
+  { theme:'기타 일정', q:'오는 발표 예정 상장사' },
+  { theme:'기타 일정', q:'내달 발표 예정 상장사' },
+  { theme:'기타 일정', q:'다음달 일정 국내 상장사' },
   { theme:'FDA·허가', q:'FDA PDUFA 승인 예정일 국내 제약 바이오' },
   { theme:'FDA·허가', q:'FDA 허가 결정일 품목허가 예정 국내 기업' },
   { theme:'FDA·허가', q:'식약처 품목허가 승인 예정일 제약 바이오' },
   { theme:'임상·학회', q:'임상 3상 결과 발표 예정 국내 제약 바이오' },
   { theme:'임상·학회', q:'ASCO ESMO AACR SITC 발표 예정 국내 기업' },
-  { theme:'실적·IR', q:'실적 발표 예정 기업설명회 IR NDR 국내 상장사' },
-  { theme:'주총·배당·증자', q:'주주총회 배당기준일 유상증자 납입일 신주상장 예정' },
-  { theme:'정부정책·입찰', q:'정부 정책 발표 예정 입찰 선정 공고 국내 기업' },
+  { theme:'실적·IR', q:'실적 발표 예정 상장사' },
+  { theme:'실적·IR', q:'기업설명회 IR NDR 개최 예정 상장사' },
+  { theme:'주총·배당·증자', q:'임시주주총회 개최 예정 상장사' },
+  { theme:'주총·배당·증자', q:'유상증자 납입 예정 신주 상장' },
+  { theme:'주총·배당·증자', q:'보호예수 해제 예정 상장사' },
+  { theme:'정부정책·입찰', q:'정부 정책 발표 예정 국내 기업' },
+  { theme:'정부정책·입찰', q:'입찰 결과 발표 예정 국내 기업' },
   { theme:'방산·조선', q:'방산 조선 수주 입찰 선정 발표 예정 국내 기업' },
   { theme:'원전·에너지', q:'원전 SMR 전력망 ESS 입찰 수주 발표 예정 국내 기업' },
-  { theme:'반도체·AI·로봇', q:'반도체 HBM AI 로봇 양산 출시 공급 예정 국내 기업' },
+  { theme:'반도체·AI·로봇', q:'반도체 HBM AI 로봇 양산 공급 발표 예정 국내 기업' },
   { theme:'2차전지·자동차', q:'2차전지 전고체 배터리 자율주행 양산 출시 예정 국내 기업' },
   { theme:'우주·항공', q:'위성 발사 우주 항공 시험 발사 예정 국내 기업' },
-  { theme:'전시회·정상회의', q:'CES MWC SEMICON 전시회 참가 발표 예정 국내 기업' },
-  { theme:'M&A·계약', q:'M&A 인수 합병 공개매수 공급계약 마감 예정 국내 상장사' },
+  { theme:'전시회·정상회의', q:'CES MWC SEMICON APEC G20 참가 발표 예정 국내 기업' },
+  { theme:'M&A·계약', q:'M&A 인수 합병 공개매수 마감 예정 상장사' },
+  { theme:'M&A·계약', q:'공급계약 수주 계약 예정 국내 상장사' },
   { theme:'지수·시장제도', q:'MSCI 코스피200 코스닥150 편입 리밸런싱 예정 종목' },
   { theme:'법원·특허·규제', q:'판결 선고 특허 소송 결정일 예정 상장사' },
   { theme:'제품·서비스 출시', q:'신제품 출시 공개 상용화 양산 예정 국내 상장사' },
-] as const;
-const DISCOVERY_QUERIES = [
-  {theme:'주총·배당·증자',q:'임시주주총회 개최 예정 상장사'},
-  {theme:'주총·배당·증자',q:'유상증자 납입 예정 신주 상장'},
-  {theme:'주총·배당·증자',q:'보호예수 해제 예정 상장사'},
-  {theme:'실적·IR',q:'기업설명회 개최 예정 상장사'},
-  {theme:'실적·IR',q:'실적 발표 예정 상장사'},
-  {theme:'M&A·계약',q:'공개매수 마감 예정 상장사'},
-  {theme:'정부정책·입찰',q:'입찰 결과 발표 예정 국내 기업'},
-  {theme:'제품·서비스 출시',q:'출시 예정 양산 예정 국내 기업'},
-  {theme:'기타 일정',q:'오는 10월 예정 상장사'},
-  {theme:'기타 일정',q:'오는 11월 예정 상장사'},
-  {theme:'기타 일정',q:'내달 발표 예정 상장사'},
-  {theme:'기타 일정',q:'다음달 일정 국내 상장사'},
 ] as const;
 
 const EVENT_CUES = /예정|일정|목표일|목표 날짜|PDUFA|시한|기한|승인|허가|결정|심사|발표|공개|개최|학회|임상|탑라인|주주총회|배당기준일|권리락|납입일|상장일|보호예수|입찰|선정|계약|수주|인도|진수|착공|준공|양산|출시|상용화|발사|시험|마감|편입|편출|리밸런싱|시행|선고|공청회|청문회|MOU|사절단|행사|전시회/i;
@@ -66,7 +58,6 @@ function capEok(v:any){ const s=String(v??'').replace(/,/g,''); let t=0,f=false;
 function clean(s=''){ return String(s||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); }
 function safeIso(pub=''){ try{ const d=new Date(pub); if(Number.isFinite(d.getTime())) return d.toISOString(); }catch{} return new Date().toISOString(); }
 async function fetchText(url:string,headers:any={},timeout=8000){ const r=await fetch(url,{cache:'no-store',redirect:'follow',headers:{'User-Agent':UA,'Accept-Language':'ko-KR,ko;q=0.9,en;q=0.7',...headers},signal:AbortSignal.timeout(timeout)}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return await r.text(); }
-async function fetchPage(url:string,headers:any={},timeout=8000){ const r=await fetch(url,{cache:'no-store',redirect:'follow',headers:{'User-Agent':UA,'Accept-Language':'ko-KR,ko;q=0.9,en;q=0.7',...headers},signal:AbortSignal.timeout(timeout)}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return {html:await r.text(),url:r.url}; }
 async function fetchJson(url:string,headers:any={}){ const r=await fetch(url,{cache:'no-store',headers:{'User-Agent':UA,'Accept-Language':'ko-KR,ko;q=0.9,en;q=0.7',...headers},signal:AbortSignal.timeout(10000)}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return await r.json(); }
 function pickArray(j:any){ if(Array.isArray(j))return j; for(const k of ['stocks','items','data','stockList','result'])if(Array.isArray(j?.[k]))return j[k]; if(Array.isArray(j?.result?.stocks))return j.result.stocks; if(Array.isArray(j?.result?.items))return j.result.items; return []; }
 
@@ -109,22 +100,21 @@ function matchedCompanies(text:string,stocks:any[],marketSet:Set<string>){ const
 
 function canonicalNaver(oid:string,aid:string){ return /^\d{3,4}$/.test(oid)&&/^\d{7,12}$/.test(aid)?`https://n.news.naver.com/article/${oid}/${aid}`:''; }
 function normalizeNaverUrl(href:string){ if(!href)return '';let h=String(href).replace(/&amp;/g,'&').replace(/\\u002F/gi,'/').replace(/\\u003A/gi,':').replace(/\\\//g,'/');try{if(/^https?%3A/i.test(h))h=decodeURIComponent(h)}catch{}try{const u=new URL(h);if(/n\.news\.naver\.com$/i.test(u.hostname)){const m=u.pathname.match(/\/(?:mnews\/)?article\/(\d+)\/(\d+)/);if(m)return canonicalNaver(m[1],m[2])}if(/news\.naver\.com$/i.test(u.hostname)){return canonicalNaver(u.searchParams.get('oid')||'',u.searchParams.get('aid')||'')}}catch{}return ''; }
-function extractNaverLinks(html:string){ const set=new Set<string>(),decoded=html.replace(/\\u002F/gi,'/').replace(/\\u003A/gi,':').replace(/\\\//g,'/').replace(/&amp;/g,'&');let m:any;for(const re of [/https?:\/\/n\.news\.naver\.com\/(?:mnews\/)?article\/(\d+)\/(\d+)/gi,/https?:\/\/news\.naver\.com\/main\/read\.naver\?[^"'<>\s]*?oid=(\d+)[^"'<>\s]*?aid=(\d+)/gi,/https%3A%2F%2Fn\.news\.naver\.com%2F(?:mnews%2F)?article%2F(\d+)%2F(\d+)/gi]){while((m=re.exec(re===arguments[0]?html:decoded))){} } const p1=/https?:\/\/n\.news\.naver\.com\/(?:mnews\/)?article\/(\d+)\/(\d+)/gi;while((m=p1.exec(decoded)))set.add(canonicalNaver(m[1],m[2]));const p2=/https?:\/\/news\.naver\.com\/main\/read\.naver\?[^"'<>\s]*?oid=(\d+)[^"'<>\s]*?aid=(\d+)/gi;while((m=p2.exec(decoded)))set.add(canonicalNaver(m[1],m[2]));const p3=/https%3A%2F%2Fn\.news\.naver\.com%2F(?:mnews%2F)?article%2F(\d+)%2F(\d+)/gi;while((m=p3.exec(html)))set.add(canonicalNaver(m[1],m[2]));const $=load(html);$('a[href]').each((_:any,e:any)=>{const x=normalizeNaverUrl(String($(e).attr('href')||''));if(x)set.add(x)});return [...set].filter(Boolean); }
+function extractNaverLinks(html:string){ const set=new Set<string>(),decoded=html.replace(/\\u002F/gi,'/').replace(/\\u003A/gi,':').replace(/\\\//g,'/').replace(/&amp;/g,'&');let m:any;const p1=/https?:\/\/n\.news\.naver\.com\/(?:mnews\/)?article\/(\d+)\/(\d+)/gi;while((m=p1.exec(decoded)))set.add(canonicalNaver(m[1],m[2]));const p2=/https?:\/\/news\.naver\.com\/main\/read\.naver\?[^"'<>\s]*?oid=(\d+)[^"'<>\s]*?aid=(\d+)/gi;while((m=p2.exec(decoded)))set.add(canonicalNaver(m[1],m[2]));const p3=/https%3A%2F%2Fn\.news\.naver\.com%2F(?:mnews%2F)?article%2F(\d+)%2F(\d+)/gi;while((m=p3.exec(html)))set.add(canonicalNaver(m[1],m[2]));const $=load(html);$('a[href]').each((_:any,e:any)=>{const x=normalizeNaverUrl(String($(e).attr('href')||''));if(x)set.add(x)});return [...set].filter(Boolean); }
 function ymdKst(d:Date){return d.toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}).replace(/-/g,'.')}
-async function naverSearch(theme:string,q:string,lookback:number){ const key=`nv3|${theme}|${q}|${lookback}`;const c=searchCache.get(key);if(c&&Date.now()-c.at<NEWS_CACHE_MS)return c.items;const items:any[]=[];const seen=new Set<string>();const ds=ymdKst(new Date(Date.now()-lookback*86400000)),de=ymdKst(new Date());for(const start of [1,11,21,31]){try{const url=`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(q)}&sort=1&photo=0&field=0&pd=3&ds=${encodeURIComponent(ds)}&de=${encodeURIComponent(de)}&start=${start}`;const html=await fetchText(url,{Referer:'https://search.naver.com/'},6500);for(const link of extractNaverLinks(html)){if(!seen.has(link)){seen.add(link);items.push({theme,title:'',desc:'',link,source:'네이버뉴스 검색'})}}}catch{}}searchCache.set(key,{at:Date.now(),items});return items; }
-async function googleFallback(theme:string,q:string,lookback:number){ const key=`gg3|${theme}|${q}|${lookback}`;const c=searchCache.get(key);if(c&&Date.now()-c.at<NEWS_CACHE_MS)return c.items;const out:any[]=[];try{const xml=await fetchText(`https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:${lookback}d`)}&hl=ko&gl=KR&ceid=KR:ko`,{},6500);const blocks=xml.match(/<item>[\s\S]*?<\/item>/g)||[];for(const b of blocks.slice(0,90)){const get=(n:string)=>{const m=b.match(new RegExp(`<${n}[^>]*>([\\s\\S]*?)<\\/${n}>`,'i'));return m?clean(m[1]):''};const sm=b.match(/<source[^>]*url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);const title=get('title'),link=get('link');if(title&&link)out.push({theme,title,desc:get('description'),link,publishedAt:safeIso(get('pubDate')),source:sm?clean(sm[2]):'Google News',sourceUrl:sm?.[1]||'',body:'',bodyRead:false})}}catch{}searchCache.set(key,{at:Date.now(),items:out});return out; }
+function buildNaverQueries(){ const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));const months=[] as number[];for(let i=0;i<3;i++)months.push(((now.getMonth()+i)%12)+1);const monthQueries:any[]=[];for(const m of months){monthQueries.push({theme:'기타 일정',q:`${m}월 예정 상장사`},{theme:'FDA·허가',q:`${m}월 FDA 승인 허가 예정 국내 바이오`},{theme:'실적·IR',q:`${m}월 IR 실적 발표 예정 상장사`},{theme:'제품·서비스 출시',q:`${m}월 출시 양산 예정 국내 기업`});}return [...NAVER_BASE_QUERIES,...monthQueries]; }
+async function naverSearch(theme:string,q:string,lookback:number){ const items:any[]=[];const seen=new Set<string>();const ds=ymdKst(new Date(Date.now()-lookback*86400000)),de=ymdKst(new Date());for(const start of [1,11,21,31,41,51]){try{const url=`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(q)}&sort=1&photo=0&field=0&pd=3&ds=${encodeURIComponent(ds)}&de=${encodeURIComponent(de)}&start=${start}`;const html=await fetchText(url,{Referer:'https://search.naver.com/'},6500);for(const link of extractNaverLinks(html)){if(!seen.has(link)){seen.add(link);items.push({theme,title:'',desc:'',link,source:'네이버뉴스 검색'})}}}catch{}}return items; }
 function cleanArticleNode($:any,node:any){const c=node.clone();c.find('script,style,figure,iframe,nav,aside,footer,.end_photo_org,.img_desc,.article_byline,.copyright,.media_end_linked_more,.media_end_categorize,[class*="recommend"],[class*="related"],[class*="promotion"],[class*="ranking"],[class*="subscription"],[class*="popular"]').remove();return clean(c.text()).slice(0,26000)}
 async function readNaverArticle(seed:any){ const c=articleCache.get('n:'+seed.link);if(c&&Date.now()-c.at<ARTICLE_CACHE_MS)return {...seed,...c.item};try{const html=await fetchText(seed.link,{Referer:'https://search.naver.com/'},6500),$=load(html);const title=clean($('#title_area').first().text())||clean($('.media_end_head_headline').first().text())||clean($('meta[property="og:title"]').attr('content')||'')||seed.title;let body='';for(const sel of ['#dic_area','.go_trans._article_content','#newsct_article']){const n=$(sel).first();if(n.length){const t=cleanArticleNode($,n);if(t.length>80){body=t;break}}}const source=clean($('.media_end_head_top_logo img').attr('alt')||'')||clean($('.media_end_head_top_logo').text())||seed.source||'네이버뉴스';const pub=$('.media_end_head_info_datestamp_time').first().attr('data-date-time')||$('meta[property="article:published_time"]').attr('content')||'';const item={title,body,source,publishedAt:safeIso(pub||Date.now().toString()),sourceUrl:seed.link,bodyRead:body.length>80,bodyType:'naver'};articleCache.set('n:'+seed.link,{at:Date.now(),item});return {...seed,...item};}catch{return {...seed,body:'',bodyRead:false,bodyType:'naver',publishedAt:safeIso(''),source:seed.source||'네이버뉴스'}} }
-async function readPublisherArticle(seed:any){ const c=articleCache.get('p:'+seed.link);if(c&&Date.now()-c.at<ARTICLE_CACHE_MS)return {...seed,...c.item};try{const pg=await fetchPage(seed.link,{},6500),$=load(pg.html);const title=clean($('meta[property="og:title"]').attr('content')||'')||clean($('h1').first().text())||seed.title;let body='';for(const sel of ['[itemprop="articleBody"]','#articleBodyContents','#articleBody','.article-body','.article_body','.article_view','.news_body','.view_text','.article-content','article']){const nodes=$(sel);if(!nodes.length)continue;let best='';nodes.each((_:any,e:any)=>{const t=cleanArticleNode($,$(e));if(t.length>best.length)best=t});if(best.length>140){body=best;break}}const item={title,body,source:seed.source||'뉴스',publishedAt:seed.publishedAt||safeIso(''),sourceUrl:seed.sourceUrl||pg.url,bodyRead:body.length>140,bodyType:'publisher',link:pg.url||seed.link};articleCache.set('p:'+seed.link,{at:Date.now(),item});return {...seed,...item};}catch{return {...seed,body:'',bodyRead:false,bodyType:'publisher'}} }
 async function mapConcurrent<T,R>(xs:T[],limit:number,fn:(x:T)=>Promise<R>){const out:R[]=[];for(let i=0;i<xs.length;i+=limit)out.push(...await Promise.all(xs.slice(i,i+limit).map(fn)));return out}
 
 export async function GET(req:Request){
   if(!authorized(req))return json({ok:false,error:'UNAUTHORIZED'},401);const u=new URL(req.url);if(u.searchParams.get('mode')==='ping')return json({ok:true,auth:'valid'});
-  const lookback=Math.max(7,Math.min(180,Number(u.searchParams.get('lookback')||120))),horizon=Math.max(1,Math.min(365,Number(u.searchParams.get('horizon')||120))),marketParam=(u.searchParams.get('market')||'ALL').toUpperCase();const marketSet=new Set(marketParam==='KOSPI'?['KOSPI']:marketParam==='KOSDAQ'?['KOSDAQ']:['KOSPI','KOSDAQ']);const started=Date.now(),stocks=await universe(),allQueries=[...EVENT_QUERIES,...DISCOVERY_QUERIES];
-  const [naverGroups,googleGroups]=await Promise.all([Promise.all(allQueries.map(x=>naverSearch(x.theme,x.q,lookback))),Promise.all(EVENT_QUERIES.map(x=>googleFallback(x.theme,x.q,lookback)))]);const nMap=new Map<string,any>();for(const x of naverGroups.flat())if(!nMap.has(x.link))nMap.set(x.link,x);const gMap=new Map<string,any>();for(const x of googleGroups.flat())if(!gMap.has(x.link))gMap.set(x.link,x);const naverSeeds=[...nMap.values()].slice(0,MAX_NAVER_ARTICLES),publisherSeeds=[...gMap.values()].slice(0,MAX_PUBLISHER_ARTICLES);
-  const [naverArticles,publisherArticles]=await Promise.all([mapConcurrent(naverSeeds,24,readNaverArticle),mapConcurrent(publisherSeeds,18,readPublisherArticle)]);const articles=[...naverArticles,...publisherArticles],events:any[]=[];const now=Date.now(),minT=now-2*86400000,maxT=now+horizon*86400000;
-  for(const a of articles){const text=`${a.title||''} ${a.desc||''} ${a.body||''}`;if(!EVENT_CUES.test(text))continue;const dates=extractEventDates(text,a.publishedAt);if(!dates.length)continue;const official=isOfficial(a.source||'',a.sourceUrl||a.link||'');for(const d of dates){const t=new Date(d.date+'T00:00:00+09:00').getTime();if(t<minT||t>maxT)continue;const ctx=contextAround(text,d.raw);if(!EVENT_CUES.test(ctx))continue;if(d.inferred&&!FORWARD_CUES.test(ctx))continue;let companies=matchedCompanies(ctx,stocks,marketSet);if(!companies.length)companies=matchedCompanies(a.title||'',stocks,marketSet);if(!companies.length)continue;const theme=classifyTheme(ctx,a.theme);for(const c of companies){const inTitle=/^[A-Za-z0-9&. -]{2,}$/.test(c.name)?asciiMention(a.title||'',c.name):koreanMention(a.title||'',c.name);const score=eventScore({bodyRead:a.bodyRead,official,source:a.source,inTitle,theme,eventDate:d.date,context:ctx});events.push({id:createHash('sha1').update(`${c.code}|${theme}|${d.date}|${a.title}`).digest('hex').slice(0,18),company:c.name,code:c.code,market:c.market,price:c.price,changePct:c.changePct,marketCapEok:c.marketCapEok,eventDate:d.date,dDay:daysUntil(d.date),theme,score,title:(a.title||'').replace(/\s+-\s+[^-]+$/,'').trim(),source:a.source||'뉴스',official,publishedAt:a.publishedAt,url:a.link,naver:c.naver,news:c.news,dateText:d.raw,bodyRead:!!a.bodyRead,bodyType:a.bodyType||'',bodyEvidence:clean(ctx).slice(0,180)});}}
+  const lookback=Math.max(7,Math.min(180,Number(u.searchParams.get('lookback')||120))),horizon=Math.max(1,Math.min(365,Number(u.searchParams.get('horizon')||120))),marketParam=(u.searchParams.get('market')||'ALL').toUpperCase();const marketSet=new Set(marketParam==='KOSPI'?['KOSPI']:marketParam==='KOSDAQ'?['KOSDAQ']:['KOSPI','KOSDAQ']);const started=Date.now(),stocks=await universe(),queries=buildNaverQueries();
+  const naverGroups=await Promise.all(queries.map(x=>naverSearch(x.theme,x.q,lookback)));const nMap=new Map<string,any>();for(const x of naverGroups.flat())if(!nMap.has(x.link))nMap.set(x.link,x);const naverSeeds=[...nMap.values()].slice(0,MAX_NAVER_ARTICLES);
+  const articles=await mapConcurrent(naverSeeds,24,readNaverArticle);const events:any[]=[];const now=Date.now(),minT=now-2*86400000,maxT=now+horizon*86400000;
+  for(const a of articles){const text=`${a.title||''} ${a.body||''}`;if(!EVENT_CUES.test(text))continue;const dates=extractEventDates(text,a.publishedAt);if(!dates.length)continue;const official=isOfficial(a.source||'',a.sourceUrl||a.link||'');for(const d of dates){const t=new Date(d.date+'T00:00:00+09:00').getTime();if(t<minT||t>maxT)continue;const ctx=contextAround(text,d.raw);if(!EVENT_CUES.test(ctx))continue;if(d.inferred&&!FORWARD_CUES.test(ctx))continue;let companies=matchedCompanies(ctx,stocks,marketSet);if(!companies.length)companies=matchedCompanies(a.title||'',stocks,marketSet);if(!companies.length)continue;const theme=classifyTheme(ctx,a.theme);for(const c of companies){const inTitle=/^[A-Za-z0-9&. -]{2,}$/.test(c.name)?asciiMention(a.title||'',c.name):koreanMention(a.title||'',c.name);const score=eventScore({bodyRead:a.bodyRead,official,source:a.source,inTitle,theme,eventDate:d.date,context:ctx});events.push({id:createHash('sha1').update(`${c.code}|${theme}|${d.date}|${a.title}`).digest('hex').slice(0,18),company:c.name,code:c.code,market:c.market,price:c.price,changePct:c.changePct,marketCapEok:c.marketCapEok,eventDate:d.date,dDay:daysUntil(d.date),theme,score,title:(a.title||'').replace(/\s+-\s+[^-]+$/,'').trim(),source:a.source||'네이버뉴스',official,publishedAt:a.publishedAt,url:a.link,naver:c.naver,news:c.news,dateText:d.raw,bodyRead:!!a.bodyRead,bodyType:'naver',bodyEvidence:clean(ctx).slice(0,180)});}}
   }
   const seen=new Set<string>();const unique=events.filter(x=>{const k=`${x.code}|${x.theme}|${x.eventDate}|${x.title.toLowerCase().replace(/\s+/g,' ').slice(0,100)}`;if(seen.has(k))return false;seen.add(k);return true});unique.sort((a,b)=>a.dDay-b.dDay||b.score-a.score||new Date(b.publishedAt).getTime()-new Date(a.publishedAt).getTime());const counts:any={};for(const x of unique)counts[x.theme]=(counts[x.theme]||0)+1;
-  return json({ok:true,generatedAt:new Date().toISOString(),elapsedMs:Date.now()-started,universeCount:stocks.filter((s:any)=>marketSet.has(s.market)).length,articleCount:articles.length,naverSearchCount:naverSeeds.length,bodyReadCount:naverArticles.filter(x=>x.bodyRead).length,publisherBodyReadCount:publisherArticles.filter(x=>x.bodyRead).length,bodyEventCount:unique.filter(x=>x.bodyRead).length,eventCount:unique.length,counts,events:unique.slice(0,1800),notes:['네이버뉴스 기사 본문을 우선 읽고, 네이버 본문이 없는 후보는 원 언론사 본문도 보조적으로 분석합니다.','각 날짜의 앞뒤 문장 안에서 종목명을 다시 매칭해 다른 종목이 잘못 붙는 현상을 줄였습니다.','일정은 변경될 수 있으므로 원문·KIND/DART·회사 IR·공식기관에서 최종 확인하세요.']});
+  return json({ok:true,searchMode:'NAVER_DIRECT_ONLY',autoRefresh:false,generatedAt:new Date().toISOString(),elapsedMs:Date.now()-started,universeCount:stocks.filter((s:any)=>marketSet.has(s.market)).length,queryCount:queries.length,naverSearchCount:naverSeeds.length,articleCount:articles.length,bodyReadCount:articles.filter(x=>x.bodyRead).length,bodyEventCount:unique.filter(x=>x.bodyRead).length,eventCount:unique.length,counts,events:unique.slice(0,1800),notes:['구글뉴스나 다른 기사후보를 먼저 거치지 않고 네이버뉴스 검색에서 바로 기사 후보를 수집합니다.','검색 버튼을 눌렀을 때만 네이버뉴스 검색과 본문 분석을 실행하며 자동 새로고침은 사용하지 않습니다.','일정은 변경될 수 있으므로 원문·KIND/DART·회사 IR·공식기관에서 최종 확인하세요.']});
 }
