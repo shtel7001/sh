@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>골든크로스 · 50~80% 조정 · 5일선 쌍바닥 레이더</title>
+  <link rel="stylesheet" href="/gc-retrace-ma5-double-bottom-radar-20260928.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <section id="login" class="login hide">
+    <div class="login-card">
+      <div class="logo">W5</div>
+      <h1>골든크로스 · 조정 · 5일선 쌍바닥 레이더</h1>
+      <p>5일선이 20일선을 골든크로스한 뒤 상승하고, 그 상승폭의 <b>1/2~4/5(50~80%)를 되돌린 구간</b>에서 <b>5일선 쌍바닥</b>을 만드는 종목을 코스피·코스닥 전종목에서 찾습니다.</p>
+      <p class="small">인증번호는 같은 번호를 계속 재사용할 수 있습니다. 한 번 인증한 브라우저는 사이트 저장공간을 지우거나 로그아웃하기 전까지 다시 묻지 않습니다.</p>
+      <div class="login-row">
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="개인 인증번호" />
+        <button id="loginBtn" class="btn primary">인증</button>
+      </div>
+      <div id="loginErr" class="error"></div>
+    </div>
+  </section>
+
+  <main id="app" class="shell hide">
+    <header class="topbar">
+      <div>
+        <h1>GC → 50~80% 조정 → MA5 쌍바닥 레이더</h1>
+        <p>KOSPI · KOSDAQ ALL / 과거 날짜 스냅샷 / 사후 수익률 검증</p>
+      </div>
+      <div class="top-actions">
+        <button id="excelBtn" class="btn good" disabled>Excel .xlsx 저장</button>
+        <button id="logoutBtn" class="btn secondary">로그아웃</button>
+      </div>
+    </header>
+
+    <section class="panel intro">
+      <div class="formula">
+        <b>기본 검색식</b>
+        <span>① MA5가 MA20 상향 돌파</span><span>② 교차 종가 대비 고점까지 최소 상승</span><span>③ 그 상승폭의 50~80% 조정</span><span>④ MA5 저점 2개가 비슷한 가격대</span><span>⑤ 두 저점 사이 MA5가 한 번 충분히 반등</span><span>⑥ 지정일이 두 번째 저점 근처</span>
+      </div>
+      <p>날짜를 과거로 지정하면 <b>그 날짜 이후 데이터는 검색식에 절대 사용하지 않고</b> 그날 종가 기준으로 신호를 계산합니다. 다만 ‘검증’ 열에서는 일부러 그 뒤 3·5·10·20거래일 성과를 따로 계산해 신호가 실제로 잘 잡혔는지 확인합니다.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><h2>검색 조건</h2><span class="meta">모든 숫자는 조절 가능</span></div>
+      <div class="controls">
+        <div class="field wide"><label>기준일(과거 날짜 가능)</label><input id="asOf" type="date" /></div>
+        <div class="field"><label>시장</label><select id="market"><option value="BOTH">KOSPI + KOSDAQ 전종목</option><option value="KOSPI">KOSPI 전종목</option><option value="KOSDAQ">KOSDAQ 전종목</option></select></div>
+        <div class="field"><label>골든크로스 최소 경과일</label><input id="gcMinDays" type="number" min="0" max="120" value="3" /></div>
+        <div class="field"><label>골든크로스 최대 경과일</label><input id="gcMaxDays" type="number" min="5" max="240" value="80" /></div>
+        <div class="field"><label>교차 후 최소 상승률(%)</label><input id="minRise" type="number" min="1" max="100" step="0.5" value="8" /></div>
+        <div class="field"><label>조정비율 하단(%)</label><input id="retrMin" type="number" min="0" max="100" step="1" value="50" /></div>
+        <div class="field"><label>조정비율 상단(%)</label><input id="retrMax" type="number" min="0" max="120" step="1" value="80" /></div>
+        <div class="field"><label>쌍바닥 저점 유사도(±%)</label><input id="bottomTol" type="number" min="0.5" max="15" step="0.5" value="4" /></div>
+        <div class="field"><label>두 저점 최소 간격(일)</label><input id="bottomMinGap" type="number" min="2" max="40" value="4" /></div>
+        <div class="field"><label>두 저점 최대 간격(일)</label><input id="bottomMaxGap" type="number" min="4" max="80" value="25" /></div>
+        <div class="field"><label>저점 사이 최소 반등(%)</label><input id="valleyRise" type="number" min="0" max="20" step="0.5" value="2.5" /></div>
+        <div class="field"><label>두 번째 저점 최근성(일)</label><input id="nearBottomDays" type="number" min="0" max="15" value="4" /></div>
+        <div class="field"><label>현재 MA5 / 2차저점 허용(%)</label><input id="ma5NearTol" type="number" min="0" max="10" step="0.25" value="2" /></div>
+        <div class="field"><label>현재가 / MA5 거리 상한(%)</label><input id="priceMa5Tol" type="number" min="1" max="20" step="0.5" value="7" /></div>
+        <div class="field"><label>동시 검색 수</label><select id="concurrency"><option>6</option><option selected>10</option><option>14</option><option>18</option></select></div>
+      </div>
+      <div class="checks">
+        <label><input id="excludeSpac" type="checkbox" checked /> 스팩 제외</label>
+        <label><input id="preferTurning" type="checkbox" checked /> 2차 저점 이후 MA5 횡보·반등 우선</label>
+        <label><input id="requireCloseAbove20" type="checkbox" /> 종가 ≥ MA20만</label>
+      </div>
+      <div class="actions">
+        <button id="scanBtn" class="btn primary">기준일 전종목 검색</button>
+        <button id="stopBtn" class="btn warn" disabled>중지</button>
+        <button id="healthBtn" class="btn secondary">데이터 연결 점검</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="progressbox">
+        <b id="status">대기 중</b>
+        <div class="bar"><i id="bar"></i></div>
+        <span id="progressTxt">0 / 0</span>
+      </div>
+      <div class="stats six">
+        <div class="stat"><b id="universeN">0</b><span>대상 종목</span></div>
+        <div class="stat"><b id="checkedN">0</b><span>검사 완료</span></div>
+        <div class="stat"><b id="matchN">0</b><span>검출 종목</span></div>
+        <div class="stat"><b id="failN">0</b><span>데이터 오류</span></div>
+        <div class="stat"><b id="cacheN">0</b><span>가격 캐시</span></div>
+        <div class="stat"><b id="elapsed">0:00</b><span>경과 시간</span></div>
+      </div>
+    </section>
+
+    <section class="panel verify-panel">
+      <div class="section-head"><h2>검출 품질 빠른 확인</h2><span class="meta">사진 속 종목처럼 특정 종목을 직접 검사</span></div>
+      <div class="verify-row">
+        <input id="verifyCode" placeholder="종목코드 예: 058470" inputmode="numeric" />
+        <button id="verifyBtn" class="btn secondary">이 종목만 진단</button>
+        <span id="verifyMsg" class="meta"></span>
+      </div>
+      <div id="verifyBox" class="verify-box muted">종목코드와 기준일을 넣으면 골든크로스·상승·조정비율·MA5 쌍바닥 각 조건을 통과했는지 하나씩 보여줍니다.</div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><h2>기준일 검색 결과</h2><span id="resultMeta" class="meta">아직 검색하지 않았습니다.</span></div>
+      <div class="validation-grid">
+        <div><span>검출 수</span><b id="vCount">-</b></div>
+        <div><span>향후 5일 평균</span><b id="vR5">-</b></div>
+        <div><span>향후 10일 평균</span><b id="vR10">-</b></div>
+        <div><span>20일내 +5% 도달</span><b id="vHit5">-</b></div>
+        <div><span>20일내 +10% 도달</span><b id="vHit10">-</b></div>
+        <div><span>20일 최대낙폭 평균</span><b id="vMdd">-</b></div>
+      </div>
+      <div class="table-wrap">
+        <table class="results">
+          <thead><tr><th>#</th><th>점수</th><th>시장 / 종목</th><th>기준일 종가</th><th>골든크로스</th><th>교차→고점 상승</th><th>조정비율</th><th>MA5 쌍바닥</th><th>지정일 위치</th><th>향후 3/5/10/20일</th><th>20일 최고/최저</th><th>네이버</th><th>상세</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="13" class="empty">조건을 조절한 뒤 ‘기준일 전종목 검색’을 누르세요.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><h2>기간 반복 백테스트</h2><span class="meta">한 번 받은 가격 데이터를 재사용하므로 두 번째부터 빠릅니다.</span></div>
+      <div class="controls backtest-controls">
+        <div class="field wide"><label>검증 시작일</label><input id="btStart" type="date" /></div>
+        <div class="field wide"><label>검증 종료일</label><input id="btEnd" type="date" /></div>
+        <div class="field"><label>검사 간격(거래일)</label><input id="btStep" type="number" min="3" max="30" value="5" /></div>
+        <div class="field"><label>성과 확인(거래일)</label><input id="btForward" type="number" min="3" max="40" value="20" /></div>
+        <div class="field"><label>하루 최대 신호 수</label><input id="btTopN" type="number" min="1" max="100" value="30" /></div>
+      </div>
+      <div class="actions"><button id="backtestBtn" class="btn good">기간 백테스트 실행</button></div>
+      <div id="backtestSummary" class="backtest-summary muted">기간을 정하면 각 기준일을 완전히 과거 시점으로 되돌려 같은 검색식을 반복하고, 이후 성과를 집계합니다.</div>
+      <div class="table-wrap small-table">
+        <table class="results"><thead><tr><th>기준일</th><th>검출 수</th><th>평균 종가수익</th><th>평균 최고상승</th><th>+5% 도달률</th><th>+10% 도달률</th><th>평균 최대낙폭</th></tr></thead><tbody id="btBody"><tr><td colspan="7" class="empty">백테스트 전입니다.</td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="panel note">
+      <b>해석 포인트</b>
+      <p>‘조정비율 50~80%’는 골든크로스 당일 종가에서 이후 최고가까지의 상승폭을 기준으로, 기준일 종가가 그 상승폭을 얼마나 되돌렸는지 계산한 값입니다. 예: 교차 종가 10,000원 → 고점 12,000원 → 기준일 10,800원이면 1,200원 되돌려 상승폭 2,000원의 60% 조정입니다.</p>
+      <p>신호 점수와 백테스트 결과는 기술적 패턴 검증용이며 미래 수익을 보장하지 않습니다. 거래정지·액면분할·권리락 등 특수 이벤트는 원천 시세에 따라 왜곡될 수 있습니다.</p>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hide">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="modalTitle">상세</h2><button id="modalClose" class="close">닫기</button></div>
+      <canvas id="chart" width="1000" height="440"></canvas>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="/gc-retrace-ma5-double-bottom-radar-20260928.js"></script>
+</body>
+</html>
