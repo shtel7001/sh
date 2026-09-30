@@ -1,5 +1,5 @@
 import { NextRequest,NextResponse } from 'next/server';
-import { getDailyThemeRotationAnalysis } from '@/lib/naver-theme-rotation';
+import { getDailyThemeRotationAnalysis } from '@/lib/naver-theme-rotation-v2';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=60;
