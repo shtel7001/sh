@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Theme Value Radar | 저평가 테마 순환 레이더</title>
   <meta name="description" content="시대 흐름·정책·뉴스·실적·소외지수를 결합한 저평가 테마 순환 레이더" />
-  <link rel="stylesheet" href="/theme-value-radar-20261001.css?v=20261001-5" />
+  <link rel="stylesheet" href="/theme-value-radar-20261001.css?v=20261001-6" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -17,7 +17,7 @@
       <div class="brand-mark">TVR</div>
       <h1>Theme Value Radar</h1>
       <p>1회 인증 후 이 브라우저에서는 다시 입력하지 않도록 설계된 개인용 테마 레이더입니다.</p>
-      <form id="authForm" novalidate>
+      <form id="authForm" action="/api/theme-value-radar/auth-form" method="post" novalidate>
         <label for="code">1회용 영구 인증번호</label>
         <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="인증번호 입력" required />
         <button class="primary" type="submit">인증하고 시작하기</button>
@@ -132,24 +132,34 @@
       try { localStorage.setItem('themeRadarAuthorized', '1'); } catch(e) {}
     }
 
-    try {
-      var existing = localStorage.getItem('themeRadarToken');
-      if(existing){
-        fetch('/api/theme-value-radar/session', {
-          method:'GET',
-          credentials:'include',
-          cache:'no-store',
-          headers:{'Authorization':'Bearer '+existing}
-        }).then(function(r){ return r.json(); }).then(function(j){ if(j && j.ok) openApp(); }).catch(function(){});
-      }
-    } catch(e) {}
+    var params = new URLSearchParams(location.search || '');
+    if(params.get('auth') === 'bad' && msg) msg.textContent = '인증번호가 올바르지 않습니다.';
+
+    var existing = '';
+    try { existing = localStorage.getItem('themeRadarToken') || ''; } catch(e) {}
+    var sessionHeaders = existing ? {'Authorization':'Bearer '+existing} : {};
+    fetch('/api/theme-value-radar/session', {
+      method:'GET',
+      credentials:'include',
+      cache:'no-store',
+      headers:sessionHeaders
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if(j && j.ok) openApp();
+    }).catch(function(){});
 
     if(form){
       form.addEventListener('submit', function(e){
+        var code = codeInput ? String(codeInput.value || '').trim() : '';
+        if(!code){
+          e.preventDefault();
+          if(msg) msg.textContent='인증번호를 입력해 주세요.';
+          return;
+        }
+
+        if(typeof fetch !== 'function') return;
+
         e.preventDefault();
         e.stopImmediatePropagation();
-        var code = codeInput ? String(codeInput.value || '').trim() : '';
-        if(!code){ if(msg) msg.textContent='인증번호를 입력해 주세요.'; return; }
         if(msg) msg.textContent='인증 중...';
 
         fetch('/api/theme-value-radar/auth', {
@@ -168,13 +178,13 @@
           } else {
             if(msg) msg.textContent=(x.data && x.data.message) ? x.data.message : '인증 실패 ('+x.status+')';
           }
-        }).catch(function(err){
-          if(msg) msg.textContent='인증 요청 오류: '+(err && err.message ? err.message : String(err));
+        }).catch(function(){
+          form.submit();
         });
       }, true);
     }
   })();
   </script>
-  <script src="/theme-value-radar-20261001.js?v=20261001-5"></script>
+  <script src="/theme-value-radar-20261001.js?v=20261001-6"></script>
 </body>
 </html>
