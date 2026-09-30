@@ -55,8 +55,24 @@ function detect(rows:Row[],cfg:Cfg){
     const hit={score,deadDate:dtext(rows[di].date),goldenDate:dtext(rows[gi].date),near60Date:dtext(cur.date),near60State:d60>0?'60일선 위':d60<0?'60일선 아래':'60일선 일치',supportDate:dtext(rows[si].date),gapMonths:round(gap/30.44,1),close:cur.close,ma5:round(cur.ma5 as number,2),ma20:round(cur.ma20,2),ma60:round(cur.ma60,2),dist20:round(d20,2),dist60:round(d60,2),slope20:round(slope,2),volumeRatio:round(vr,2),lastDate:dtext(cur.date),chart:rows.slice(Math.max(0,last-130),last+1).map(x=>({date:dtext(x.date),close:x.close,ma5:x.ma5?round(x.ma5,2):null,ma20:x.ma20?round(x.ma20,2):null,ma60:x.ma60?round(x.ma60,2):null}))};if(!best||hit.score>best.score)best=hit;
   }return best;
 }
-async function scanOne(s:any,cfg:Cfg){try{const start=dt(cfg.start),end=dt(cfg.end);if(!start||!end)return null;const fs=new Date(start);fs.setMonth(fs.getMonth()-cfg.maxGapMonths-3);const url=`https://api.stock.naver.com/chart/domestic/item/${encodeURIComponent(s.code)}?periodType=dayCandle&startDateTime=${ymd(fs)}&endDateTime=${ymd(end)}`;const hit=detect(chartRows(await fetchJson(url)),cfg);return hit?{...s,...hit}:null}catch(e:any){return {scanError:true,code:s.code,message:String(e?.message||e)}}}
-
+async function loadHistory(code:string,cfg:Cfg){
+  const start=dt(cfg.start),end=dt(cfg.end);if(!start||!end)throw new Error('BAD_DATE');
+  const fs=new Date(start);fs.setMonth(fs.getMonth()-cfg.maxGapMonths-3);
+  // Naver dayCandle caps each response at 110 bars. Use windows below that cap.
+  const windows:{start:Date;end:Date}[]=[];for(let cursor=new Date(fs);cursor<=end;){const last=new Date(cursor);last.setUTCDate(last.getUTCDate()+119);if(last>end)last.setTime(end.getTime());windows.push({start:new Date(cursor),end:last});cursor=new Date(last);cursor.setUTCDate(cursor.getUTCDate()+1);}
+  const byDate=new Map<string,Row>();
+  for(let i=0;i<windows.length;i+=3){
+    const batches=await Promise.all(windows.slice(i,i+3).map(async w=>{
+      const url=`https://api.stock.naver.com/chart/domestic/item/${encodeURIComponent(code)}?periodType=dayCandle&startDateTime=${ymd(w.start)}&endDateTime=${ymd(w.end)}`;
+      const raw=await fetchJson(url);const rows=chartRows(raw);
+      if(rows.length>=110)throw new Error('일봉 응답이 제한되어 과거 데이터를 확인할 수 없습니다.');
+      return rows.filter(row=>row.date>=ymd(w.start)&&row.date<=ymd(w.end));
+    }));for(const rows of batches)for(const row of rows)byDate.set(row.date,row);
+  }
+  const rows=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  if(!rows.length)throw new Error('일봉 데이터를 불러오지 못했습니다.');return rows;
+}
+async function scanOne(s:any,cfg:Cfg){try{const rows=await loadHistory(String(s.code),cfg),hit=detect(rows,cfg);return hit?{...s,...hit}:null}catch(e:any){return {scanError:true,code:s.code,message:String(e?.message||e)}}}
 
 export async function GET(req:Request){
   const key=new URL(req.url).searchParams.get('key')||'';
@@ -64,12 +80,12 @@ export async function GET(req:Request){
   const cfg:Cfg={start:'2026-03-01',end:'2026-09-28',minGapMonths:3,maxGapMonths:12,near60Pct:5,supportPct:5,supportLookback:3};
   try{
     const raw=await fetchJson('https://api.stock.naver.com/chart/domestic/item/457190?periodType=dayCandle&startDateTime=20241201&endDateTime=20260928',15000);
-    const rows=chartRows(raw),hit=detect(rows,cfg);const limited=rows.filter(r=>r.date<='20260928');
+    const cappedRows=chartRows(raw),rows=await loadHistory('457190',cfg),hit=detect(rows,cfg);const limited=rows.filter(r=>r.date<='20260928');
     const crosses:any[]=[];for(let i=1;i<limited.length;i++){const p=limited[i-1],c=limited[i];if(!p.ma5||!p.ma20||!c.ma5||!c.ma20)continue;if(p.ma5>=p.ma20&&c.ma5<c.ma20)crosses.push({type:'dead',date:c.date});if(p.ma5<=p.ma20&&c.ma5>c.ma20)crosses.push({type:'golden',date:c.date});}
     const cur=limited.at(-1),dist60=cur?.ma60?(cur.close-cur.ma60)/cur.ma60*100:null;
     const support=limited.slice(-3).map(r=>({...r,dist20:r.ma20?(r.close-r.ma20)/r.ma20*100:null}));
     const golds=crosses.filter(x=>x.type==='golden'&&x.date>='20260301');
     const pairs=golds.map(g=>({golden:g.date,deads:crosses.filter(d=>d.type==='dead'&&d.date<g.date).map(d=>({date:d.date,gapDays:((dt(dtext(g.date)) as Date).getTime()-(dt(dtext(d.date)) as Date).getTime())/86400000})).filter(d=>d.gapDays>=3*30.44&&d.gapDays<=12*30.44)}));
-    return NextResponse.json({cfg,rawKeys:Object.keys(raw),rowCount:rows.length,first:rows[0]?.date,last:cur,dist60,support,crosses:crosses.filter(c=>c.date>='20260101'),pairs,detected:hit?{...hit,chart:undefined}:null,source:'Naver dayCandle'},{headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'}});
+    return NextResponse.json({cfg,rawKeys:Object.keys(raw),capped:{count:cappedRows.length,first:cappedRows[0]?.date,last:cappedRows.at(-1)?.date},rowCount:rows.length,first:rows[0]?.date,last:cur,dist60,support,crosses:crosses.filter(c=>c.date>='20260101'),pairs,detected:hit?{...hit,chart:undefined}:null,source:'Naver dayCandle'},{headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'}});
   }catch(e:any){return NextResponse.json({error:String(e?.message||e)},{status:502});}
 }
