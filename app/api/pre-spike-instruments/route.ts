@@ -11,11 +11,53 @@ async function authorize(req:Request){const token=req.headers.get('x-auth-token'
 async function fetchJson(url:string,timeout=8000){let last='';for(let i=0;i<2;i++){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),timeout);try{const r=await fetch(url,{signal:ctl.signal,cache:'no-store',headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.6','Referer':'https://m.stock.naver.com/'}});if(!r.ok){last=`HTTP ${r.status}`;await sleep(180*(i+1));continue}const tx=await r.text();return JSON.parse(tx)}catch(e:any){last=String(e?.message||e);await sleep(180*(i+1))}finally{clearTimeout(t)}}throw new Error(last||'FETCH_FAILED')}
 function pickArray(j:any){if(Array.isArray(j))return j;for(const k of ['stocks','items','data','stockList','result','etfs','etns']){if(Array.isArray(j?.[k]))return j[k];if(Array.isArray(j?.result?.[k]))return j.result[k]}if(Array.isArray(j?.result))return j.result;return []}
 function isSpac(name:string){return /(스팩|SPAC)/i.test(String(name||''))}
-function normStock(x:any,market:'KOSPI'|'KOSDAQ'){const code=String(x?.itemCode??x?.itemcode??x?.stockCode??x?.code??'').match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.name??x?.itemName??'').trim();if(!code||!name)return null;return {code,name,market,instrumentType:isSpac(name)?'SPAC':'STOCK',currentPrice:n(x?.closePrice??x?.currentPrice??x?.price),changePct:n(x?.fluctuationsRatio??x?.changeRate??x?.changePct),marketValue:x?.marketValue??x?.marketCap??null}}
-async function stockList(market:'KOSPI'|'KOSDAQ'){const out:any[]=[],seen=new Set<string>();for(let page=1;page<=35;page++){const j=await fetchJson(`https://m.stock.naver.com/api/stocks/marketValue/${market}?page=${page}&pageSize=100`),rows=pickArray(j);if(!rows.length)break;let add=0;for(const x of rows){const s=normStock(x,market);if(s&&!seen.has(s.code)){seen.add(s.code);out.push(s);add++}}if(!add||rows.length<100)break}return out}
+function isETNName(name:string){return /(^|[^A-Z])ETN([^A-Z]|$)|상장지수증권/i.test(String(name||''))}
+// Dedicated ETF list is the primary source. Brand matching is only a fallback when the list API is incomplete.
+function isLikelyETFName(name:string){const s=String(name||'').trim();return /^(KODEX|TIGER|ACE|RISE|SOL|HANARO|KOSEF|ARIRANG|PLUS|TIMEFOLIO|KBSTAR|KINDEX|WOORI|FOCUS|UNICORN|히어로즈|1Q|BNK|마이티|TREX|MASTER|SMART|파워|QV|HK|KIWOOM|DAISHIN|신한SOL|삼성KODEX)\b/i.test(s)}
+function normStockRaw(x:any,market:'KOSPI'|'KOSDAQ'){const code=String(x?.itemCode??x?.itemcode??x?.stockCode??x?.code??'').match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.name??x?.itemName??'').trim();if(!code||!name)return null;return {code,name,market,currentPrice:n(x?.closePrice??x?.currentPrice??x?.price),changePct:n(x?.fluctuationsRatio??x?.changeRate??x?.changePct),marketValue:x?.marketValue??x?.marketCap??null}}
+async function stockList(market:'KOSPI'|'KOSDAQ'){const out:any[]=[],seen=new Set<string>();for(let page=1;page<=35;page++){const j=await fetchJson(`https://m.stock.naver.com/api/stocks/marketValue/${market}?page=${page}&pageSize=100`),rows=pickArray(j);if(!rows.length)break;let add=0;for(const x of rows){const s=normStockRaw(x,market);if(s&&!seen.has(s.code)){seen.add(s.code);out.push(s);add++}}if(!add||rows.length<100)break}return out}
 function normETF(x:any){const code=String(x?.itemCode??x?.symbolCode??x?.code??'').match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.name??x?.itemName??x?.stockNameKor??x?.stockNameEng??'').trim();if(!code||!name)return null;return {code,name,market:'KOSPI',instrumentType:'ETF',currentPrice:n(x?.currentPrice??x?.closePrice??x?.price),changePct:n(x?.changeRate??x?.fluctuationsRatio??x?.changePct),marketValue:x?.aum??x?.marketValue??null}}
 async function etfList(){const out:any[]=[],seen=new Set<string>();try{for(let page=1;page<=30;page++){const j=await fetchJson(`https://m.stock.naver.com/front-api/domestic/etf/list?sortTypeCode=aum&page=${page}&pageSize=100`),rows=pickArray(j);if(!rows.length)break;for(const x of rows){const s=normETF(x);if(s&&!seen.has(s.code)){seen.add(s.code);out.push(s)}}if(rows.length<100)break}if(out.length)return out}catch{}for(let page=1;page<=30;page++){const j=await fetchJson(`https://api.stock.naver.com/etf/priceTop?page=${page}&pageSize=100`),rows=pickArray(j);if(!rows.length)break;for(const x of rows){const s=normETF(x);if(s&&!seen.has(s.code)){seen.add(s.code);out.push(s)}}if(rows.length<100)break}return out}
 function normETN(x:any){const code=String(x?.itemCode??x?.symbolCode??x?.code??'').match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.name??x?.itemName??x?.stockNameKor??x?.stockNameEng??'').trim();if(!code||!name)return null;return {code,name,market:'KOSPI',instrumentType:'ETN',currentPrice:n(x?.currentPrice??x?.closePrice??x?.price),changePct:n(x?.changeRate??x?.fluctuationsRatio??x?.changePct),marketValue:x?.marketValue??null}}
 async function etnList(){const out:any[]=[],seen=new Set<string>();for(let page=1;page<=30;page++){let j:any;try{j=await fetchJson(`https://api.stock.naver.com/etn/priceTop?page=${page}&pageSize=100`)}catch{break}const rows=pickArray(j);if(!rows.length)break;for(const x of rows){const s=normETN(x);if(s&&!seen.has(s.code)){seen.add(s.code);out.push(s)}}if(rows.length<100)break}return out}
 
-export async function GET(req:Request){if(!await authorize(req))return json({error:'UNAUTHORIZED'},401);const u=new URL(req.url),market=String(u.searchParams.get('market')||'ALL').toUpperCase(),limit=Math.max(0,Math.min(5000,Number(u.searchParams.get('limit')||0))),types=String(u.searchParams.get('types')||'STOCK').split(',').map(x=>x.trim().toUpperCase()).filter(x=>['STOCK','SPAC','ETF','ETN'].includes(x));if(!types.length)return json({error:'NO_TYPES'},400);const want=new Set(types),warnings:string[]=[],rows:any[]=[];try{if(want.has('STOCK')||want.has('SPAC')){let base:any[]=[];if(market==='ALL'||market==='KOSPI')base.push(...await stockList('KOSPI'));if(market==='ALL'||market==='KOSDAQ')base.push(...await stockList('KOSDAQ'));rows.push(...base.filter(x=>want.has(x.instrumentType)))}if(want.has('ETF')){try{rows.push(...await etfList())}catch(e:any){warnings.push(`ETF 목록 오류: ${e?.message||e}`)}}if(want.has('ETN')){try{const etns=await etnList();if(!etns.length)warnings.push('ETN 목록 응답이 없어 ETN은 이번 검색에서 제외되었습니다.');rows.push(...etns)}catch(e:any){warnings.push(`ETN 목록 오류: ${e?.message||e}`)}}const uniq=[...new Map(rows.map(x=>[`${x.instrumentType}:${x.code}`,x])).values()];const selected=limit>0?uniq.slice(0,limit):uniq;const counts:any={STOCK:0,SPAC:0,ETF:0,ETN:0};selected.forEach(x=>counts[x.instrumentType]=(counts[x.instrumentType]||0)+1);return json({ok:true,total:selected.length,rows:selected,counts,warnings})}catch(e:any){return json({ok:false,error:String(e?.message||e),warnings},502)}}
+export async function GET(req:Request){
+  if(!await authorize(req))return json({error:'UNAUTHORIZED'},401);
+  const u=new URL(req.url),market=String(u.searchParams.get('market')||'ALL').toUpperCase(),limit=Math.max(0,Math.min(5000,Number(u.searchParams.get('limit')||0))),types=String(u.searchParams.get('types')||'STOCK').split(',').map(x=>x.trim().toUpperCase()).filter(x=>['STOCK','SPAC','ETF','ETN'].includes(x));
+  if(!types.length)return json({error:'NO_TYPES'},400);
+  const want=new Set(types),warnings:string[]=[],rows:any[]=[];
+  try{
+    // The Naver market-value endpoint mixes common stocks, preferreds, ETFs and ETNs.
+    // Build ETF/ETN code sets first, then classify the market list so STOCK-only really means equities only.
+    let etfs:any[]=[],etns:any[]=[];
+    const needProductMaps=want.has('STOCK')||want.has('SPAC')||want.has('ETF')||want.has('ETN');
+    if(needProductMaps){
+      const [er,nr]=await Promise.allSettled([etfList(),etnList()]);
+      if(er.status==='fulfilled')etfs=er.value;else warnings.push(`ETF 분류목록 오류: ${er.reason?.message||er.reason}`);
+      if(nr.status==='fulfilled')etns=nr.value;else warnings.push(`ETN 분류목록 오류: ${nr.reason?.message||nr.reason}`);
+    }
+    const etfCodes=new Set(etfs.map(x=>x.code)),etnCodes=new Set(etns.map(x=>x.code));
+
+    if(want.has('STOCK')||want.has('SPAC')){
+      let base:any[]=[];
+      if(market==='ALL'||market==='KOSPI')base.push(...await stockList('KOSPI'));
+      if(market==='ALL'||market==='KOSDAQ')base.push(...await stockList('KOSDAQ'));
+      for(const s of base){
+        let instrumentType='STOCK';
+        if(etnCodes.has(s.code)||isETNName(s.name))instrumentType='ETN';
+        else if(etfCodes.has(s.code)||isLikelyETFName(s.name))instrumentType='ETF';
+        else if(isSpac(s.name))instrumentType='SPAC';
+        if(want.has(instrumentType))rows.push({...s,instrumentType});
+      }
+    }
+    if(want.has('ETF'))rows.push(...etfs);
+    if(want.has('ETN')){
+      if(!etns.length)warnings.push('ETN 전용 목록 응답이 없어 ETN은 이번 검색에서 제외되었습니다.');
+      rows.push(...etns);
+    }
+    const uniq=[...new Map(rows.map(x=>[`${x.instrumentType}:${x.code}`,x])).values()];
+    const selected=limit>0?uniq.slice(0,limit):uniq;
+    const counts:any={STOCK:0,SPAC:0,ETF:0,ETN:0};selected.forEach(x=>counts[x.instrumentType]=(counts[x.instrumentType]||0)+1);
+    return json({ok:true,total:selected.length,rows:selected,counts,warnings,classification:{etfCodes:etfCodes.size,etnCodes:etnCodes.size}});
+  }catch(e:any){return json({ok:false,error:String(e?.message||e),warnings},502)}
+}
