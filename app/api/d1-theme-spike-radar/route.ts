@@ -44,7 +44,13 @@ async function fetchHtml(url:string,timeoutMs=10000){const r=await fetchRaw(url,
 function pickArray(j:any,keys:string[]){if(Array.isArray(j))return j;for(const k of keys){if(Array.isArray(j?.[k]))return j[k];if(Array.isArray(j?.result?.[k]))return j.result[k]}if(Array.isArray(j?.result))return j.result;return []}
 function normalizeMarket(v:any){const s=String(v||'').toUpperCase();if(s.includes('KOSDAQ')||s==='KQ'||s==='2')return 'KOSDAQ';if(s.includes('KOSPI')||s==='KS'||s==='1')return 'KOSPI';return 'UNKNOWN'}
 
-function normalizeTheme(x:any){const code=String(x?.sectorCode??x?.detailNo??x?.no??'').replace(/\D/g,'');const name=String(x?.sectorName??x?.name??x?.themeName??'').trim();if(!code||!name)return null;return {code,name,changePct:n(x?.fluctuationsRatio??x?.changeRate??x?.changePct??x?.rate),up:n(x?.risingStockCount??x?.riseCount??x?.upCount),down:n(x?.fallingStockCount??x?.fallCount??x?.downCount),flat:n(x?.unchangedStockCount??x?.steadyCount??x?.flatCount),count:n(x?.stockCount??x?.itemCount??x?.totalCount),source:'Naver front-api'}}
+function normalizeTheme(x:any){
+  const code=String(x?.code??x?.sectorCode??x?.detailNo??x?.no??'').replace(/\D/g,'');
+  const name=String(x?.name??x?.sectorName??x?.themeName??'').trim();
+  if(!code||!name)return null;
+  const up=n(x?.risingCount??x?.risingStockCount??x?.riseCount??x?.upCount),down=n(x?.fallingCount??x?.fallingStockCount??x?.fallCount??x?.downCount),flat=n(x?.unchangedCount??x?.unchangedStockCount??x?.steadyCount??x?.flatCount);
+  return {code,name,changePct:n(x?.changeRate??x?.fluctuationsRatio??x?.changePct??x?.rate),up,down,flat,count:n(x?.stockCount??x?.itemCount??x?.totalCount)||(up+down+flat),source:'Naver front-api'};
+}
 
 async function loadThemesFront(){
   const out:any[]=[];let empty=0;
@@ -77,7 +83,7 @@ async function loadThemes(force=false){
   data.sort((a,b)=>b.changePct-a.changePct);themeCache.time=Date.now();themeCache.data=data;return data;
 }
 
-function normalizeMember(x:any){const raw=String(x?.itemCode??x?.stockCode??x?.code??'').replace(/\D/g,''),code=raw.match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.itemName??x?.name??'').trim();if(!code||!name)return null;return {code,name,market:normalizeMarket(x?.stockExchangeType??x?.marketType??x?.market??x?.category),price:n(x?.closePrice??x?.currentPrice??x?.nowVal??x?.price)||null,changePct:n(x?.fluctuationsRatio??x?.changeRate??x?.changePct??x?.rate),marketValue:n(x?.marketValue??x?.marketCap)||null}}
+function normalizeMember(x:any){const raw=String(x?.itemCode??x?.stockCode??x?.code??'').replace(/\D/g,''),code=raw.match(/\d{6}/)?.[0]||'',name=String(x?.stockName??x?.itemName??x?.name??'').trim();if(!code||!name)return null;return {code,name,market:normalizeMarket(x?.marketType??x?.stockExchangeType??x?.market??x?.category),price:n(x?.closePrice??x?.currentPrice??x?.nowVal??x?.price)||null,changePct:n(x?.fluctuationsRatio??x?.changeRate??x?.changePct??x?.rate),marketValue:n(x?.marketValue??x?.marketCap)||null}}
 async function loadThemeMembersFront(code:string){
   const out:any[]=[];
   for(let page=1;page<=6;page++){
