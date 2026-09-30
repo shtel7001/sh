@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Theme Value Radar | 저평가 테마 순환 레이더</title>
+  <meta name="description" content="시대 흐름·정책·뉴스·실적·소외지수를 결합한 저평가 테마 순환 레이더" />
+  <link rel="stylesheet" href="/theme-value-radar-20261001.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div id="auth" class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand-mark">TVR</div>
+      <h1>Theme Value Radar</h1>
+      <p>1회 인증 후 이 브라우저에서는 다시 입력하지 않도록 설계된 개인용 테마 레이더입니다.</p>
+      <form id="authForm">
+        <label>1회용 영구 인증번호</label>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="인증번호 입력" required />
+        <button class="primary" type="submit">인증하고 시작하기</button>
+        <div id="authMsg" class="msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <main id="app" class="hidden">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">THEME VALUE RADAR · KOREA</div>
+        <h1>저평가 테마 순환 레이더</h1>
+        <p>좋은 테마를 찾고 → 충분히 눌린 구간을 찾고 → 사업기반이 있는 종목으로 분산하는 구조</p>
+      </div>
+      <div class="top-actions">
+        <button id="runBtn" class="primary">시장·뉴스 분석 실행</button>
+        <button id="excelBtn" class="ghost" disabled>Excel 저장</button>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="hero-card accent">
+        <span>핵심 원칙</span>
+        <h2>전망점수 ≠ 매수기회점수</h2>
+        <p>아무리 좋은 테마도 이미 고점 부근이면 추격하지 않습니다. 전망과 가격 소외를 따로 계산합니다.</p>
+      </article>
+      <article class="hero-card">
+        <span>소외지수</span>
+        <h2>현재가 ÷ 최근 고점 × 100</h2>
+        <p>낮을수록 많이 눌린 상태입니다. 단, 단순 낙폭만으로 매수하지 않고 뉴스·정책·실적·반등 신호를 함께 봅니다.</p>
+      </article>
+      <article class="hero-card">
+        <span>종합 매수기회</span>
+        <h2>전망 58% + 낙폭 30% + 반등 12%</h2>
+        <p>‘싸 보이는 이유가 있는 하락’을 줄이기 위해 구조적 성장성과 기술적 회복을 같이 반영합니다.</p>
+      </article>
+    </section>
+
+    <section class="controls panel">
+      <div class="control">
+        <label>소외지수 계산기간</label>
+        <div class="range-row"><input id="lookback" type="range" min="30" max="240" step="10" value="240"><b id="lookbackVal">240일</b></div>
+      </div>
+      <div class="control">
+        <label>최대 소외지수</label>
+        <div class="range-row"><input id="maxAlien" type="range" min="40" max="100" step="1" value="82"><b id="maxAlienVal">82</b></div>
+      </div>
+      <div class="control">
+        <label>최소 전망점수</label>
+        <div class="range-row"><input id="minOutlook" type="range" min="40" max="100" step="1" value="70"><b id="minOutlookVal">70</b></div>
+      </div>
+      <div class="control search-control">
+        <label>테마/종목 검색</label>
+        <input id="search" placeholder="예: 로봇, HBM, 방산, 삼성전자" />
+      </div>
+    </section>
+
+    <section class="status-strip">
+      <div><span>분석시각</span><b id="asOf">아직 실행 전</b></div>
+      <div><span>테마 수</span><b id="themeCount">-</b></div>
+      <div><span>저평가 후보</span><b id="candidateCount">-</b></div>
+      <div><span>관심테마</span><b id="favoriteCount">0</b></div>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="section-head">
+        <div><span class="eyebrow">RANKING</span><h2>테마 종합 순위</h2></div>
+        <div class="legend"><i class="dot green"></i> 저평가 후보 <i class="dot amber"></i> 관찰 <i class="dot red"></i> 과열/리스크</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>순위</th><th>관심</th><th>테마</th><th>매수기회</th><th>전망</th><th>소외지수</th><th>고점대비 낙폭</th><th>20일 흐름</th><th>뉴스</th><th>판정</th></tr></thead>
+          <tbody id="themeRows"><tr><td colspan="10" class="empty">‘시장·뉴스 분석 실행’을 누르면 최신 데이터를 불러옵니다.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="detail" class="detail-grid"></section>
+
+    <section class="panel methodology">
+      <div class="section-head"><div><span class="eyebrow">METHOD</span><h2>점수 산식과 안전장치</h2></div></div>
+      <div class="method-grid">
+        <div><b>전망점수</b><p>구조적 성장 30% · 정책 22% · 최근 7일 뉴스 20% · 실적가시성 16% · 글로벌 확산성 12%</p></div>
+        <div><b>소외지수</b><p>테마 대표종목별 ‘현재가 ÷ 조회기간 고가’를 계산한 뒤 중앙값 사용. 낮을수록 고점 대비 많이 눌림.</p></div>
+        <div><b>종목구분</b><p>핵심 · 도전자 · 다크호스 · 이벤트형으로 나눠 동일비중 맹목 분산을 피합니다.</p></div>
+        <div><b>경고</b><p>‘절대로 망하지 않는 회사’는 존재하지 않습니다. 재무·현금흐름·부채·실적·규제·기술 리스크 확인이 필요합니다.</p></div>
+      </div>
+    </section>
+
+    <footer>
+      <p>본 사이트는 ‘좋은 사업을 충분히 낮은 가격에 산다’는 가치투자 원리를 정량화한 개인용 분석 도구입니다. 특정 연수익률을 보장하지 않으며, 워런 버핏의 ‘연 50%’ 발언을 이 정확한 4단계 방법의 출처로 단정하지 않습니다.</p>
+      <p>데이터는 Yahoo Finance 및 Google News RSS 등 공개 접근 가능한 소스를 사용하며 지연·누락·오류가 있을 수 있습니다. 투자판단과 결과는 사용자 책임입니다.</p>
+    </footer>
+  </main>
+  <script src="/theme-value-radar-20261001.js"></script>
+</body>
+</html>
