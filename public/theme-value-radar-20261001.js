@@ -1,20 +1,101 @@
 const $ = s => document.querySelector(s);
-const state = { data:[], favorites:new Set(JSON.parse(localStorage.getItem('themeFavorites')||'[]')), stockFavorites:new Set(JSON.parse(localStorage.getItem('stockFavorites')||'[]')) };
+
+function storageGet(key){
+  try { return window.localStorage.getItem(key) || ''; } catch { return ''; }
+}
+function storageSet(key,value){
+  try { window.localStorage.setItem(key,value); return true; } catch { return false; }
+}
+function storageRemove(key){
+  try { window.localStorage.removeItem(key); } catch {}
+}
+function readSet(key){
+  try {
+    const raw = storageGet(key);
+    if(!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    storageRemove(key);
+    return new Set();
+  }
+}
+function saveSet(key,set){ storageSet(key,JSON.stringify([...set])); }
+function authToken(){ return storageGet('themeRadarToken'); }
+function authHeaders(json=false){
+  const h = {};
+  if(json) h['Content-Type'] = 'application/json';
+  const token = authToken();
+  if(token) h['Authorization'] = `Bearer ${token}`;
+  return h;
+}
+
+const state = {
+  data:[],
+  favorites:readSet('themeFavorites'),
+  stockFavorites:readSet('stockFavorites')
+};
 
 async function checkSession(){
-  try{const r=await fetch('/api/theme-value-radar/session',{cache:'no-store'});const j=await r.json();return !!j.ok}catch(_){return false}
+  try{
+    const r = await fetch('/api/theme-value-radar/session',{
+      cache:'no-store',
+      credentials:'include',
+      headers:authHeaders(false)
+    });
+    const j = await r.json().catch(()=>({}));
+    if(r.ok && j.ok) return true;
+    if(authToken()) storageRemove('themeRadarToken');
+    return false;
+  }catch(_){
+    return false;
+  }
 }
-async function init(){
-  if(await checkSession()){showApp()}else{$('#auth').classList.remove('hidden')}
-}
-function showApp(){ $('#auth').classList.add('hidden'); $('#app').classList.remove('hidden'); updateFavoriteCount(); }
 
-$('#authForm').addEventListener('submit',async e=>{
-  e.preventDefault(); $('#authMsg').textContent='인증 중...';
-  const r=await fetch('/api/theme-value-radar/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('#code').value.trim()})});
-  const j=await r.json().catch(()=>({}));
-  if(r.ok&&j.ok){localStorage.setItem('themeRadarAuthorized','1');showApp();$('#authMsg').textContent='';}else{$('#authMsg').textContent=j.message||'인증에 실패했습니다.'}
-});
+async function init(){
+  const auth = $('#auth');
+  if(auth) auth.classList.remove('hidden');
+  if(await checkSession()) showApp();
+}
+
+function showApp(){
+  $('#auth')?.classList.add('hidden');
+  $('#app')?.classList.remove('hidden');
+  updateFavoriteCount();
+}
+
+const authForm = $('#authForm');
+if(authForm){
+  authForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const msg = $('#authMsg');
+    const code = ($('#code')?.value || '').trim();
+    if(msg) msg.textContent='인증 중...';
+
+    try{
+      const r = await fetch('/api/theme-value-radar/auth',{
+        method:'POST',
+        credentials:'include',
+        cache:'no-store',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code})
+      });
+      const j = await r.json().catch(()=>({}));
+
+      if(r.ok && j.ok){
+        if(j.token) storageSet('themeRadarToken',j.token);
+        storageSet('themeRadarAuthorized','1');
+        if(msg) msg.textContent='인증 성공';
+        showApp();
+        return;
+      }
+
+      if(msg) msg.textContent=j.message || `인증 실패 (${r.status})`;
+    }catch(err){
+      if(msg) msg.textContent='인증 요청 실패: '+(err?.message || String(err));
+    }
+  });
+}
 
 function fmt(n,d=1){return Number.isFinite(n)?Number(n).toLocaleString('ko-KR',{maximumFractionDigits:d}):'-'}
 function scoreClass(n){return n>=78?'high':n>=62?'mid':'low'}
@@ -41,24 +122,35 @@ function render(){
   document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>toggleTheme(b.dataset.theme));
   document.querySelectorAll('[data-stock]').forEach(b=>b.onclick=()=>toggleStock(b.dataset.stock));
 }
-function toggleTheme(id){state.favorites.has(id)?state.favorites.delete(id):state.favorites.add(id);localStorage.setItem('themeFavorites',JSON.stringify([...state.favorites]));updateFavoriteCount()}
-function toggleStock(id){state.stockFavorites.has(id)?state.stockFavorites.delete(id):state.stockFavorites.add(id);localStorage.setItem('stockFavorites',JSON.stringify([...state.stockFavorites]));render()}
+function toggleTheme(id){state.favorites.has(id)?state.favorites.delete(id):state.favorites.add(id);saveSet('themeFavorites',state.favorites);updateFavoriteCount()}
+function toggleStock(id){state.stockFavorites.has(id)?state.stockFavorites.delete(id):state.stockFavorites.add(id);saveSet('stockFavorites',state.stockFavorites);render()}
 function updateFavoriteCount(){if($('#favoriteCount'))$('#favoriteCount').textContent=state.favorites.size}
 
-$('#runBtn').addEventListener('click',async()=>{
+$('#runBtn')?.addEventListener('click',async()=>{
   const btn=$('#runBtn'); btn.disabled=true; btn.textContent='분석 중…';
   try{
-    const r=await fetch('/api/theme-value-radar/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lookback:+$('#lookback').value})});
-    if(r.status===401){location.reload();return}
+    const r=await fetch('/api/theme-value-radar/analyze',{
+      method:'POST',
+      credentials:'include',
+      cache:'no-store',
+      headers:authHeaders(true),
+      body:JSON.stringify({lookback:+$('#lookback').value})
+    });
+    if(r.status===401){
+      storageRemove('themeRadarToken');
+      storageRemove('themeRadarAuthorized');
+      location.reload();
+      return;
+    }
     const j=await r.json(); if(!j.ok)throw new Error(j.message||'분석 실패');
     state.data=j.results; $('#asOf').textContent=new Date(j.asOf).toLocaleString('ko-KR'); $('#excelBtn').disabled=false; render();
   }catch(e){alert('분석 중 오류가 발생했습니다. 잠시 후 다시 실행해 주세요.\n'+e.message)}finally{btn.disabled=false;btn.textContent='시장·뉴스 분석 실행'}
 });
 
-['lookback','maxAlien','minOutlook'].forEach(id=>{$('#'+id).addEventListener('input',()=>{if(id==='lookback')$('#lookbackVal').textContent=$('#lookback').value+'일';if(id==='maxAlien')$('#maxAlienVal').textContent=$('#maxAlien').value;if(id==='minOutlook')$('#minOutlookVal').textContent=$('#minOutlook').value;if(state.data.length)render()})});
-$('#search').addEventListener('input',()=>state.data.length&&render());
+['lookback','maxAlien','minOutlook'].forEach(id=>{$('#'+id)?.addEventListener('input',()=>{if(id==='lookback')$('#lookbackVal').textContent=$('#lookback').value+'일';if(id==='maxAlien')$('#maxAlienVal').textContent=$('#maxAlien').value;if(id==='minOutlook')$('#minOutlookVal').textContent=$('#minOutlook').value;if(state.data.length)render()})});
+$('#search')?.addEventListener('input',()=>state.data.length&&render());
 
-$('#excelBtn').addEventListener('click',()=>{
+$('#excelBtn')?.addEventListener('click',()=>{
   if(!state.data.length)return;
   const themeRows=state.data.map((t,i)=>({순위:i+1,관심테마:state.favorites.has(t.id)?'Y':'',테마:t.name,매수기회점수:+t.opportunity.toFixed(1),전망점수:+t.outlook.toFixed(1),소외지수:+t.alienation.toFixed(1),고점대비낙폭:+t.drawdown.toFixed(1),20일등락률:+t.momentum.toFixed(1),뉴스점수:+t.newsScore.toFixed(1),판정:verdict(t)[0],핵심논리:t.thesis}));
   const stockRows=state.data.flatMap(t=>t.stockData.map(s=>({테마:t.name,관심종목:state.stockFavorites.has(s.code)?'Y':'',종목:s.name,코드:s.code,구분:s.tier,현재가:s.error?'':s.current,20일등락률:s.error?'':+s.mom20.toFixed(1),고점대비낙폭:s.error?'':+(100-s.pos).toFixed(1),네이버증권:naver(s.code)})));
