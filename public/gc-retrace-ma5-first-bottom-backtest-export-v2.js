@@ -152,7 +152,7 @@ async function runBacktestV2(){
     await ensureAllHistories(rows);
     if(stopRequested)return;
     const dates=referenceDates(rows,s,e);
-    const step=clamp(+$('btStep').value||5,3,30);
+    const step=clamp(+$('btStep').value||1,1,30);
     const forward=clamp(+$('btForward').value||20,3,40);
     const topN=clamp(+$('btTopN').value||30,1,100);
     const picked=dates.filter((_,i)=>i%step===0);
@@ -193,6 +193,14 @@ async function runBacktestV2(){
 }
 
 (function installBacktestDetailExportV2(){
+  const stepInput=$('btStep');
+  if(stepInput){
+    stepInput.min='1';
+    stepInput.max='30';
+    stepInput.step='1';
+    stepInput.value='1';
+  }
+
   const oldBtn=$('backtestBtn');
   if(!oldBtn)return;
   const newBtn=oldBtn.cloneNode(true);
