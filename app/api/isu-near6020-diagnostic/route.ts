@@ -65,7 +65,8 @@ async function loadHistory(code:string,cfg:Cfg){
     const batches=await Promise.all(windows.slice(i,i+3).map(async w=>{
       const url=`https://api.stock.naver.com/chart/domestic/item/${encodeURIComponent(code)}?periodType=dayCandle&startDateTime=${ymd(w.start)}&endDateTime=${ymd(w.end)}`;
       const raw=await fetchJson(url);const rows=chartRows(raw);
-      if(rows.length>=110)throw new Error('일봉 응답이 제한되어 과거 데이터를 확인할 수 없습니다.');
+      // The provider may ignore startDateTime and return 110 bars ending at the requested end.
+      if(rows.length>=110&&rows[0].date>ymd(w.start))throw new Error('일봉 응답이 제한되어 과거 데이터를 확인할 수 없습니다.');
       return rows.filter(row=>row.date>=ymd(w.start)&&row.date<=ymd(w.end));
     }));for(const rows of batches)for(const row of rows)byDate.set(row.date,row);
   }
