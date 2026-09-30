@@ -52,26 +52,28 @@ function detect(rows:Row[],cfg:Cfg){
     const b20=last>=5?rows[last-5].ma20:null,slope=b20?(cur.ma20-b20)/b20*100:0,recent=rows.slice(Math.max(0,last-19),last+1),v20=recent.reduce((s,x)=>s+x.volume,0)/recent.length,vr=v20?cur.volume/v20:1;
     const nearScore=(distance:number,tolerance:number,weight:number)=>weight*(1-Math.min(1,distance/Math.max(tolerance,.01)));
     const score=Math.round(Math.min(100,nearScore(Math.abs(d60),cfg.near60Pct,40)+nearScore(sd,cfg.supportPct,30)+Math.max(0,Math.min(16,8+slope*6))+Math.max(0,Math.min(14,(1.3-vr)*15))));
-    const hit={score,deadDate:dtext(rows[di].date),goldenDate:dtext(rows[gi].date),near60Date:dtext(cur.date),near60State:d60>0?'60일선 위':d60<0?'60일선 아래':'60일선 일치',supportDate:dtext(rows[si].date),gapMonths:round(gap/30.44,1),close:cur.close,ma5:round(cur.ma5 as number,2),ma20:round(cur.ma20,2),ma60:round(cur.ma60,2),dist20:round(d20,2),dist60:round(d60,2),slope20:round(slope,2),volumeRatio:round(vr,2),lastDate:dtext(cur.date),chart:rows.slice(Math.max(0,last-130),last+1).map(x=>({date:dtext(x.date),close:x.close,ma5:x.ma5?round(x.ma5,2):null,ma20:x.ma20?round(x.ma20,2):null,ma60:x.ma60?round(x.ma60,2):null}))};if(!best||hit.score>best.score)best=hit;
+    const hit={score,deadDate:dtext(rows[di].date),goldenDate:dtext(rows[gi].date),near60Date:dtext(cur.date),near60State:d60>0?'60일선 위':d60<0?'60일선 아래':'60일선 일치',supportDate:dtext(rows[si].date),gapMonths:round(gap/30.44,1),close:cur.close,ma5:round(cur.ma5 as number,2),ma20:round(cur.ma20,2),ma60:round(cur.ma60,2),dist20:round(d20,2),dist60:round(d60,2),slope20:round(slope,2),volumeRatio:round(vr,2),lastDate:dtext(cur.date),chart:rows.slice(Math.max(0,last-130),last+1).map(x=>({date:dtext(x.date),close:x.close,ma5:x.ma5?round(x.ma5,2):null,ma20:x.ma20?round(x.ma20,2):null,ma60:x.ma60?round(x.ma60,2):null}))};if(!best||hit.score>best.score||(hit.score===best.score&&hit.goldenDate>best.goldenDate))best=hit;
   }return best;
 }
 async function loadHistory(code:string,cfg:Cfg){
   const start=dt(cfg.start),end=dt(cfg.end);if(!start||!end)throw new Error('BAD_DATE');
-  const fs=new Date(start);fs.setMonth(fs.getMonth()-cfg.maxGapMonths-3);
-  // Naver dayCandle caps each response at 110 bars. Use windows below that cap.
-  const windows:{start:Date;end:Date}[]=[];for(let cursor=new Date(fs);cursor<=end;){const last=new Date(cursor);last.setUTCDate(last.getUTCDate()+119);if(last>end)last.setTime(end.getTime());windows.push({start:new Date(cursor),end:last});cursor=new Date(last);cursor.setUTCDate(cursor.getUTCDate()+1);}
-  const byDate=new Map<string,Row>();
-  for(let i=0;i<windows.length;i+=3){
-    const batches=await Promise.all(windows.slice(i,i+3).map(async w=>{
-      const url=`https://api.stock.naver.com/chart/domestic/item/${encodeURIComponent(code)}?periodType=dayCandle&startDateTime=${ymd(w.start)}&endDateTime=${ymd(w.end)}`;
-      const raw=await fetchJson(url);const rows=chartRows(raw);
-      // The provider may ignore startDateTime and return 110 bars ending at the requested end.
-      if(rows.length>=110&&rows[0].date>ymd(w.start))throw new Error('일봉 응답이 제한되어 과거 데이터를 확인할 수 없습니다.');
-      return rows.filter(row=>row.date>=ymd(w.start)&&row.date<=ymd(w.end));
-    }));for(const rows of batches)for(const row of rows)byDate.set(row.date,row);
-  }
-  const rows=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
-  if(!rows.length)throw new Error('일봉 데이터를 불러오지 못했습니다.');return rows;
+  const fs=new Date(start);fs.setUTCMonth(fs.getUTCMonth()-cfg.maxGapMonths-3);
+  // Mobile dayCandle ignores date parameters and returns only the latest 110 bars.
+  // The Naver chart feed provides a requested history length instead.
+  const count=Math.min(10000,Math.max(180,Math.ceil((Date.now()-fs.getTime())/86400000)+90));
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const url=`https://fchart.stock.naver.com/sise.nhn?symbol=${encodeURIComponent(code)}&timeframe=day&count=${count}&requestType=0`;
+    const response=await fetch(url,{signal:controller.signal,cache:'no-store',headers:{'User-Agent':'Mozilla/5.0','Referer':'https://finance.naver.com/'}});
+    if(!response.ok)throw new Error(`일봉 HTTP ${response.status}`);
+    const xml=await response.text(),byDate=new Map<string,Row>();
+    for(const item of xml.matchAll(/<item\s+data=["']([^"']+)["']/g)){
+      const [date,o,h,l,c,v]=item[1].split('|'),close=Number(c);
+      if(/^\d{8}$/.test(date)&&Number.isFinite(close)&&close>0&&date>=ymd(fs)&&date<=ymd(end))byDate.set(date,{date,open:Number(o)||close,high:Number(h)||close,low:Number(l)||close,close,volume:Number(v)||0});
+    }
+    const rows=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+    if(!rows.length)throw new Error('과거 일봉 데이터를 불러오지 못했습니다.');return rows;
+  }finally{clearTimeout(timer);}
 }
 async function scanOne(s:any,cfg:Cfg){try{const rows=await loadHistory(String(s.code),cfg),hit=detect(rows,cfg);return hit?{...s,...hit}:null}catch(e:any){return {scanError:true,code:s.code,message:String(e?.message||e)}}}
 
