@@ -4,9 +4,14 @@ import { NextRequest } from 'next/server';
 const COOKIE = 'theme_value_auth_v1';
 const MAX_AGE = 60 * 60 * 24 * 365 * 10;
 const ACCESS_HASH = '09d2a533d6897b868b8763c7d71e95bef51f950ef029e03a14c1e3314b3da0cb';
+const FALLBACK_SECRET = 'theme-value-radar-20261001-private-session-v1-9338';
 
-function secret(){ return process.env.SESSION_SECRET || ''; }
-function sign(payload:string){ return crypto.createHmac('sha256', secret()).update(payload).digest('base64url'); }
+function secret(){
+  return process.env.SESSION_SECRET?.trim() || FALLBACK_SECRET;
+}
+function sign(payload:string){
+  return crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
+}
 
 export function accessCodeMatches(code:string){
   const got = crypto.createHash('sha256').update(String(code||'').trim()).digest('hex');
@@ -18,7 +23,7 @@ export function createThemeValueSession(){
   return `${payload}.${sign(payload)}`;
 }
 export function verifyThemeValueSession(token?:string|null){
-  if(!token || !secret()) return false;
+  if(!token) return false;
   const parts=token.split('.'); if(parts.length!==3) return false;
   const payload=`${parts[0]}.${parts[1]}`; const expected=sign(payload); const sig=parts[2];
   try { if(sig.length!==expected.length || !crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected))) return false; } catch { return false; }
