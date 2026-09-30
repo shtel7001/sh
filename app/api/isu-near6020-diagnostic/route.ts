@@ -80,13 +80,8 @@ export async function GET(req:Request){
   if(Date.now()>1790740414671||crypto.createHash('sha256').update(key).digest('hex')!=='f0f442e9b139bdcbd5cd213c8de4b1829b99e04248a5c02eec4fe9d3167bcb2c')return unauthorized();
   const cfg:Cfg={start:'2026-03-01',end:'2026-09-28',minGapMonths:3,maxGapMonths:12,near60Pct:5,supportPct:5,supportLookback:3};
   try{
-    const raw=await fetchJson('https://api.stock.naver.com/chart/domestic/item/457190?periodType=dayCandle&startDateTime=20241201&endDateTime=20260928',15000);
-    const cappedRows=chartRows(raw),rows=await loadHistory('457190',cfg),hit=detect(rows,cfg);const limited=rows.filter(r=>r.date<='20260928');
-    const crosses:any[]=[];for(let i=1;i<limited.length;i++){const p=limited[i-1],c=limited[i];if(!p.ma5||!p.ma20||!c.ma5||!c.ma20)continue;if(p.ma5>=p.ma20&&c.ma5<c.ma20)crosses.push({type:'dead',date:c.date});if(p.ma5<=p.ma20&&c.ma5>c.ma20)crosses.push({type:'golden',date:c.date});}
-    const cur=limited.at(-1),dist60=cur?.ma60?(cur.close-cur.ma60)/cur.ma60*100:null;
-    const support=limited.slice(-3).map(r=>({...r,dist20:r.ma20?(r.close-r.ma20)/r.ma20*100:null}));
-    const golds=crosses.filter(x=>x.type==='golden'&&x.date>='20260301');
-    const pairs=golds.map(g=>({golden:g.date,deads:crosses.filter(d=>d.type==='dead'&&d.date<g.date).map(d=>({date:d.date,gapDays:((dt(dtext(g.date)) as Date).getTime()-(dt(dtext(d.date)) as Date).getTime())/86400000})).filter(d=>d.gapDays>=3*30.44&&d.gapDays<=12*30.44)}));
-    return NextResponse.json({cfg,rawKeys:Object.keys(raw),capped:{count:cappedRows.length,first:cappedRows[0]?.date,last:cappedRows.at(-1)?.date},rowCount:rows.length,first:rows[0]?.date,last:cur,dist60,support,crosses:crosses.filter(c=>c.date>='20260101'),pairs,detected:hit?{...hit,chart:undefined}:null,source:'Naver dayCandle'},{headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'}});
+    const dates=[['eight','20260101','20260430'],['twelve','202601010000','202604302359'],['fourteen','20260101000000','20260430235959']];
+    const samples=await Promise.all(dates.map(async ([format,start,end])=>{const raw=await fetchJson(`https://api.stock.naver.com/chart/domestic/item/457190?periodType=dayCandle&startDateTime=${start}&endDateTime=${end}`,15000);const rows=chartRows(raw);return{format,count:rows.length,first:rows[0]?.date,last:rows.at(-1)?.date,lastRow:rows.at(-1)}}));
+    return NextResponse.json({samples},{headers:{'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'}});
   }catch(e:any){return NextResponse.json({error:String(e?.message||e)},{status:502});}
 }
