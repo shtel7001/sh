@@ -53,13 +53,16 @@ function normalizeTheme(x:any){
 }
 
 async function loadThemesFront(){
-  const out:any[]=[];
-  for(let page=1;page<=8;page++){
-    const url=`https://m.stock.naver.com/front-api/stock/sectors/all?nationType=domestic&sectorType=theme&sectorSortType=CHANGE_RATE&businessDayCategory=daily&page=${page}&pageSize=50`;
+  const out:any[]=[];let cursor='';const seenCursors=new Set<string>();
+  for(let turn=0;turn<12;turn++){
+    const base='https://m.stock.naver.com/front-api/stock/sectors/all?nationType=domestic&sectorType=theme&sectorSortType=CHANGE_RATE&businessDayCategory=daily&pageSize=50';
+    const url=cursor?`${base}&cursor=${encodeURIComponent(cursor)}`:base;
     const j=await fetchJson(url,10000),rows=pickArray(j,['sectors','items','stocks','data']);
     if(!rows.length)break;
     for(const x of rows){const t=normalizeTheme(x);if(t)out.push(t)}
-    if(rows.length<50||j?.result?.hasNext===false)break;
+    const next=String(j?.result?.cursor||'');
+    if(j?.result?.hasNext===false||!next||next===cursor||seenCursors.has(next))break;
+    seenCursors.add(next);cursor=next;
   }
   const uniq=[...new Map(out.map(x=>[x.code,x])).values()];if(!uniq.length)throw new Error('THEME_FRONT_EMPTY');return uniq;
 }
