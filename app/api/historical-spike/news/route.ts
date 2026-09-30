@@ -1,0 +1,8 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { isHistoricalAuthed } from '@/lib/historical-spike-auth';
+import { within240 } from '@/lib/historical-spike-naver';
+export const runtime='nodejs';
+function unesc(s:string){return s.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');}
+function tag(block:string,name:string){const m=block.match(new RegExp(`<${name}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${name}>`,'i'));return m?unesc(m[1].trim()):'';}
+function addDays(d:string,n:number){const x=new Date(`${d}T12:00:00+09:00`);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);}
+export async function GET(req:NextRequest){if(!isHistoricalAuthed(req))return NextResponse.json({ok:false,error:'AUTH_REQUIRED'},{status:401});const name=(req.nextUrl.searchParams.get('name')||'').slice(0,80),date=req.nextUrl.searchParams.get('date')||'';if(!name||!within240(date))return NextResponse.json({ok:false,error:'BAD_INPUT'},{status:400});const q=encodeURIComponent(`${name} 주식 after:${addDays(date,-4)} before:${addDays(date,5)}`);try{const r=await fetch(`https://news.google.com/rss/search?q=${q}&hl=ko&gl=KR&ceid=KR:ko`,{headers:{'user-agent':'Mozilla/5.0'},cache:'no-store'});const xml=await r.text(),items:any[]=[];for(const block of xml.match(/<item>[\s\S]*?<\/item>/gi)||[]){const title=tag(block,'title').replace(/\s+-\s+[^-]+$/,''),link=tag(block,'link'),pubDate=tag(block,'pubDate'),source=tag(block,'source');if(title&&link)items.push({title,link,pubDate,source});if(items.length>=10)break;}return NextResponse.json({ok:true,items});}catch(e:any){return NextResponse.json({ok:false,error:String(e?.message||e),items:[]},{status:500});}}
