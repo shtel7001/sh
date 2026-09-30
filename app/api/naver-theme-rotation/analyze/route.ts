@@ -1,6 +1,6 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { isThemeRotationAuthed } from '@/lib/naver-theme-rotation-auth';
-import { getDailyThemeRotationAnalysis,runThemeRotationAnalysis } from '@/lib/naver-theme-rotation';
+import { getDailyThemeRotationAnalysis,runThemeRotationAnalysis } from '@/lib/naver-theme-rotation-v2';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export const maxDuration=60;
