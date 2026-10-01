@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>D-1 급등 전 수급 레이더 | 외국인·기관</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#152033;--muted:#6b7890;--line:#dfe6ef;--brand:#2447d8;--brand2:#6d28d9;--red:#d62f2f;--blue:#2463d4;--green:#087f5b;--amber:#b7791f;--shadow:0 10px 28px rgba(25,35,60,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}
+.wrap{max-width:1550px;margin:auto;padding:12px}.hero{background:linear-gradient(135deg,#0f225e,#42207a);color:#fff;padding:24px;border-radius:22px;box-shadow:var(--shadow)}
+.hero h1{margin:0 0 8px;font-size:26px}.hero p{margin:0;line-height:1.6;opacity:.95}.tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}.tag{background:rgba(255,255,255,.14);padding:7px 10px;border-radius:999px;font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:12px;box-shadow:var(--shadow)}.cardhead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+h2{font-size:18px;margin:0}.small{font-size:12px;color:var(--muted);line-height:1.5}.warn{padding:10px 12px;border-radius:12px;background:#fff8e6;border:1px solid #f1dca4;color:#73510b;font-size:12px;line-height:1.5;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:9px;margin-top:11px}.field label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin-bottom:5px}.field input,.field select{width:100%;height:42px;border:1px solid #cfd8e6;border-radius:10px;padding:0 10px;background:#fff}
+.actions,.segrow,.toggles{display:flex;gap:8px;flex-wrap:wrap}.actions{margin-top:11px}.btn,.seg,.toggle{border:1px solid #cdd7e6;background:#fff;border-radius:11px;padding:10px 13px;font-weight:800;color:#334155;cursor:pointer}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.dark{background:#172033;color:#fff;border-color:#172033}.btn.soft{background:#eef2ff;color:#3142a2;border-color:#cfd7ff}.btn.green{background:#ecfdf5;color:#0b6b50;border-color:#b7edd9}.btn:disabled{opacity:.5;cursor:not-allowed}.seg.active,.toggle.active{background:#263ea2;color:#fff;border-color:#263ea2}
+.settingsTitle{font-size:13px;font-weight:900;margin-top:12px;color:#334155}.themebox{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:350px;margin-top:9px}.themegrid{display:grid;grid-template-columns:repeat(4,minmax(225px,1fr))}
+.themeitem{padding:10px;border-right:1px solid #edf1f6;border-bottom:1px solid #edf1f6;display:flex;gap:8px;align-items:flex-start}.themeitem strong{font-size:13px}.meta{font-size:11px;color:var(--muted);margin-top:3px}
+.searchbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.searchbar input{height:42px;border:1px solid #ccd6e3;border-radius:10px;padding:0 11px;min-width:220px;flex:1}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}.stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#f8fafc}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:20px;margin-top:2px}
+.progress{height:12px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;background:linear-gradient(90deg,#2447d8,#8b5cf6);width:0;transition:.2s}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px;max-height:70vh}table{border-collapse:collapse;width:100%;min-width:1900px;background:#fff}th,td{padding:8px;border-bottom:1px solid #edf1f6;font-size:11px;text-align:center;white-space:nowrap}
+th{position:sticky;top:0;background:#f7f9fc;z-index:2;color:#455269}td.name{text-align:left;font-weight:900}.score{font-weight:900;color:#3f2c9d}.pos{color:var(--red)}.neg{color:var(--blue)}.good{color:var(--green)}.pill{display:inline-block;border-radius:999px;padding:4px 7px;font-weight:900;background:#eef2ff;color:#3730a3}.pill.ap{background:#dcfce7;color:#166534}.pill.a{background:#e0f2fe;color:#075985}.pill.b{background:#fef3c7;color:#92400e}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0f225e,#42207a);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.3)}
+.loginbox h2{font-size:22px}.loginbox input{width:100%;height:50px;border:1px solid #cbd5e1;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.hidden{display:none!important}
+a{color:#245bd4;text-decoration:none}.empty{padding:30px!important;color:var(--muted)}.flowbar{height:6px;border-radius:99px;background:#e8edf5;overflow:hidden;width:70px;margin:auto}.flowbar i{display:block;height:100%;background:#6366f1}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(3,1fr)}.themegrid{grid-template-columns:repeat(2,minmax(220px,1fr))}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.wrap{padding:8px}.hero{padding:18px;border-radius:16px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.themegrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:10px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginbox">
+    <h2>개인 1회 영구 인증</h2>
+    <div class="small">한 번 인증하면 이 브라우저에 서명 토큰을 저장합니다. 브라우저 데이터를 지우거나 서버 비밀키를 바꾸지 않는 한 다시 입력하지 않아도 됩니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="16" placeholder="인증번호 입력">
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" class="small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<section class="hero">
+  <h1>D-1 급등 전 수급 레이더 · 외국인 매집/가속도 결합</h1>
+  <p>기존의 <b>이평 압축·20/60일선 접근·거래량·과거 급등 이력</b>에 외국인 1일/3일/5일 순매수, 매수일수, 기관 동행, 매도 약화·반전, 그리고 브라우저 스냅샷 기반 <b>30분 수급 가속도</b>를 합쳐 봅니다.</p>
+  <div class="tags"><span class="tag">Naver 투자자별 매매동향</span><span class="tag">외인 5일 누적</span><span class="tag">외인 가속도</span><span class="tag">기관 동행</span><span class="tag">테마 집단감시</span><span class="tag">D-1 과거검증</span><span class="tag">Excel 저장</span></div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><div><h2>1. 네이버 테마 또는 직접 종목 선택</h2><div class="small">테마 구성종목을 불러온 뒤 기술+수급을 함께 스캔합니다. 종목코드를 직접 넣어 CJ(001040) 같은 개별 종목도 검증할 수 있습니다.</div></div><button class="btn soft" onclick="loadThemes(true)">테마 새로고침</button></div>
+  <div class="searchbar">
+    <input id="themeSearch" placeholder="테마 검색: 로봇, 반도체, 바이오, 방산..." oninput="renderThemes()">
+    <button class="btn soft" onclick="selectTop(15)">상승 상위 15</button>
+    <button class="btn soft" onclick="selectRising()">상승 테마</button>
+    <button class="btn" onclick="clearThemes()">전체 해제</button>
+  </div>
+  <div id="themeInfo" class="small" style="margin-top:8px">인증 후 테마를 불러옵니다.</div>
+  <div class="themebox"><div id="themeGrid" class="themegrid"><div class="empty">대기 중</div></div></div>
+  <div class="grid">
+    <div class="field" style="grid-column:span 3"><label>직접 종목코드 (쉼표/공백)</label><input id="directCodes" placeholder="예: 001040, 005930, 000660"></div>
+    <div class="field"><label>최대 스캔 종목</label><input id="maxStocks" type="number" min="10" max="120" value="70"></div>
+    <div class="field"><label>시장</label><select id="market"><option value="ALL">KOSPI+KOSDAQ</option><option value="KOSPI">KOSPI</option><option value="KOSDAQ">KOSDAQ</option></select></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><div><h2>2. D-1 기술 조건</h2><div class="small">외국인 수급만 보지 않고 급등 하루 전의 가격·거래량 준비상태와 결합합니다.</div></div></div>
+  <div class="grid">
+    <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
+    <div class="field"><label>일봉 조회</label><select id="lookbackDays"><option>120</option><option selected>180</option><option>240</option><option>360</option></select></div>
+    <div class="field"><label>5·20·60 이평 압축 ≤ %</label><input id="maCompressPct" type="number" step="0.5" value="12"></div>
+    <div class="field"><label>20일선 근처 ±%</label><input id="near20Pct" type="number" step="0.5" value="7"></div>
+    <div class="field"><label>60일선 근처 ±%</label><input id="near60Pct" type="number" step="0.5" value="10"></div>
+    <div class="field"><label>최근 가격폭 ≤ %</label><input id="rangePct" type="number" step="0.5" value="18"></div>
+    <div class="field"><label>가격폭 기간</label><input id="rangeDays" type="number" value="10"></div>
+    <div class="field"><label>20일선 5일 기울기 ≥ %</label><input id="minSlope20Pct" type="number" step="0.1" value="-1.5"></div>
+    <div class="field"><label>과거 급등 조회</label><input id="spikeLookback" type="number" value="120"></div>
+    <div class="field"><label>과거 급등 ≥ %</label><input id="minSpikePct" type="number" step="0.5" value="8"></div>
+    <div class="field"><label>현재 거래량/20일평균 ≤</label><input id="dryVolumeRatio" type="number" step="0.1" value="1.2"></div>
+    <div class="field"><label>과거 거래량점화 ≥ 배</label><input id="minVolumeSurge" type="number" step="0.1" value="2"></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><div><h2>3. 외국인·기관 수급 조건</h2><div class="small">순매수 ‘주수’는 종목마다 거래량이 달라서, 가능하면 당일/5일 거래량 대비 비율로 비교합니다.</div></div></div>
+  <div class="grid">
+    <div class="field"><label>외인 당일/거래량 ≥ %</label><input id="minForeignDayPct" type="number" step="0.05" value="0.30"></div>
+    <div class="field"><label>외인 5일/거래량 ≥ %</label><input id="minForeign5Pct" type="number" step="0.05" value="0.20"></div>
+    <div class="field"><label>5일 중 외인 순매수일 ≥</label><input id="minForeignPositiveDays" type="number" min="1" max="5" value="3"></div>
+    <div class="field"><label>5일 중 외인+기관 동시 ≥</label><input id="minJointDays" type="number" min="0" max="5" value="1"></div>
+    <div class="field"><label>최소 종합점수</label><input id="minTotalScore" type="number" min="0" max="100" value="62"></div>
+  </div>
+  <div class="settingsTitle">필수 필터</div>
+  <div class="toggles" style="margin-top:7px">
+    <button class="toggle active" data-k="useTechGate" onclick="toggleFilter(this)">✓ 기술준비 점수</button>
+    <button class="toggle" data-k="useForeignToday" onclick="toggleFilter(this)">✓ 외인 당일 매수</button>
+    <button class="toggle active" data-k="useForeign5" onclick="toggleFilter(this)">✓ 외인 5일 누적/매수일</button>
+    <button class="toggle" data-k="useForeignAccel" onclick="toggleFilter(this)">✓ 외인 가속도</button>
+    <button class="toggle" data-k="useInstitution" onclick="toggleFilter(this)">✓ 기관 3일 동행</button>
+    <button class="toggle" data-k="useJoint" onclick="toggleFilter(this)">✓ 외인+기관 동시</button>
+    <button class="toggle" data-k="useSellExhaust" onclick="toggleFilter(this)">✓ 외인 매도약화/반전</button>
+    <button id="onlyPassBtn" class="toggle active" data-k="showOnlyPass" onclick="toggleFilter(this)">✓ 통과만 표시</button>
+  </div>
+  <div class="warn"><b>30분 외인Δ:</b> 거래소의 별도 틱 데이터가 아니라, 이 사이트를 실행할 때의 네이버 수급 누적값을 브라우저에 저장해 다음 실행값과 비교합니다. 따라서 첫 실행에는 값이 없고, 20~90분 뒤 재실행 또는 30분 자동감시 후부터 표시됩니다. 장중 수급은 추정·갱신값일 수 있습니다.</div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><div><h2>4. 실행</h2><div id="runMsg" class="small">선택한 테마 또는 직접 종목을 스캔합니다.</div></div><div class="actions" style="margin-top:0"><button id="runBtn" class="btn primary" onclick="runScan()">기술+외국인 수급 스캔</button><button id="autoBtn" class="btn green" onclick="toggleAuto()">30분 자동감시 OFF</button><button id="excelBtn" class="btn dark" onclick="exportExcel()" disabled>Excel 저장</button></div></div>
+  <div class="progress"><div id="bar" class="bar"></div></div>
+  <div class="stats">
+    <div class="stat"><span>스캔</span><b id="stScan">0</b></div>
+    <div class="stat"><span>통과</span><b id="stPass">0</b></div>
+    <div class="stat"><span>A/A+</span><b id="stA">0</b></div>
+    <div class="stat"><span>외인 5일+</span><b id="stF">0</b></div>
+    <div class="stat"><span>기관 동행</span><b id="stI">0</b></div>
+    <div class="stat"><span>30분Δ 확보</span><b id="stD">0</b></div>
+  </div>
+  <div class="tableWrap">
+    <table>
+      <thead><tr>
+        <th>순위</th><th>등급</th><th>종목</th><th>시장</th><th>테마</th><th>종합</th><th>기술</th><th>수급</th><th>현재/기준가</th>
+        <th>외인1일</th><th>외인1일/거래량</th><th>외인5일</th><th>외인5일/거래량</th><th>외인매수일</th><th>외인가속도</th><th>외인Δ30m</th>
+        <th>기관3일</th><th>동시매수일</th><th>외인보유율Δ5</th><th>이평압축</th><th>20일선거리</th><th>60일선거리</th><th>거래량비</th><th>과거급등</th><th>신호</th><th>링크</th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="26" class="empty">아직 실행하지 않았습니다.</td></tr></tbody>
+    </table>
+  </div>
+</section>
+</div>
+
+<script>
+const API='/api/d1-flow-spike-radar';
+let TOKEN=''; let THEMES=[]; let selected=new Set(); let RESULTS=[]; let AUTO=null;
+const filters={useTechGate:true,useForeignToday:false,useForeign5:true,useForeignAccel:false,useInstitution:false,useJoint:false,useSellExhaust:false,showOnlyPass:true};
+function $(id){return document.getElementById(id)}
+function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(e){return new Date().toISOString().slice(0,10)}}
+$('asOf').value=kstDate();
+
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,opt={}){
+  opt.headers=Object.assign({},opt.headers||{},headers());
+  const r=await fetch(url,opt); let j={}; try{j=await r.json()}catch(e){}
+  if(r.status===401){showLogin();throw new Error('인증이 필요합니다.')}
+  if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status)); return j;
+}
+function showLogin(){$('login').classList.remove('hidden')}
+function hideLogin(){$('login').classList.add('hidden')}
+async function login(){
+  const code=$('authCode').value.trim(); if(!code){$('loginMsg').textContent='인증번호를 입력해 주세요.';return}
+  $('loginMsg').textContent='인증 중...';
+  try{
+    const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const j=await r.json(); if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');
+    TOKEN=j.token; localStorage.setItem('d1FlowRadarToken',TOKEN); hideLogin(); $('loginMsg').textContent=''; loadThemes(false);
+  }catch(e){$('loginMsg').textContent='인증 실패: '+e.message}
+}
+(async function boot(){
+  TOKEN=localStorage.getItem('d1FlowRadarToken')||'';
+  if(!TOKEN){showLogin();return}
+  try{await loadThemes(false);hideLogin()}catch(e){showLogin()}
+})();
+
+async function loadThemes(force){
+  $('themeInfo').textContent='네이버 테마를 불러오는 중...';
+  const j=await api(API+'?op=themes'+(force?'&force=1':''));
+  THEMES=j.themes||[]; $('themeInfo').textContent='테마 '+THEMES.length+'개 · 선택 '+selected.size+'개'; renderThemes();
+}
+function renderThemes(){
+  const q=$('themeSearch').value.trim().toLowerCase(), box=$('themeGrid'); box.innerHTML='';
+  const list=THEMES.filter(t=>!q||String(t.name).toLowerCase().includes(q));
+  if(!list.length){box.innerHTML='<div class="empty">검색 결과 없음</div>';return}
+  list.forEach(t=>{
+    const d=document.createElement('label'); d.className='themeitem';
+    d.innerHTML='<input type="checkbox" '+(selected.has(t.code)?'checked':'')+'><div><strong>'+esc(t.name)+'</strong><div class="meta">'+fmtPct(t.changePct)+' · 종목 '+(t.count||'-')+'</div></div>';
+    d.querySelector('input').onchange=e=>{if(e.target.checked)selected.add(t.code);else selected.delete(t.code);$('themeInfo').textContent='테마 '+THEMES.length+'개 · 선택 '+selected.size+'개'};
+    box.appendChild(d);
+  });
+}
+function selectTop(n){selected.clear();THEMES.slice(0,n).forEach(t=>selected.add(t.code));renderThemes();$('themeInfo').textContent='상승 상위 '+n+'개 선택'}
+function selectRising(){selected.clear();THEMES.filter(t=>Number(t.changePct)>0).slice(0,40).forEach(t=>selected.add(t.code));renderThemes();$('themeInfo').textContent='상승 테마 '+selected.size+'개 선택'}
+function clearThemes(){selected.clear();renderThemes();$('themeInfo').textContent='선택 해제'}
+function toggleFilter(el){const k=el.dataset.k;filters[k]=!filters[k];el.classList.toggle('active',filters[k]);renderResults()}
+function val(id,d=0){const x=Number($(id).value);return Number.isFinite(x)?x:d}
+function cfg(){
+  return {
+    asOf:$('asOf').value,lookbackDays:val('lookbackDays',180),maCompressPct:val('maCompressPct',12),near20Pct:val('near20Pct',7),near60Pct:val('near60Pct',10),
+    rangeDays:val('rangeDays',10),rangePct:val('rangePct',18),minSlope20Pct:val('minSlope20Pct',-1.5),spikeLookback:val('spikeLookback',120),minSpikePct:val('minSpikePct',8),
+    dryVolumeRatio:val('dryVolumeRatio',1.2),volumeSurgeLookback:120,minVolumeSurge:val('minVolumeSurge',2),higherLowDays:10,minHigherLowPct:-3,
+    minForeignDayPct:val('minForeignDayPct',.3),minForeign5Pct:val('minForeign5Pct',.2),minForeignPositiveDays:val('minForeignPositiveDays',3),minJointDays:val('minJointDays',1),
+    minTotalScore:val('minTotalScore',62),useTechGate:filters.useTechGate,useForeignToday:filters.useForeignToday,useForeign5:filters.useForeign5,useForeignAccel:filters.useForeignAccel,
+    useInstitution:filters.useInstitution,useJoint:filters.useJoint,useSellExhaust:filters.useSellExhaust
+  };
+}
+async function collectStocks(){
+  const map=new Map(), market=$('market').value, max=Math.max(10,Math.min(120,val('maxStocks',70)));
+  const chosen=THEMES.filter(t=>selected.has(t.code));
+  for(let i=0;i<chosen.length && map.size<max;i++){
+    $('runMsg').textContent='테마 구성종목 수집 '+(i+1)+'/'+chosen.length+' · '+chosen[i].name;
+    try{
+      const j=await api(API+'?op=members&themeCode='+encodeURIComponent(chosen[i].code));
+      (j.members||[]).forEach(s=>{
+        if(map.size>=max)return;
+        if(market!=='ALL'&&s.market!=='UNKNOWN'&&s.market!==market)return;
+        const old=map.get(s.code);
+        if(old){if(!old.theme.includes(chosen[i].name))old.theme+=', '+chosen[i].name}
+        else map.set(s.code,{code:s.code,name:s.name,market:s.market,theme:chosen[i].name});
+      });
+    }catch(e){}
+  }
+  const direct=($('directCodes').value.match(/\d{6}/g)||[]);
+  direct.forEach(code=>{if(map.size<max&&!map.has(code))map.set(code,{code,name:code,market:'UNKNOWN',theme:'직접입력'})});
+  return Array.from(map.values()).slice(0,max);
+}
+async function runScan(auto=false){
+  if(!$('asOf').value){alert('기준일을 선택해 주세요.');return}
+  if(!selected.size&&!($('directCodes').value.match(/\d{6}/))){alert('테마를 선택하거나 종목코드를 입력해 주세요.');return}
+  $('runBtn').disabled=true;$('bar').style.width='2%';$('runMsg').textContent=auto?'30분 자동감시 실행 중...':'종목 목록 준비 중...';
+  try{
+    const stocks=await collectStocks(); if(!stocks.length)throw new Error('스캔할 종목이 없습니다.');
+    let out=[],errs=[]; const c=cfg();
+    for(let i=0;i<stocks.length;i+=12){
+      $('runMsg').textContent='기술+수급 분석 '+Math.min(i+12,stocks.length)+'/'+stocks.length;
+      const j=await api(API+'?op=scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:stocks.slice(i,i+12),cfg:c})});
+      out=out.concat(j.results||[]); errs=errs.concat(j.errors||[]);
+      $('bar').style.width=Math.round(Math.min(98,(i+12)/stocks.length*100))+'%';
+    }
+    RESULTS=attachSnapshots(out).sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));
+    renderResults(); $('excelBtn').disabled=!RESULTS.length; $('bar').style.width='100%';
+    $('runMsg').textContent='완료 '+RESULTS.length+'개 · 오류 '+errs.length+'개 · '+new Date().toLocaleTimeString();
+    setTimeout(()=>$('bar').style.width='0%',1200);
+  }catch(e){$('runMsg').textContent='실패: '+e.message;alert(e.message)}
+  finally{$('runBtn').disabled=false}
+}
+function loadSnaps(){try{return JSON.parse(localStorage.getItem('d1FlowSnapshotsV1')||'{}')}catch(e){return {}}}
+function saveSnaps(x){try{localStorage.setItem('d1FlowSnapshotsV1',JSON.stringify(x))}catch(e){}}
+function attachSnapshots(rows){
+  const db=loadSnaps(), now=Date.now(), today=kstDate();
+  rows.forEach(r=>{
+    const key=r.code, arr=Array.isArray(db[key])?db[key]:[], curF=Number(r.flow?.foreign1d||0), curI=Number(r.flow?.institution1d||0);
+    let prior=null;
+    for(let i=arr.length-1;i>=0;i--){const mins=(now-arr[i].t)/60000;if(mins>=20&&mins<=90&&arr[i].date===r.flow?.flowDate){prior=arr[i];break}}
+    if(prior){r.snapMinutes=Math.round((now-prior.t)/60000);r.foreignDelta30=curF-prior.f;r.instDelta30=curI-prior.i}
+    else{r.snapMinutes=0;r.foreignDelta30=null;r.instDelta30=null}
+    if(r.flow?.flowDate===today){
+      const last=arr[arr.length-1]; if(!last||(now-last.t)>180000)arr.push({t:now,date:r.flow.flowDate,f:curF,i:curI});
+      db[key]=arr.filter(x=>now-x.t<8*3600000).slice(-20);
+    }
+  }); saveSnaps(db); return rows;
+}
+function renderResults(){
+  if(!RESULTS.length)return;
+  const list=filters.showOnlyPass?RESULTS.filter(r=>r.pass):RESULTS;
+  const tb=$('rows');tb.innerHTML='';
+  if(!list.length){tb.innerHTML='<tr><td colspan="26" class="empty">현재 필터를 모두 통과한 종목이 없습니다. ‘통과만 표시’를 끄고 점수순을 확인해 보세요.</td></tr>'}
+  list.forEach((r,idx)=>{
+    const t=r.tech||{},f=r.flow||{},tr=document.createElement('tr'),delta=r.foreignDelta30;
+    tr.innerHTML=
+      '<td>'+(idx+1)+'</td><td><span class="pill '+gradeClass(r.grade)+'">'+esc(r.grade)+'</span></td>'+ 
+      '<td class="name">'+esc(r.name)+' <span class="small">'+r.code+'</span></td><td>'+esc(r.market)+'</td><td>'+esc(short(r.theme,28))+'</td>'+ 
+      '<td class="score">'+num(r.totalScore)+'</td><td>'+num(t.techScore)+'</td><td>'+num(f.flowScore)+'</td><td>'+comma(t.price)+'</td>'+ 
+      '<td class="'+pn(f.foreign1d)+'">'+signed(f.foreign1d)+'</td><td class="'+pn(f.foreign1dPct)+'">'+signed(f.foreign1dPct,3)+'%</td>'+ 
+      '<td class="'+pn(f.foreign5d)+'">'+signed(f.foreign5d)+'</td><td class="'+pn(f.foreign5dPct)+'">'+signed(f.foreign5dPct,3)+'%</td>'+ 
+      '<td>'+num(f.foreignPositiveDays5)+'/5</td><td class="'+pn(f.foreignAccelPct)+'">'+signed(f.foreignAccelPct,3)+'%p</td>'+ 
+      '<td class="'+pn(delta)+'">'+(delta==null?'<span class="small">첫 스냅샷</span>':signed(delta)+' <span class="small">('+r.snapMinutes+'m)</span>')+'</td>'+ 
+      '<td class="'+pn(f.institution3d)+'">'+signed(f.institution3d)+'</td><td>'+num(f.jointDays5)+'/5</td><td class="'+pn(f.holdRatioDelta5)+'">'+signed(f.holdRatioDelta5,3)+'%p</td>'+ 
+      '<td>'+num(t.compressPct,2)+'%</td><td>'+signed(t.d20Pct,2)+'%</td><td>'+signed(t.d60Pct,2)+'%</td><td>'+num(t.dryVolumeRatio,2)+'x</td>'+ 
+      '<td class="pos">'+num(t.priorSpikePct,2)+'% <span class="small">'+esc(t.priorSpikeDate||'')+'</span></td><td>'+esc((r.reasons||[]).join(' · '))+'</td>'+ 
+      '<td><a href="'+r.naver+'" target="_blank">증권</a> · <a href="'+r.investor+'" target="_blank">수급</a></td>';
+    tb.appendChild(tr);
+  });
+  $('stScan').textContent=RESULTS.length;$('stPass').textContent=RESULTS.filter(r=>r.pass).length;$('stA').textContent=RESULTS.filter(r=>r.grade==='A'||r.grade==='A+').length;
+  $('stF').textContent=RESULTS.filter(r=>Number(r.flow?.foreign5d)>0).length;$('stI').textContent=RESULTS.filter(r=>Number(r.flow?.institution3d)>0).length;$('stD').textContent=RESULTS.filter(r=>r.foreignDelta30!=null).length;
+}
+function exportExcel(){
+  if(!RESULTS.length)return;
+  const data=RESULTS.map((r,i)=>({
+    순위:i+1,등급:r.grade,종목:r.name,코드:r.code,시장:r.market,테마:r.theme,통과:r.pass?'Y':'N',종합점수:r.totalScore,기술점수:r.tech?.techScore,수급점수:r.flow?.flowScore,
+    기준일:r.tech?.asOf,가격:r.tech?.price,'외국인1일(주)':r.flow?.foreign1d,'외국인1일/거래량(%)':r.flow?.foreign1dPct,'외국인3일(주)':r.flow?.foreign3d,'외국인5일(주)':r.flow?.foreign5d,
+    '외국인5일/거래량(%)':r.flow?.foreign5dPct,'외국인순매수일(5일)':r.flow?.foreignPositiveDays5,'외인가속도(%p)':r.flow?.foreignAccelPct,'외인Δ스냅샷(주)':r.foreignDelta30,
+    '스냅샷간격(분)':r.snapMinutes,'기관1일(주)':r.flow?.institution1d,'기관3일(주)':r.flow?.institution3d,'기관5일(주)':r.flow?.institution5d,'외인+기관동시일(5일)':r.flow?.jointDays5,
+    '외인보유율':r.flow?.holdRatio,'외인보유율Δ5(%p)':r.flow?.holdRatioDelta5,'이평압축(%)':r.tech?.compressPct,'20일선거리(%)':r.tech?.d20Pct,'60일선거리(%)':r.tech?.d60Pct,
+    '20일선기울기(%)':r.tech?.slope20Pct,'가격폭(%)':r.tech?.rangePct,'거래량/20일평균':r.tech?.dryVolumeRatio,'과거급등(%)':r.tech?.priorSpikePct,'과거급등일':r.tech?.priorSpikeDate,
+    '과거거래량점화(배)':r.tech?.volumeSurge,신호:(r.reasons||[]).join(' | '),네이버증권:r.naver,네이버수급:r.investor
+  }));
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'D1_수급레이더');
+  XLSX.writeFile(wb,'D1_외국인수급_레이더_'+$('asOf').value+'.xlsx');
+}
+function toggleAuto(){
+  if(AUTO){clearInterval(AUTO);AUTO=null;$('autoBtn').textContent='30분 자동감시 OFF';return}
+  $('autoBtn').textContent='30분 자동감시 ON'; runScan(true); AUTO=setInterval(()=>runScan(true),30*60*1000);
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function comma(v){const x=Number(v);return Number.isFinite(x)?Math.round(x).toLocaleString():'-'}
+function num(v,p=0){const x=Number(v);return Number.isFinite(x)?x.toFixed(p):'-'}
+function signed(v,p=0){const x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+x.toLocaleString(undefined,{maximumFractionDigits:p,minimumFractionDigits:p}):'-'}
+function pn(v){const x=Number(v);return !Number.isFinite(x)?'':x>0?'pos':x<0?'neg':''}
+function fmtPct(v){const x=Number(v)||0;return (x>0?'+':'')+x.toFixed(2)+'%'}
+function short(s,n){s=String(s??'');return s.length>n?s.slice(0,n)+'…':s}
+function gradeClass(g){return g==='A+'?'ap':g==='A'?'a':g==='B'?'b':''}
+</script>
+</body>
+</html>
