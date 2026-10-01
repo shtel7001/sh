@@ -217,7 +217,7 @@ export async function POST(req:NextRequest){
   const body=await req.json().catch(()=>({})); const cfg=parseCfg(body?.cfg||{});
   if(!withinCalendarDays(cfg.asOf,370)) return NextResponse.json({ok:false,error:'BAD_DATE'},{status:400});
   if(op==='scan'){
-    const stocks=(Array.isArray(body?.stocks)?body.stocks:[]).slice(0,70).map((s:any)=>({code:String(s.code||''),name:String(s.name||''),market:String(s.market||'KOSDAQ') as Market})).filter((s:any)=>/^\d{6}$/.test(s.code)&&s.name&&!spacName(s.name));
+    const stocks:Stock[]=(Array.isArray(body?.stocks)?body.stocks:[]).slice(0,70).map((s:any)=>({code:String(s.code||''),name:String(s.name||''),market:String(s.market||'KOSDAQ') as Market})).filter((s:Stock)=>/^\d{6}$/.test(s.code)&&s.name&&!spacName(s.name));
     if(!stocks.length) return NextResponse.json({ok:false,error:'NO_STOCKS'},{status:400});
     const rows=(await pool(stocks,12,s=>scanOne(s,cfg))).filter(Boolean);
     return NextResponse.json({ok:true,rows});
