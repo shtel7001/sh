@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>코스피·코스닥 뉴스 급등 재점화 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#061321;--panel:#0a1d31;--panel2:#0d243b;--line:#183955;--ink:#ecf7ff;--muted:#8fa8bd;--cyan:#37d6d0;--cyan2:#65a7ff;--red:#ff7b86;--green:#7ef0bd;--amber:#ffd27d;--shadow:0 18px 45px rgba(0,0,0,.28)}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:radial-gradient(circle at 70% 0,#0b2841 0,#061321 45%,#040d17 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1500px;margin:auto;padding:12px 12px 70px}.top{display:flex;align-items:center;gap:14px;padding:12px 4px 18px}.logo{width:54px;height:54px;border-radius:17px;background:linear-gradient(145deg,#42e4d9,#4f8cff);display:grid;place-items:center;color:#031421;font-weight:1000;font-size:24px;box-shadow:0 12px 30px rgba(55,214,208,.2)}.top h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-.7px}.top .sub{font-size:12px;color:var(--muted);margin-top:4px}.grow{flex:1}.btn{border:1px solid #28506e;background:#102a43;color:#dff7ff;border-radius:13px;padding:11px 14px;font-weight:850;cursor:pointer;transition:.15s}.btn:hover{transform:translateY(-1px)}.btn.primary{background:linear-gradient(135deg,#37d6d0,#4fbccc);color:#03131e;border:0}.btn.soft{background:#0b2237}.btn.red{border-color:#6e3440;color:#ffc1c6}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}.hero{padding:30px 28px;border-radius:24px;background:linear-gradient(145deg,rgba(13,42,67,.96),rgba(5,20,34,.98));border:1px solid #174464;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero:after{content:"";position:absolute;right:-80px;top:-100px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(55,214,208,.16),transparent 65%)}.eyebrow{color:var(--cyan);font-weight:850;letter-spacing:1px;font-size:14px}.hero h2{font-size:44px;line-height:1.12;margin:22px 0 18px;letter-spacing:-2px;max-width:860px}.hero h2 .outline{color:transparent;-webkit-text-stroke:1px #62a8d6}.hero p{max-width:850px;color:#a8bfd1;font-size:17px;line-height:1.72;margin:0}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}.badge{font-size:12px;font-weight:850;border:1px solid #2c566f;border-radius:999px;padding:7px 10px;color:#b9d6e7;background:#092036}.badge.cyan{border-color:#21706e;color:#73ece6}.card{margin-top:13px;background:linear-gradient(180deg,rgba(10,29,49,.97),rgba(7,23,39,.97));border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 12px 32px rgba(0,0,0,.18)}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.head h3{margin:0;font-size:18px}.small{font-size:12px;line-height:1.55;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:9px;margin-top:12px}.field label{display:block;font-size:11px;color:#91aabe;font-weight:850;margin-bottom:6px}.field input,.field select{width:100%;height:44px;border:1px solid #27506b;background:#071827;color:#edf9ff;border-radius:11px;padding:0 10px;outline:none}.field input:focus,.field select:focus{border-color:var(--cyan)}.segments{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.seg{padding:10px 13px;border:1px solid #28506e;background:#091d30;color:#c4d9e6;border-radius:11px;font-weight:850;cursor:pointer}.seg.active{background:#2bd4ce;color:#041721;border-color:#2bd4ce}.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #1b405d;border-radius:18px;overflow:hidden;margin-top:15px}.stat{padding:18px;border-right:1px solid #1b405d;background:rgba(6,21,36,.5)}.stat:last-child{border-right:0}.stat span{display:block;color:#829aaf;font-size:12px}.stat b{display:block;margin-top:7px;font-size:27px}.status{margin-top:12px;padding:12px;border:1px solid #1c4059;border-radius:12px;color:#96b0c4;background:#071a2b}.progress{height:10px;background:#06131f;border:1px solid #17354c;border-radius:99px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#39ddd5,#62a8ff);transition:.2s}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.toolbar .btn{min-width:120px}.tableWrap{overflow:auto;border:1px solid #1a3d58;border-radius:15px;margin-top:12px;max-height:69vh;background:#061625}table{border-collapse:collapse;width:100%;min-width:1900px}th,td{padding:9px 8px;border-bottom:1px solid #123049;font-size:11px;text-align:center;white-space:nowrap}th{position:sticky;top:0;background:#0d263d;z-index:2;color:#9db9cc}td.name{text-align:left;font-weight:900;font-size:12px}.pos{color:#ff8792}.good{color:#78efbb}.muted{color:#7891a6}.score{font-weight:1000;color:#61e5de}.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-weight:900;background:#19364f;color:#b8d2e3}.pill.on{background:#144f48;color:#8cf5dc}.topics{max-width:250px;overflow:hidden;text-overflow:ellipsis}.newsCell{max-width:420px;text-align:left;white-space:normal;line-height:1.45}.newsCell a{display:block;color:#a7d9ff;text-decoration:none;margin:2px 0}.newsCell a:hover{text-decoration:underline}.reason{max-width:360px;text-align:left;white-space:normal;line-height:1.45;color:#bfd6e6}.empty{padding:38px!important;color:#7f98ab}.login{position:fixed;inset:0;z-index:999;background:radial-gradient(circle at 70% 0,#123954,#061321 55%);display:flex;align-items:center;justify-content:center;padding:18px}.login.hidden{display:none}.loginbox{width:min(440px,100%);background:#0b2237;border:1px solid #24516c;border-radius:22px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.45)}.loginbox h3{font-size:23px;margin:0}.loginbox input{width:100%;height:52px;margin:14px 0;border:1px solid #2d5a75;background:#061625;color:#fff;border-radius:12px;padding:0 14px;font-size:19px}.loginMsg{font-size:12px;color:#ffb7bd;margin-top:9px}.note{margin-top:10px;border:1px solid #634f28;background:#261f0d;color:#e8ca88;padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.55}a.link{color:#74c9ff;text-decoration:none}.hidden{display:none!important}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid #1b405d}}
+@media(max-width:680px){.wrap{padding:8px 8px 55px}.top h1{font-size:20px}.logo{width:46px;height:46px}.hero{padding:24px 18px}.hero h2{font-size:37px}.hero p{font-size:15px}.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.card{padding:11px}.btn{flex:1}.top .btn{flex:0 0 auto;padding:10px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginbox">
+    <h3>개인 1회 영구 인증</h3>
+    <div class="small" style="margin-top:8px">한 번 인증하면 이 브라우저에 10년 유효 서명 쿠키가 저장됩니다. 브라우저 쿠키 삭제 또는 서버 비밀키 변경 전까지 다시 입력하지 않아도 됩니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="12" placeholder="인증번호 입력">
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" class="loginMsg"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="logo">◎</div>
+    <div><h1>코스피·코스닥 뉴스 급등 재점화 레이더</h1><div class="sub">SPAC 제외 · NEWS × PRICE × VOLUME</div></div>
+    <div class="grow"></div>
+    <button class="btn primary" onclick="runAnalysis()">⌕ 지금 새로 분석</button>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">⌁ NEWS × PRICE × VOLUME</div>
+    <h2>급등 전에 뉴스는<br><span class="outline">먼저 움직였는가?</span></h2>
+    <p>코스피·코스닥 전종목에서 지정한 기준일 기준 <b>1~30거래일 이전 3~30% 급등 이력</b>을 찾고, 급등일 이전 뉴스 흐름을 되짚은 뒤 최근 신호 구간의 가격·거래량·뉴스 재점화를 결합해 다음 거래일 관찰 후보를 찾습니다.</p>
+    <div class="badges"><span class="badge cyan">코스피 전종목</span><span class="badge cyan">코스닥 전종목</span><span class="badge">SPAC 자동 제외</span><span class="badge">급등 거래일 범위 조절</span><span class="badge">급등률 3~30% 조절</span><span class="badge">과거 뉴스 20일 기본</span><span class="badge">최근 5거래일 신호</span><span class="badge">Excel(.xlsx)</span></div>
+  </section>
+
+  <section class="card">
+    <div class="head"><div><h3>1. 분석 범위와 날짜</h3><div class="small">모든 핵심 구간을 직접 바꿀 수 있습니다. 급등 거래일은 기준일에서 과거로 센 거래일입니다.</div></div></div>
+    <div class="segments"><button class="seg active" data-market="ALL" onclick="setMarket(this)">코스피 + 코스닥</button><button class="seg" data-market="KOSPI" onclick="setMarket(this)">코스피 전종목</button><button class="seg" data-market="KOSDAQ" onclick="setMarket(this)">코스닥 전종목</button></div>
+    <div class="grid">
+      <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
+      <div class="field"><label>급등 발생 시작 (거래일 전)</label><input id="spikeFrom" type="number" min="1" max="30" value="1"></div>
+      <div class="field"><label>급등 발생 끝 (거래일 전)</label><input id="spikeTo" type="number" min="1" max="30" value="30"></div>
+      <div class="field"><label>급등률 최소 %</label><input id="spikeMin" type="number" min="0.1" max="30" step="0.5" value="3"></div>
+      <div class="field"><label>급등률 최대 %</label><input id="spikeMax" type="number" min="0.1" max="30" step="0.5" value="30"></div>
+      <div class="field"><label>후보 최소 신호점수</label><input id="minSignalScore" type="number" min="0" max="100" value="55"></div>
+      <div class="field"><label>급등 전 뉴스 기간 (일)</label><input id="preNewsDays" type="number" min="1" max="60" value="20"></div>
+      <div class="field"><label>최근 신호 기간 (거래일)</label><input id="recentDays" type="number" min="1" max="20" value="5"></div>
+      <div class="field"><label>종목별 뉴스 최대 건수</label><input id="maxNewsItems" type="number" min="5" max="30" value="24"></div>
+      <div class="field"><label>뉴스 분석 후보 상한 (0=전체)</label><input id="newsCap" type="number" min="0" max="3000" value="300"></div>
+      <div class="field"><label>가격 스캔 동시 요청</label><input id="scanWorkers" type="number" min="1" max="4" value="3"></div>
+      <div class="field"><label>결과 표시</label><select id="showMode" onchange="render()"><option value="ALL">전체 급등 이력 종목</option><option value="CAND">다음 거래일 후보만</option></select></div>
+    </div>
+    <div class="note">후보 점수는 예측 확률이 아니라 <b>과거 급등 특징 + 최근 가격·거래량 + 뉴스 주제 재점화</b>의 일치도를 정리한 관찰 신호입니다. 실제 다음 거래일 상승을 보장하지 않습니다.</div>
+  </section>
+
+  <section class="card">
+    <div class="head"><div><h3>2. 전종목 스크리닝</h3><div class="small">1단계: 급등 이력 탐색 → 2단계: 최근 신호 계산 → 3단계: 급등 전 뉴스와 최근 뉴스 비교</div></div><div class="toolbar"><button id="runBtn" class="btn primary" onclick="runAnalysis()">분석 실행</button><button id="stopBtn" class="btn red" onclick="STOP=true" disabled>중지</button><button id="excelBtn" class="btn soft" onclick="exportExcel()" disabled>Excel 저장</button></div></div>
+    <div class="stats"><div class="stat"><span>분석 범위</span><b id="stUniverse">-</b></div><div class="stat"><span>급등 이력 검출</span><b id="stSpikes">-</b></div><div class="stat"><span>뉴스 분석 완료</span><b id="stNews">-</b></div><div class="stat"><span>다음 거래일 후보</span><b id="stCandidates">-</b></div></div>
+    <div id="status" class="status">분석 버튼을 눌러 시작하세요.</div><div class="progress"><div id="bar" class="bar"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="head"><div><h3>3. 결과</h3><div class="small">신호점수 높은 순. 뉴스가 재점화된 주제는 과거 급등 전 뉴스와 최근 뉴스에서 동시에 잡힌 주제입니다.</div></div></div>
+    <div class="tableWrap"><table><thead><tr><th>순위</th><th>후보</th><th>종목</th><th>시장</th><th>신호점수</th><th>기술점수</th><th>뉴스점수</th><th>기준가</th><th>당일%</th><th>급등일</th><th>몇 거래일 전</th><th>급등%</th><th>급등 거래량비</th><th>최근수익률%</th><th>최근거래량비</th><th>5일선거리</th><th>20일선거리</th><th>재점화 주제</th><th>신호 근거</th><th>최근 뉴스</th><th>급등 전 뉴스</th><th>링크</th></tr></thead><tbody id="rows"><tr><td colspan="22" class="empty">아직 실행하지 않았습니다.</td></tr></tbody></table></div>
+  </section>
+</div>
+
+<script>
+const API='/api/kr-news-surge-radar-20261001';
+const AUTH_API='/api/historical-spike/auth';
+let MARKET='ALL',RESULTS=[],STOP=false;
+const $=id=>document.getElementById(id);
+function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
+$('asOf').value=kstDate();
+function setMarket(el){document.querySelectorAll('.seg').forEach(x=>x.classList.remove('active'));el.classList.add('active');MARKET=el.dataset.market}
+function cfg(){return {asOf:$('asOf').value,spikeFrom:+$('spikeFrom').value||1,spikeTo:+$('spikeTo').value||30,spikeMin:+$('spikeMin').value||3,spikeMax:+$('spikeMax').value||30,recentDays:+$('recentDays').value||5,preNewsDays:+$('preNewsDays').value||20,minSignalScore:+$('minSignalScore').value||55,maxNewsItems:+$('maxNewsItems').value||24}}
+async function j(url,opt={}){const r=await fetch(url,opt);let x={};try{x=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(x.error||x.message||('HTTP '+r.status));return x}
+async function login(){const code=$('authCode').value.trim();if(!code){$('loginMsg').textContent='인증번호를 입력해 주세요.';return}$('loginMsg').textContent='인증 중...';try{await j(AUTH_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});$('login').classList.add('hidden');$('loginMsg').textContent='';}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+(async()=>{try{const x=await j(API+'?op=auth');if(x.authenticated)$('login').classList.add('hidden')}catch{}})();
+function val(id,d=0){const x=Number($(id).value);return Number.isFinite(x)?x:d}
+function progress(p,msg){$('bar').style.width=Math.max(0,Math.min(100,p))+'%';if(msg)$('status').textContent=msg}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function comma(v){const x=Number(v);return Number.isFinite(x)?Math.round(x).toLocaleString():'-'}
+function num(v,p=1){const x=Number(v);return Number.isFinite(x)?x.toFixed(p):'-'}
+function signed(v,p=1){const x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+x.toFixed(p):'-'}
+function chunk(a,n){const o=[];for(let i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o}
+async function parallelChunks(chunks,workers,fn,onDone){let next=0,done=0;await Promise.all(Array.from({length:Math.min(workers,chunks.length)},async()=>{while(true){if(STOP)return;const i=next++;if(i>=chunks.length)return;await fn(chunks[i],i);done++;onDone(done,chunks.length)}}))}
+async function runAnalysis(){
+  if(!$('asOf').value){alert('기준일을 선택해 주세요.');return}
+  STOP=false;RESULTS=[];$('runBtn').disabled=true;$('stopBtn').disabled=false;$('excelBtn').disabled=true;$('rows').innerHTML='<tr><td colspan="22" class="empty">분석 중...</td></tr>';
+  $('stUniverse').textContent=$('stSpikes').textContent=$('stNews').textContent=$('stCandidates').textContent='-';
+  try{
+    progress(2,'코스피·코스닥 전종목 목록을 불러오는 중...');
+    const u=await j(API+'?op=universe&market='+MARKET);let stocks=[];if(MARKET!=='KOSDAQ')stocks=stocks.concat(u.kospi||[]);if(MARKET!=='KOSPI')stocks=stocks.concat(u.kosdaq||[]);
+    $('stUniverse').textContent=stocks.length.toLocaleString()+' 종목';
+    if(STOP)throw new Error('사용자 중지');
+    const c=cfg(),groups=chunk(stocks,60),hits=[];let scanned=0;
+    await parallelChunks(groups,Math.max(1,Math.min(4,val('scanWorkers',3))),async g=>{const x=await j(API+'?op=scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:g,cfg:c})});hits.push(...(x.rows||[]));scanned+=g.length;},()=>{progress(5+scanned/stocks.length*58,`가격·거래량 스캔 ${Math.min(scanned,stocks.length).toLocaleString()} / ${stocks.length.toLocaleString()} · 급등 이력 ${hits.length}종목`) });
+    if(STOP)throw new Error('사용자 중지');
+    hits.sort((a,b)=>(b.technicalScore||0)-(a.technicalScore||0));$('stSpikes').textContent=hits.length.toLocaleString()+' 종목';
+    if(!hits.length){RESULTS=[];render();progress(100,'조건에 맞는 급등 이력 종목이 없습니다.');return}
+    let newsTargets=hits,cap=Math.max(0,val('newsCap',300));if(cap>0&&hits.length>cap)newsTargets=hits.slice(0,cap);
+    const left=hits.slice(newsTargets.length),newsGroups=chunk(newsTargets,8),enriched=[];let newsDone=0;
+    await parallelChunks(newsGroups,2,async g=>{const x=await j(API+'?op=enrich',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:g,cfg:c})});enriched.push(...(x.rows||[]));newsDone+=g.length;},()=>{progress(65+newsDone/newsTargets.length*33,`뉴스 분석 ${Math.min(newsDone,newsTargets.length)} / ${newsTargets.length} · 과거 급등 전 ${c.preNewsDays}일 ↔ 최근 ${c.recentDays}거래일 비교`) });
+    const fallback=left.map(r=>({...r,newsScore:null,finalScore:Math.round((r.technicalScore||0)*.58),candidate:false,historicalNews:[],recentNews:[],overlapTopics:[],reasons:['뉴스 분석 상한 밖']}));
+    RESULTS=enriched.concat(fallback).sort((a,b)=>(b.finalScore||0)-(a.finalScore||0));
+    $('stNews').textContent=enriched.length.toLocaleString()+' 종목';$('stCandidates').textContent=RESULTS.filter(r=>r.candidate).length.toLocaleString()+' 종목';$('excelBtn').disabled=false;render();progress(100,`완료 · 전종목 ${stocks.length.toLocaleString()} → 급등 이력 ${hits.length.toLocaleString()} → 뉴스 분석 ${enriched.length.toLocaleString()} → 후보 ${RESULTS.filter(r=>r.candidate).length.toLocaleString()}`);
+  }catch(e){if(String(e.message)!=='사용자 중지')alert(e.message);progress(0,String(e.message)==='사용자 중지'?'분석을 중지했습니다.':'실패: '+e.message)}finally{$('runBtn').disabled=false;$('stopBtn').disabled=true;setTimeout(()=>{if($('bar').style.width==='100%')$('bar').style.width='0%'},1800)}
+}
+function topicText(r){return (r.overlapTopics||[]).join(', ')||'-'}
+function newsHtml(arr){if(!arr||!arr.length)return '<span class="muted">-</span>';return arr.slice(0,3).map(n=>'<a href="'+esc(n.link)+'" target="_blank">'+esc((n.date?('['+n.date+'] '):'')+n.title)+'</a>').join('')}
+function render(){const mode=$('showMode').value,list=mode==='CAND'?RESULTS.filter(r=>r.candidate):RESULTS,tb=$('rows');tb.innerHTML='';if(!list.length){tb.innerHTML='<tr><td colspan="22" class="empty">표시할 결과가 없습니다.</td></tr>';return}list.forEach((r,i)=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+(i+1)+'</td><td><span class="pill '+(r.candidate?'on':'')+'">'+(r.candidate?'후보':'관찰')+'</span></td><td class="name">'+esc(r.name)+' <span class="muted">'+r.code+'</span></td><td>'+esc(r.market)+'</td><td class="score">'+num(r.finalScore,0)+'</td><td>'+num(r.technicalScore,0)+'</td><td>'+num(r.newsScore,0)+'</td><td>'+comma(r.currentPrice)+'</td><td class="'+(r.currentChange>0?'pos':'')+'">'+signed(r.currentChange,2)+'%</td><td>'+esc(r.spikeDate)+'</td><td>'+r.spikeOffset+'</td><td class="pos">'+num(r.spikePct,2)+'%</td><td>'+num(r.spikeVolumeRatio,2)+'x</td><td class="'+(r.recentReturnPct>0?'pos':'')+'">'+signed(r.recentReturnPct,2)+'%</td><td>'+num(r.recentVolumeRatio,2)+'x</td><td>'+signed(r.ma5Pct,2)+'%</td><td>'+signed(r.ma20Pct,2)+'%</td><td class="topics">'+esc(topicText(r))+'</td><td class="reason">'+esc((r.reasons||[]).join(' · '))+'</td><td class="newsCell">'+newsHtml(r.recentNews)+'</td><td class="newsCell">'+newsHtml(r.historicalNews)+'</td><td><a class="link" href="'+r.naver+'" target="_blank">증권</a> · <a class="link" href="'+r.naverNews+'" target="_blank">뉴스</a></td>';tb.appendChild(tr)})}
+function exportExcel(){if(!RESULTS.length)return;const main=RESULTS.map((r,i)=>({순위:i+1,후보:r.candidate?'Y':'N',종목:r.name,코드:r.code,시장:r.market,기준일:r.asOf,신호점수:r.finalScore,기술점수:r.technicalScore,뉴스점수:r.newsScore,기준가:r.currentPrice,기준일등락률:r.currentChange,급등일:r.spikeDate,'급등_거래일전':r.spikeOffset,급등률:r.spikePct,'급등거래량/이전20일':r.spikeVolumeRatio,'최근신호_시작일':r.recentFrom,'최근수익률':r.recentReturnPct,'최근5일거래량/20일':r.recentVolumeRatio,'현재/MA5(%)':r.ma5Pct,'현재/MA20(%)':r.ma20Pct,'급등전뉴스시작':r.preNewsFrom,'최근뉴스시작':r.recentNewsFrom,'재점화주제':topicText(r),'신호근거':(r.reasons||[]).join(' | '),네이버증권:r.naver,네이버뉴스:r.naverNews}));const news=[];RESULTS.forEach(r=>{(r.historicalNews||[]).forEach(n=>news.push({종목:r.name,코드:r.code,구간:'급등 전',날짜:n.date,제목:n.title,출처:n.source,링크:n.link}));(r.recentNews||[]).forEach(n=>news.push({종목:r.name,코드:r.code,구간:'최근 신호',날짜:n.date,제목:n.title,출처:n.source,링크:n.link}))});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(main),'후보');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(news),'뉴스');XLSX.writeFile(wb,'KR_뉴스급등재점화_레이더_'+$('asOf').value+'.xlsx')}
+</script>
+</body>
+</html>
