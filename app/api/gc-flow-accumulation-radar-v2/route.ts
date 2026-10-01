@@ -202,9 +202,21 @@ async function health(code:string,asOf:string,lookback:number){
   }catch(e:any){return NextResponse.json({ok:false,code,asOf,error:String(e?.message||e)},{status:502,headers:{'Cache-Control':'no-store'}});}
 }
 
+async function diagnose(code:string,asOf:string,lookback:number){
+  try{
+    const techCfg:TechCfg={asOf,lookbackDays:lookback,gcLookback:45,minDaysAfterGc:3,minPostGcReturn:-3,maxPostGcReturn:35,minSlopePerDay:-0.15,maxSlopePerDay:1.5,maxDrawdown:10,maxRange:35,maxDist20:12,maxRecent5Rise:15,maxBelow20Days:5,requireMa5Above20:true};
+    const flowCfg:FlowCfg={flowDays:15,minForeignDays:5,minInstDays:5,minCoverageDays:9,minJointDays:0,minCombinedVolumePct:0,allowForeignOnly:true,allowInstOnly:true,allowAlternate:true};
+    const [rows,trends]=await Promise.all([loadHistory(code,asOf,lookback,45),loadTrend(code,asOf,15)]);
+    const tech=analyseTechnical(rows,techCfg),flow=analyseFlow(trends,rows,flowCfg,asOf);
+    const failedChecks=tech?.checks?Object.entries(tech.checks).filter(([,v])=>!v).map(([k])=>k):[];
+    return NextResponse.json({ok:true,code,requestedAsOf:asOf,actualPriceAsOf:tech?.asOf||dashDate(rows[rows.length-1]?.date),lookback,tech,failedChecks,flow},{headers:{'Cache-Control':'no-store'}});
+  }catch(e:any){return NextResponse.json({ok:false,code,asOf,error:String(e?.message||e)},{status:502,headers:{'Cache-Control':'no-store'}});}
+}
+
 export async function GET(req:Request){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
   if(op==='health'){const code=String(u.searchParams.get('code')||'005930').replace(/\D/g,'').slice(0,6),asOf=String(u.searchParams.get('asOf')||'2026-09-01'),lookback=clamp(Number(u.searchParams.get('lookback')||60),10,420);return health(code,asOf,lookback);}
+  if(op==='diagnose'){const code=String(u.searchParams.get('code')||'005930').replace(/\D/g,'').slice(0,6),asOf=String(u.searchParams.get('asOf')||'2026-09-01'),lookback=clamp(Number(u.searchParams.get('lookback')||60),10,420);return diagnose(code,asOf,lookback);}
   if(!validToken(requestToken(req)))return unauthorized();
   if(op==='universe'){try{const market=String(u.searchParams.get('market')||'ALL').toUpperCase();const rows=await fetchUniverse(market);return NextResponse.json({rows,count:rows.length,market},{headers:{'Cache-Control':'no-store'}});}catch(e:any){return NextResponse.json({error:'UNIVERSE_FAILED',message:String(e?.message||e)},{status:502});}}
   return NextResponse.json({error:'BAD_OP'},{status:400});
