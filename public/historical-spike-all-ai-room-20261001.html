@@ -1,0 +1,25 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#071c2a"><title>한국 주식 AI 과거 급등 상황실 · 전종목</title></head><body style="margin:0;background:#061a27;color:#ecf4f8;font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif"><div id="boot" style="min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center"><div><div style="font-size:42px">⚡</div><div style="font-size:24px;margin-top:12px">전종목 스크리너를 불러오는 중…</div><div style="color:#8aa0b1;margin-top:8px">코스피 전종목 · 코스닥 전종목</div></div></div><script>
+(async()=>{
+  try{
+    const r=await fetch('/historical-spike-ai-room-20261001.html',{cache:'no-store'});
+    if(!r.ok) throw new Error('기본 화면을 불러오지 못했습니다.');
+    let html=await r.text();
+    html=html
+      .replace('<title>한국 주식 AI 과거 급등 상황실</title>','<title>한국 주식 AI 과거 급등 상황실 · 전종목</title>')
+      .replace('<div class="title">한국 주식 AI 과거 급등 상황실</div><div class="sub">코스피 시총 500 · 코스닥 시총 300 · 최대 240일 과거 조회</div>','<div class="title">한국 주식 AI 과거 급등 상황실</div><div class="sub">코스피 전종목 · 코스닥 전종목 · 최대 240일 과거 조회</div>')
+      .replace('<option value="ALL">전체</option><option value="KOSPI">코스피</option><option value="KOSDAQ">코스닥</option>','<option value="ALL">코스피+코스닥 전종목</option><option value="KOSPI">코스피 전종목</option><option value="KOSDAQ">코스닥 전종목</option>')
+      .replace('시총 순위는 현재 네이버 시총 순위를 기준으로 500/300 종목군을 구성합니다.','전종목 목록은 현재 네이버 국내주식 시가총액 목록을 기준으로 구성합니다. 코스피·코스닥을 각각 또는 함께 선택할 수 있습니다.')
+      .replace('코스피 시총 상위','코스피 전종목')
+      .replace('코스닥 시총 상위','코스닥 전종목')
+      .replace('<span id="kpTotal">500</span>','<span id="kpTotal">0</span>')
+      .replace('<span id="kqTotal">300</span>','<span id="kqTotal">0</span>')
+      .replace("$('#msg').textContent='시총 상위 800종목 목록을 불러오는 중…'; universe=await api('/api/historical-spike/universe');","$('#msg').textContent='코스피·코스닥 전종목 목록을 불러오는 중…'; universe=await api('/api/historical-spike-all/universe');")
+      .replace("XLSX.writeFile(wb,`한국주식_AI_과거급등_${resolvedDate}.xlsx`)","XLSX.writeFile(wb,`한국주식_전종목_AI_과거급등_${resolvedDate}.xlsx`)");
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(e){
+    document.getElementById('boot').innerHTML='<div><div style="font-size:42px">⚠️</div><div style="font-size:22px;margin-top:12px">화면을 불러오지 못했습니다.</div><div style="color:#8aa0b1;margin-top:8px">'+String(e&&e.message||e)+'</div></div>';
+  }
+})();
+</script></body></html>
