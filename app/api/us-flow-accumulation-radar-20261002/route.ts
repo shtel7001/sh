@@ -1,0 +1,156 @@
+// @ts-nocheck
+import crypto from 'crypto';
+
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+export const maxDuration=60;
+
+const SCOPE='gc-flow-accumulation-radar-20261002-v1';
+const ACCESS_CODE_HASH='696db21cbff09ada1a61dce8499bd5de35f5f8a7f68a90ac294e091a131ca70f';
+const UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
+let yahooSession={cookie:'',crumb:'',expiresAt:0};
+let spCache={rows:[],expiresAt:0,source:''};
+let ndCache={rows:[],expiresAt:0,source:''};
+
+function json(data:any,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store'}});}
+function secret(){return process.env.SESSION_SECRET||'';}
+function sign(payload:string){return crypto.createHmac('sha256',`${secret()}:${SCOPE}`).update(payload).digest('base64url');}
+function createToken(){const p=`${SCOPE}.${crypto.randomBytes(24).toString('base64url')}`;return `${p}.${sign(p)}`;}
+function requestToken(req:Request){return req.headers.get('x-auth-token')||(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');}
+function validToken(token?:string|null){
+  if(!token||!secret())return false;const i=token.lastIndexOf('.');if(i<0)return false;
+  const p=token.slice(0,i),s=token.slice(i+1);if(!p.startsWith(`${SCOPE}.`))return false;
+  const e=sign(p);if(s.length!==e.length)return false;try{return crypto.timingSafeEqual(Buffer.from(s),Buffer.from(e));}catch{return false;}
+}
+function validPassword(v:string){
+  const actual=crypto.createHash('sha256').update(String(v||'').trim()).digest();
+  try{return actual.length===32&&crypto.timingSafeEqual(actual,Buffer.from(ACCESS_CODE_HASH,'hex'));}catch{return false;}
+}
+function parseCookieHeader(raw:string|null){
+  if(!raw)return '';const found:string[]=[];for(const name of ['A1','A3','A1S','GUC','GUCS']){
+    const m=raw.match(new RegExp(`(?:^|[,;]\\s*)${name}=([^;,]+)`));if(m)found.push(`${name}=${m[1]}`);
+  }return found.join('; ');
+}
+function mergeCookies(...parts:string[]){
+  const m=new Map<string,string>();for(const part of parts)for(const item of (part||'').split(/;\s*/).filter(Boolean)){const i=item.indexOf('=');if(i>0)m.set(item.slice(0,i),item.slice(i+1));}
+  return [...m.entries()].map(([k,v])=>`${k}=${v}`).join('; ');
+}
+async function getYahooSession(force=false){
+  if(!force&&yahooSession.crumb&&Date.now()<yahooSession.expiresAt)return yahooSession;let cookie='';
+  try{const r=await fetch('https://fc.yahoo.com/',{headers:{'User-Agent':UA,Accept:'*/*'},redirect:'manual',cache:'no-store'});cookie=mergeCookies(cookie,parseCookieHeader(r.headers.get('set-cookie')));}catch{}
+  const cr=await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb',{headers:{'User-Agent':UA,Accept:'text/plain,*/*',...(cookie?{Cookie:cookie}:{})},cache:'no-store'});
+  cookie=mergeCookies(cookie,parseCookieHeader(cr.headers.get('set-cookie')));const crumb=(await cr.text()).trim();
+  if(!cr.ok||!crumb||/unauthorized|too many requests/i.test(crumb))throw new Error(`YAHOO_SESSION_${cr.status}`);
+  yahooSession={cookie,crumb,expiresAt:Date.now()+20*60*1000};return yahooSession;
+}
+async function yahooFetch(url:string,opts:RequestInit={},retry=true){
+  const s=await getYahooSession(false),h=new Headers(opts.headers||{});h.set('User-Agent',UA);h.set('Accept','application/json,text/plain,*/*');if(s.cookie)h.set('Cookie',s.cookie);
+  const join=url.includes('?')?'&':'?';const r=await fetch(`${url}${join}crumb=${encodeURIComponent(s.crumb)}`,{...opts,headers:h,cache:'no-store'});
+  if((r.status===401||r.status===403)&&retry){await getYahooSession(true);return yahooFetch(url,opts,false);}return r;
+}
+function parseCsv(text:string){
+  const rows:string[][]=[];let row:string[]=[],field='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];if(q){if(ch==='"'&&text[i+1]==='"'){field+='"';i++;}else if(ch==='"')q=false;else field+=ch;}else{if(ch==='"')q=true;else if(ch===','){row.push(field);field='';}else if(ch==='\n'){row.push(field.replace(/\r$/,''));rows.push(row);row=[];field='';}else field+=ch;}}
+  if(field.length||row.length){row.push(field);rows.push(row);}const head=rows.shift()||[];return rows.filter(r=>r.some(Boolean)).map(r=>Object.fromEntries(head.map((h,i)=>[h,r[i]??''])));
+}
+function normalizeSymbol(s:any){return String(s||'').trim().replace('.','-');}
+async function sp500(){
+  if(spCache.rows.length>450&&Date.now()<spCache.expiresAt)return spCache;
+  const r=await fetch('https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv',{headers:{'User-Agent':UA},cache:'no-store'});
+  if(!r.ok)throw new Error(`SP500_UNIVERSE_${r.status}`);
+  const rows=parseCsv(await r.text()).map((x:any)=>({symbol:normalizeSymbol(x.Symbol),name:x.Security||x.Symbol,exchange:'US',marketCapB:null,universe:'S&P500',sector:x['GICS Sector']||'',industry:x['GICS Sub-Industry']||''})).filter((x:any)=>x.symbol);
+  if(rows.length<450)throw new Error(`SP500_SHORT_${rows.length}`);spCache={rows,source:'Current S&P500 constituents',expiresAt:Date.now()+6*3600e3};return spCache;
+}
+async function screenerPage(offset:number,size:number){
+  const payload={offset,size,sortField:'intradaymarketcap',sortType:'DESC',quoteType:'EQUITY',query:{operator:'AND',operands:[{operator:'EQ',operands:['region','us']},{operator:'EQ',operands:['exchange','NMS']}]},userId:'',userIdType:'guid'};
+  const url='https://query1.finance.yahoo.com/v1/finance/screener?formatted=false&lang=en-US&region=US&corsDomain=finance.yahoo.com';
+  const r=await yahooFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw new Error(`NASDAQ_SCREENER_${r.status}`);
+  const j=await r.json(),q=j?.finance?.result?.[0]?.quotes;if(!Array.isArray(q))throw new Error('NASDAQ_SCREENER_FORMAT');return q;
+}
+async function nasdaq500(){
+  if(ndCache.rows.length>=480&&Date.now()<ndCache.expiresAt)return ndCache;
+  const quotes=[...(await screenerPage(0,250)),...(await screenerPage(250,250))];
+  const seen=new Set<string>(),rows:any[]=[];for(const q of quotes){const symbol=normalizeSymbol(q.symbol);if(!symbol||seen.has(symbol))continue;seen.add(symbol);rows.push({symbol,name:q.longName||q.shortName||q.displayName||symbol,exchange:q.exchange||'NMS',marketCapB:typeof q.marketCap==='number'?q.marketCap/1e9:null,universe:'NASDAQ500',sector:'',industry:''});if(rows.length>=500)break;}
+  if(rows.length<450)throw new Error(`NASDAQ500_SHORT_${rows.length}`);ndCache={rows,source:'Yahoo NASDAQ market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+}
+async function universe(kind:string){
+  if(kind==='SP500')return (await sp500()).rows;
+  if(kind==='NASDAQ500')return (await nasdaq500()).rows;
+  const [a,b]=await Promise.all([sp500(),nasdaq500()]);const map=new Map<string,any>();
+  for(const x of a.rows)map.set(x.symbol,x);
+  for(const x of b.rows){const old=map.get(x.symbol);map.set(x.symbol,old?{...x,name:old.name||x.name,universe:'S&P500+NASDAQ500',sector:old.sector||'',industry:old.industry||''}:x);}
+  return [...map.values()];
+}
+function dayStart(s:string){return Math.floor(Date.parse(s+'T00:00:00Z')/1000);}
+function addDays(s:string,n:number){return Math.floor((Date.parse(s+'T00:00:00Z')+n*86400000)/1000);}
+function fmtDate(ts:number){return new Date(ts*1000).toISOString().slice(0,10);}
+function avg(a:number[]){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0;}
+function round(v:number,p=2){const m=10**p;return Math.round(v*m)/m;}
+function clamp(v:number,a:number,b:number){return Math.max(a,Math.min(b,v));}
+
+type Bar={date:string;open:number;high:number;low:number;close:number;volume:number};
+async function history(symbol:string,startDate:string,endDate:string){
+  const p1=addDays(startDate,-70),p2=addDays(endDate,2);
+  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
+  const r=await yahooFetch(url);if(!r.ok)throw new Error(`CHART_${r.status}`);const j=await r.json(),root=j?.chart?.result?.[0];if(!root)throw new Error(j?.chart?.error?.description||'CHART_EMPTY');
+  const ts=root.timestamp||[],q=root.indicators?.quote?.[0]||{},adj=root.indicators?.adjclose?.[0]?.adjclose||[];
+  const out:Bar[]=[];for(let i=0;i<ts.length;i++){const close=Number(adj[i]??q.close?.[i]);if(!Number.isFinite(close)||close<=0)continue;out.push({date:fmtDate(ts[i]),open:Number(q.open?.[i])||close,high:Number(q.high?.[i])||close,low:Number(q.low?.[i])||close,close,volume:Number(q.volume?.[i])||0});}
+  if(out.length<3)throw new Error('HISTORY_SHORT');return {bars:out,meta:root.meta||{}};
+}
+function analyze(all:Bar[],startDate:string,endDate:string,cfg:any){
+  const sy=startDate,ey=endDate,inRange=all.filter(x=>x.date>=sy&&x.date<=ey);if(inRange.length<3)return {pass:false,reason:'RANGE_SHORT',tradingDays:inRange.length};
+  const firstIndex=all.findIndex(x=>x.date===inRange[0].date),lastIndex=all.findIndex(x=>x.date===inRange[inRange.length-1].date);
+  let upVol=0,downVol=0,flatVol=0,obv=0,obvStart=0,acc=0,dist=0,spikeUp=0;const cmfParts:any[]=[];
+  for(let i=Math.max(1,firstIndex);i<=lastIndex;i++){
+    const b=all[i],p=all[i-1],chg=(b.close/p.close-1)*100;
+    if(i===firstIndex)obvStart=obv;
+    if(b.close>p.close){obv+=b.volume;upVol+=b.volume;}else if(b.close<p.close){obv-=b.volume;downVol+=b.volume;}else flatVol+=b.volume;
+    const prev20=all.slice(Math.max(0,i-20),i).map(x=>x.volume).filter(Boolean),av20=avg(prev20)||b.volume;
+    if(chg>=1&&b.volume>=p.volume*1.05)acc++;
+    if(chg<=-1&&b.volume>=p.volume*1.05)dist++;
+    if(chg>0&&b.volume>=av20*1.5)spikeUp++;
+    const den=b.high-b.low,mfm=den?((b.close-b.low)-(b.high-b.close))/den:0;cmfParts.push({mf:mfm*b.volume,v:b.volume});
+  }
+  const totalVol=upVol+downVol+flatVol,upShare=totalVol?upVol/totalVol*100:0,obvBalance=totalVol?(obv-obvStart)/totalVol*100:0;
+  const cmfDen=cmfParts.reduce((s,x)=>s+x.v,0),cmf=cmfDen?cmfParts.reduce((s,x)=>s+x.mf,0)/cmfDen*100:0;
+  const vols=inRange.map(x=>x.volume),last5=vols.slice(-Math.min(5,vols.length)),prior=vols.slice(Math.max(0,vols.length-25),Math.max(0,vols.length-5)),volRatio=avg(last5)/(avg(prior)||avg(vols)||1);
+  const vwapDen=inRange.reduce((s,x)=>s+x.volume,0),vwap=vwapDen?inRange.reduce((s,x)=>s+((x.high+x.low+x.close)/3)*x.volume,0)/vwapDen:inRange[inRange.length-1].close;
+  const first=inRange[0],last=inRange[inRange.length-1],ret=(last.close/first.close-1)*100,vsVwap=(last.close/vwap-1)*100,minLow=Math.min(...inRange.map(x=>x.low)),maxHigh=Math.max(...inRange.map(x=>x.high)),rangePos=maxHigh>minLow?(last.close-minLow)/(maxHigh-minLow)*100:50;
+  let score=0;score+=clamp((upShare-45)*0.8,0,20);score+=clamp((obvBalance+5)*0.75,0,15);score+=clamp((cmf+5)*0.75,0,15);score+=clamp((volRatio-.8)*20,0,15);score+=clamp((acc-dist+2)*2.5,0,15);score+=clamp((vsVwap+3)*1.5,0,10);score+=clamp((rangePos-40)*0.25,0,10);
+  const checks={upShare:upShare>=cfg.minUpVolumeShare,obv:obvBalance>=cfg.minObvBalance,cmf:cmf>=cfg.minCmf,acc:acc>=cfg.minAccumDays,dist:dist<=cfg.maxDistributionDays,volRatio:volRatio>=cfg.minVolumeRatio,vsVwap:vsVwap>=cfg.minPriceVsVwap};
+  const pass=Object.values(checks).every(Boolean);
+  let mode='혼합/중립';if(upShare>=62&&obvBalance>=10&&cmf>=5)mode='강한 매집';else if(volRatio>=1.5&&ret>=3)mode='거래량 돌파';else if(obvBalance>=8&&acc>dist)mode='OBV 매집';else if(upShare>=55&&vsVwap>=0)mode='완만 매집';
+  return {pass,score:round(score,1),mode,checks,startDate:first.date,endDate:last.date,tradingDays:inRange.length,startPrice:round(first.close,2),endPrice:round(last.close,2),returnPct:round(ret,2),upVolumeSharePct:round(upShare,2),obvBalancePct:round(obvBalance,2),cmfPct:round(cmf,2),recentVolumeRatio:round(volRatio,2),accumulationDays:acc,distributionDays:dist,highVolumeUpDays:spikeUp,priceVsVwapPct:round(vsVwap,2),rangePositionPct:round(rangePos,1),vwap:round(vwap,2),recent:inRange.slice(-20).reverse().map((x,i)=>({date:x.date,close:round(x.close,2),volume:x.volume}))};
+}
+async function scanOne(s:any,startDate:string,endDate:string,cfg:any){
+  const {bars,meta}=await history(s.symbol,startDate,endDate),flow=analyze(bars,startDate,endDate,cfg);
+  return {...s,name:s.name||meta.longName||meta.shortName||s.symbol,exchange:s.exchange||meta.exchangeName||meta.exchange||'',flow,totalScore:flow.score,pass:flow.pass,yahoo:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/`,chart:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/chart/`,news:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/news/`};
+}
+
+export async function GET(req:Request){
+  const u=new URL(req.url),op=u.searchParams.get('op')||'';
+  if(op==='health'){
+    try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),start=String(u.searchParams.get('start')||'2026-08-01'),end=String(u.searchParams.get('end')||'2026-10-01');const r=await scanOne({symbol,name:symbol,universe:'HEALTH'},start,end,{minUpVolumeShare:0,minObvBalance:-100,minCmf:-100,minAccumDays:0,maxDistributionDays:999,minVolumeRatio:0,minPriceVsVwap:-100});return json({ok:true,result:r});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
+  }
+  if(!validToken(requestToken(req)))return json({error:'UNAUTHORIZED'},401);
+  if(op==='universe'){
+    try{const kind=String(u.searchParams.get('kind')||'SP500').toUpperCase();const rows=await universe(kind);return json({ok:true,kind,count:rows.length,rows});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
+  }
+  return json({error:'BAD_OP'},400);
+}
+export async function POST(req:Request){
+  const u=new URL(req.url),op=u.searchParams.get('op')||'',body:any=await req.json().catch(()=>({}));
+  if(op==='login'){
+    if(!secret())return json({error:'AUTH_NOT_CONFIGURED'},503);if(!validPassword(String(body?.code||body?.password||'')))return json({error:'INVALID_CODE'},401);return json({ok:true,token:createToken()});
+  }
+  if(!validToken(requestToken(req)))return json({error:'UNAUTHORIZED'},401);
+  if(op==='scan'){
+    const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,12):[],b=body.cfg||{},startDate=String(b.startDate||''),endDate=String(b.endDate||'');
+    if(!stocks.length)return json({error:'NO_STOCKS'},400);if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||startDate>endDate)return json({error:'BAD_DATE_RANGE'},400);
+    const cfg={minUpVolumeShare:clamp(Number(b.minUpVolumeShare??55),0,100),minObvBalance:clamp(Number(b.minObvBalance??0),-100,100),minCmf:clamp(Number(b.minCmf??0),-100,100),minAccumDays:clamp(Number(b.minAccumDays??2),0,200),maxDistributionDays:clamp(Number(b.maxDistributionDays??6),0,200),minVolumeRatio:clamp(Number(b.minVolumeRatio??0.8),0,10),minPriceVsVwap:clamp(Number(b.minPriceVsVwap??-3),-100,100)};
+    const results:any[]=[],errors:any[]=[];
+    for(let i=0;i<stocks.length;i+=4){const rr=await Promise.all(stocks.slice(i,i+4).map(async(s:any)=>{try{return await scanOne(s,startDate,endDate,cfg);}catch(e:any){return {...s,scanError:String(e?.message||e)};}}));for(const x of rr){if(x.scanError)errors.push(x);else results.push(x);}}
+    results.sort((a,b)=>Number(b.totalScore||0)-Number(a.totalScore||0));return json({ok:true,results,errors,count:results.length});
+  }
+  return json({error:'BAD_OP'},400);
+}
