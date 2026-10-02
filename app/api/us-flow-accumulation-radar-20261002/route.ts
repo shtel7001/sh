@@ -246,8 +246,29 @@ function googleSeriesProbe(html:string){
   return out;
 }
 
+async function googleRpcModeProbe(symbol:string,exchange:string){
+  const endpoint='https://www.google.com/finance/_/GoogleFinanceUi/data/batchexecute',ticker=`${symbol}:${exchange}`,t=[null,[symbol,exchange]],out:any[]=[];
+  for(let mode=0;mode<=12;mode++){
+    try{
+      const arr=[['AiCwsd',JSON.stringify([[t],mode]),null,'1']],body='f.req='+encodeURIComponent(JSON.stringify([arr]));
+      const url=`${endpoint}?rpcids=AiCwsd&source-path=${encodeURIComponent('/finance/quote/'+ticker)}&hl=en&gl=us&rt=c`;
+      const r=await fetch(url,{method:'POST',headers:{'User-Agent':UA,'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9','Accept-Encoding':'identity','Cookie':'CONSENT=YES+','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body,cache:'no-store'});
+      const raw=await r.text(),lines=raw.replace(/^\)\]\}'\n\n?/,'').split('\n');let data:any=null;
+      for(let i=0;i<lines.length-1;i++){if(!/^[0-9 a-f A-F]+$/.test(lines[i].trim()))continue;try{for(const entry of JSON.parse(lines[i+1]))if(entry?.[0]==='wrb.fr'&&entry?.[1]==='AiCwsd'){data=JSON.parse(entry[2]);break;}}catch{}if(data)break;}
+      const pts:any[]=[];for(const period of data?.[0]?.[0]?.[3]||[])for(const pt of period?.[1]||[]){if(Array.isArray(pt?.[0])&&Array.isArray(pt?.[1]))pts.push(pt);}
+      const dates=pts.map(pt=>`${pt[0][0]}-${String(pt[0][1]).padStart(2,'0')}-${String(pt[0][2]).padStart(2,'0')}`).sort();
+      out.push({mode,status:r.status,count:pts.length,first:dates[0]||null,last:dates[dates.length-1]||null,volumePoints:pts.filter(pt=>Number(pt?.[2])>0).length});
+    }catch(e:any){out.push({mode,error:String(e?.message||e)});}
+  }
+  return out;
+}
+
 export async function GET(req:Request){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
+  if(op==='rpcModeProbe'){
+    try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),exchange=String(u.searchParams.get('exchange')||'NASDAQ').toUpperCase();return json({ok:true,modes:await googleRpcModeProbe(symbol,exchange)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
+  }
+
   if(op==='googleProbe'){
     try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),exchange=String(u.searchParams.get('exchange')||'NASDAQ').toUpperCase();const url=`https://www.google.com/finance/quote/${encodeURIComponent(symbol+':'+exchange)}`;const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'text/html,*/*','Accept-Language':'en-US,en;q=0.9'},cache:'no-store'});const tx=await r.text();return json({ok:r.ok,status:r.status,length:tx.length,arrays:googleSeriesProbe(tx)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
   }
