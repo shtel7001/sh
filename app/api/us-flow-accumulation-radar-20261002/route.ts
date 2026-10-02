@@ -150,6 +150,9 @@ export async function GET(req:Request){
   if(op==='health'){
     try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),start=String(u.searchParams.get('start')||'2026-08-01'),end=String(u.searchParams.get('end')||'2026-10-01');const r=await scanOne({symbol,name:symbol,universe:'HEALTH'},start,end,{minUpVolumeShare:0,minObvBalance:-100,minCmf:-100,minAccumDays:0,maxDistributionDays:999,minVolumeRatio:0,minPriceVsVwap:-100});return json({ok:true,result:r});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
   }
+  if(op==='healthUniverse'){
+    try{const kind=String(u.searchParams.get('kind')||'NASDAQ500').toUpperCase(),rows=await universe(kind);return json({ok:true,kind,count:rows.length,sample:rows.slice(0,5)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
+  }
   if(!validToken(requestToken(req)))return json({error:'UNAUTHORIZED'},401);
   if(op==='universe'){
     try{const kind=String(u.searchParams.get('kind')||'SP500').toUpperCase();const rows=await universe(kind);return json({ok:true,kind,count:rows.length,rows});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
