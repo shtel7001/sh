@@ -113,7 +113,38 @@ function round(v:number,p=2){const m=10**p;return Math.round(v*m)/m;}
 function clamp(v:number,a:number,b:number){return Math.max(a,Math.min(b,v));}
 
 type Bar={date:string;open:number;high:number;low:number;close:number;volume:number};
+async function googleFinanceHistory(symbol:string,startDate:string,endDate:string){
+  const candidates=[`${symbol}:NASDAQ`,`${symbol}:NYSE`],wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
+  let best:Bar[]=[];
+  for(const gs of candidates){
+    try{
+      const r=await fetch(`https://www.google.com/finance/quote/${encodeURIComponent(gs)}`,{headers:{'User-Agent':UA,'Accept':'text/html,*/*','Accept-Language':'en-US,en;q=0.9'},cache:'no-store'});
+      if(!r.ok)continue;const html=await r.text(),re=/\[\[\[\d{4},\d{1,2},\d{1,2}/g;let m;
+      while((m=re.exec(html))){
+        const payload=extractBalancedArray(html,m.index);if(!payload)continue;
+        try{
+          const data=JSON.parse(payload);if(!Array.isArray(data)||data.length<3)continue;const out:Bar[]=[];
+          for(const pt of data){
+            if(!Array.isArray(pt)||!Array.isArray(pt[0])||!Array.isArray(pt[1]))continue;
+            const y=Number(pt[0][0]),mo=Number(pt[0][1]),d=Number(pt[0][2]),close=Number(pt[1][0]),volume=Number(pt[2]??0);
+            if(!Number.isFinite(y)||!Number.isFinite(mo)||!Number.isFinite(d)||!Number.isFinite(close)||close<=0)continue;
+            const date=`${String(y).padStart(4,'0')}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const ts=dayStart(date);if(ts<wantStart||ts>wantEnd)continue;
+            out.push({date,open:close,high:close,low:close,close,volume:Number.isFinite(volume)&&volume>0?volume:0});
+          }
+          const uniq=[...new Map(out.map(x=>[x.date,x])).values()].sort((a,b)=>a.date.localeCompare(b.date));
+          const withVol=uniq.filter(x=>x.volume>0).length;
+          if(uniq.length>best.length&&withVol>=Math.max(2,Math.floor(uniq.length*.5)))best=uniq;
+        }catch{}
+      }
+      if(best.length>=3)break;
+    }catch{}
+  }
+  if(best.length<3)throw new Error('GOOGLE_FINANCE_HISTORY_SHORT');
+  return {bars:best,meta:{symbol},source:'Google Finance page timeline'};
+}
 async function history(symbol:string,startDate:string,endDate:string){
+  try{return await googleFinanceHistory(symbol,startDate,endDate);}catch{}
   const p1=addDays(startDate,-70),p2=addDays(endDate,2),parseYahoo=async(host:string)=>{
     const url=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
     const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Referer':'https://finance.yahoo.com/'},cache:'no-store'});
@@ -151,10 +182,10 @@ function analyze(all:Bar[],startDate:string,endDate:string,cfg:any){
     if(chg>=1&&b.volume>=p.volume*1.05)acc++;
     if(chg<=-1&&b.volume>=p.volume*1.05)dist++;
     if(chg>0&&b.volume>=av20*1.5)spikeUp++;
-    const den=b.high-b.low,mfm=den?((b.close-b.low)-(b.high-b.close))/den:0;cmfParts.push({mf:mfm*b.volume,v:b.volume});
+    const pressure=p.close?((b.close/p.close-1)*100)*b.volume:0;cmfParts.push({mf:pressure,v:b.volume});
   }
   const totalVol=upVol+downVol+flatVol,upShare=totalVol?upVol/totalVol*100:0,obvBalance=totalVol?(obv-obvStart)/totalVol*100:0;
-  const cmfDen=cmfParts.reduce((s,x)=>s+x.v,0),cmf=cmfDen?cmfParts.reduce((s,x)=>s+x.mf,0)/cmfDen*100:0;
+  const cmfDen=cmfParts.reduce((s,x)=>s+x.v,0),cmf=cmfDen?cmfParts.reduce((s,x)=>s+x.mf,0)/cmfDen:0;
   const vols=inRange.map(x=>x.volume),last5=vols.slice(-Math.min(5,vols.length)),prior=vols.slice(Math.max(0,vols.length-25),Math.max(0,vols.length-5)),volRatio=avg(last5)/(avg(prior)||avg(vols)||1);
   const vwapDen=inRange.reduce((s,x)=>s+x.volume,0),vwap=vwapDen?inRange.reduce((s,x)=>s+((x.high+x.low+x.close)/3)*x.volume,0)/vwapDen:inRange[inRange.length-1].close;
   const first=inRange[0],last=inRange[inRange.length-1],ret=(last.close/first.close-1)*100,vsVwap=(last.close/vwap-1)*100,minLow=Math.min(...inRange.map(x=>x.low)),maxHigh=Math.max(...inRange.map(x=>x.high)),rangePos=maxHigh>minLow?(last.close-minLow)/(maxHigh-minLow)*100:50;
