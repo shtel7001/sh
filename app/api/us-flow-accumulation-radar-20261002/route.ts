@@ -117,10 +117,10 @@ async function googleFinanceRpcHistory(symbol:string,startDate:string,endDate:st
   const endpoint='https://www.google.com/finance/_/GoogleFinanceUi/data/batchexecute',wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
   let best:Bar[]=[];
   const spanDays=Math.max(1,Math.ceil((Date.parse(endDate)-Date.parse(startDate))/86400000)+1);
-  const mode=spanDays<=35?3:spanDays<=210?4:spanDays<=310?5:6;
+  const mode=spanDays<=35?3:spanDays<=185?4:spanDays<=275?5:6;
   for(const exchange of ['NASDAQ','NYSE']){
     try{
-      const ticker=`${symbol}:${exchange}`,t=[null,[symbol,exchange]],req=[[t],mode];
+      const googleSymbol=symbol.replace(/-/g,'.'),ticker=`${googleSymbol}:${exchange}`,t=[null,[googleSymbol,exchange]],req=[[t],mode];
       const arr=[['AiCwsd',JSON.stringify(req),null,'1']];
       const body='f.req='+encodeURIComponent(JSON.stringify([arr]));
       const url=`${endpoint}?rpcids=AiCwsd&source-path=${encodeURIComponent('/finance/quote/'+ticker)}&hl=en&gl=us&rt=c`;
@@ -149,7 +149,7 @@ async function googleFinanceRpcHistory(symbol:string,startDate:string,endDate:st
   return {bars:best,meta:{symbol},source:'Google Finance chart RPC'};
 }
 async function googleFinanceHistory(symbol:string,startDate:string,endDate:string){
-  const candidates=[`${symbol}:NASDAQ`,`${symbol}:NYSE`],wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
+  const googleSymbol=symbol.replace(/-/g,'.'),candidates=[`${googleSymbol}:NASDAQ`,`${googleSymbol}:NYSE`],wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
   let best:Bar[]=[];
   for(const gs of candidates){
     try{
