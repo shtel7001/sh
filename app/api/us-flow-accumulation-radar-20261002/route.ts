@@ -169,8 +169,24 @@ async function scanOne(s:any,startDate:string,endDate:string,cfg:any){
   return {...s,name:s.name||meta.longName||meta.shortName||s.symbol,exchange:s.exchange||meta.exchangeName||meta.exchange||'',priceSource:source||'US daily',flow,totalScore:flow.score,pass:flow.pass,yahoo:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/`,chart:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/chart/`,news:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/news/`};
 }
 
+
+function extractBalancedArray(text:string,start:number){
+  let depth=0,inString=false,escape=false;
+  for(let i=start;i<text.length;i++){const ch=text[i];if(inString){if(escape)escape=false;else if(ch==='\\')escape=true;else if(ch==='"')inString=false;continue;}if(ch==='"')inString=true;else if(ch==='[')depth++;else if(ch===']'){depth--;if(depth===0)return text.slice(start,i+1);}}
+  return null;
+}
+function googleSeriesProbe(html:string){
+  const out:any[]=[],re=/\[\[\[\d{4},\d{1,2},\d{1,2}/g;let m;
+  while((m=re.exec(html))&&out.length<12){const p=extractBalancedArray(html,m.index);if(!p)continue;try{const d=JSON.parse(p);if(Array.isArray(d)&&d.length>=2)out.push({len:d.length,first:d[0],second:d[1]});}catch{}}
+  return out;
+}
+
 export async function GET(req:Request){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
+  if(op==='googleProbe'){
+    try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),exchange=String(u.searchParams.get('exchange')||'NASDAQ').toUpperCase();const url=`https://www.google.com/finance/quote/${encodeURIComponent(symbol+':'+exchange)}`;const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'text/html,*/*','Accept-Language':'en-US,en;q=0.9'},cache:'no-store'});const tx=await r.text();return json({ok:r.ok,status:r.status,length:tx.length,arrays:googleSeriesProbe(tx)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
+  }
+
   if(op==='health'){
     try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),start=String(u.searchParams.get('start')||'2026-08-01'),end=String(u.searchParams.get('end')||'2026-10-01');const r=await scanOne({symbol,name:symbol,universe:'HEALTH'},start,end,{minUpVolumeShare:0,minObvBalance:-100,minCmf:-100,minAccumDays:0,maxDistributionDays:999,minVolumeRatio:0,minPriceVsVwap:-100});return json({ok:true,result:r});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
   }
