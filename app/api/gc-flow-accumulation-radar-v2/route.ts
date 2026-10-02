@@ -240,6 +240,38 @@ export async function POST(req:Request){
     for(let i=0;i<stocks.length;i+=6){const rr=await Promise.all(stocks.slice(i,i+6).map(async(s:any)=>{const code=String(s?.code||'').replace(/\D/g,'').slice(0,6);try{const rows=await loadHistory(code,cfg.asOf,cfg.lookbackDays,cfg.gcLookback);return {...s,code,tech:analyseTechnical(rows,cfg)};}catch(e:any){return {...s,code,scanError:String(e?.message||e)};}}));for(const r of rr){if(r.scanError)errors.push(r);else results.push(r);}}
     return NextResponse.json({results,errors,count:results.length},{headers:{'Cache-Control':'no-store'}});
   }
+  if(op==='flowRange'){
+    const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,10):[];if(!stocks.length)return NextResponse.json({error:'NO_STOCKS'},{status:400});
+    const b=body.cfg||{},startDate=String(b.startDate||''),endDate=String(b.endDate||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||startDate>endDate)return NextResponse.json({error:'BAD_DATE_RANGE'},{status:400});
+    const calDays=Math.max(1,Math.round((Date.parse(endDate+'T00:00:00Z')-Date.parse(startDate+'T00:00:00Z'))/86400000)+1);
+    const expectedTrading=clamp(Math.ceil(calDays*0.70)+8,5,300),historyLookback=clamp(calDays+45,30,420);
+    const baseCfg={minForeignDays:clamp(Number(b.minForeignDays??5),0,300),minInstDays:clamp(Number(b.minInstDays??5),0,300),minCoverageDays:clamp(Number(b.minCoverageDays??9),0,300),minJointDays:clamp(Number(b.minJointDays??0),0,300),minCombinedVolumePct:clamp(Number(b.minCombinedVolumePct??0),-10,20),allowForeignOnly:b.allowForeignOnly!==false,allowInstOnly:b.allowInstOnly!==false,allowAlternate:b.allowAlternate!==false};
+    const sy=ymd(startDate),ey=ymd(endDate),results:any[]=[],errors:any[]=[];
+    for(let i=0;i<stocks.length;i+=3){
+      const rr=await Promise.all(stocks.slice(i,i+3).map(async(s:any)=>{
+        const code=String(s?.code||'').replace(/\D/g,'').slice(0,6);
+        try{
+          const [rows,basic]=await Promise.all([loadHistory(code,endDate,historyLookback,45),loadBasic(code)]);
+          let trends:Trend[]=[];
+          try{trends=await loadTrendNew(code,endDate,expectedTrading);}catch{}
+          if(!trends.length){try{trends=await loadTrendMobile(code);}catch{}}
+          trends=[...new Map(trends.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
+          const oldest=trends[trends.length-1]?.date||'';
+          if(!trends.length)throw new Error('TREND_EMPTY');
+          if(oldest>sy)throw new Error('TREND_RANGE_INCOMPLETE_'+dashDate(oldest));
+          const inRange=trends.filter(x=>x.date>=sy&&x.date<=ey).sort((a,b)=>b.date.localeCompare(a.date));
+          if(!inRange.length)throw new Error('FLOW_RANGE_EMPTY');
+          const cfg:FlowCfg={flowDays:inRange.length,minForeignDays:baseCfg.minForeignDays,minInstDays:baseCfg.minInstDays,minCoverageDays:baseCfg.minCoverageDays,minJointDays:baseCfg.minJointDays,minCombinedVolumePct:baseCfg.minCombinedVolumePct,allowForeignOnly:baseCfg.allowForeignOnly,allowInstOnly:baseCfg.allowInstOnly,allowAlternate:baseCfg.allowAlternate};
+          const flow=analyseFlow(inRange,rows,cfg,endDate);if(!flow)throw new Error('FLOW_EMPTY');
+          return {...s,code,name:s.name||basic.name||code,market:s.market&&s.market!=='UNKNOWN'?s.market:basic.market,rangeStart:startDate,rangeEnd:endDate,tradingDays:inRange.length,flow,totalScore:flow.score,pass:flow.pass,naver:`https://stock.naver.com/domestic/stock/${code}/price`,investor:`https://stock.naver.com/domestic/stock/${code}/investmentinfo`,news:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(String(s.name||basic.name||code))}`};
+        }catch(e:any){return {...s,code,scanError:String(e?.message||e)};}
+      }));
+      for(const r of rr){if(r.scanError)errors.push(r);else results.push(r);}
+    }
+    results.sort((a,b)=>Number(b.totalScore||0)-Number(a.totalScore||0));
+    return NextResponse.json({results,errors,count:results.length,startDate,endDate},{headers:{'Cache-Control':'no-store'}});
+  }
   if(op==='flow'){
     const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,10):[];if(!stocks.length)return NextResponse.json({error:'NO_STOCKS'},{status:400});const b=body.cfg||{},asOf=String(b.asOf||''),lookbackDays=clamp(Number(b.lookbackDays??120),10,420);
     const cfg:FlowCfg={flowDays:clamp(Number(b.flowDays??15),3,40),minForeignDays:clamp(Number(b.minForeignDays??5),1,40),minInstDays:clamp(Number(b.minInstDays??5),1,40),minCoverageDays:clamp(Number(b.minCoverageDays??9),1,40),minJointDays:clamp(Number(b.minJointDays??0),0,40),minCombinedVolumePct:clamp(Number(b.minCombinedVolumePct??0),-10,20),allowForeignOnly:b.allowForeignOnly!==false,allowInstOnly:b.allowInstOnly!==false,allowAlternate:b.allowAlternate!==false};
