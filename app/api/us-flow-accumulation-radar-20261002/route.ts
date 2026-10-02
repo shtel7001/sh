@@ -70,17 +70,31 @@ async function screenerPage(offset:number,size:number){
 async function nasdaq500(){
   if(ndCache.rows.length>=480&&Date.now()<ndCache.expiresAt)return ndCache;
   try{
-    const url='https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&offset=0&exchange=nasdaq&download=true';
-    const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'en-US,en;q=0.9','Origin':'https://www.nasdaq.com','Referer':'https://www.nasdaq.com/market-activity/stocks/screener'},cache:'no-store'});
-    if(!r.ok)throw new Error(`NASDAQ_API_${r.status}`);
-    const j=await r.json(),rawRows=j?.data?.table?.rows;if(!Array.isArray(rawRows))throw new Error('NASDAQ_API_FORMAT');
-    const parsed=rawRows.map((q:any)=>{const symbol=normalizeSymbol(q.symbol),cap=Number(String(q.marketCap??q.marketcap??'').replace(/[$,]/g,''));return {symbol,name:q.name||symbol,exchange:'NASDAQ',marketCapB:Number.isFinite(cap)&&cap>0?cap/1e9:null,universe:'NASDAQ500',sector:q.sector||'',industry:q.industry||''};}).filter((x:any)=>x.symbol&&Number(x.marketCapB)>0).sort((a:any,b:any)=>Number(b.marketCapB)-Number(a.marketCapB)).slice(0,500);
-    if(parsed.length<450)throw new Error(`NASDAQ_API_SHORT_${parsed.length}`);
-    ndCache={rows:parsed,source:'Nasdaq official screener market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
-  }catch(first:any){
-    const quotes=[...(await screenerPage(0,250)),...(await screenerPage(250,250))];
-    const seen=new Set<string>(),rows:any[]=[];for(const q of quotes){const symbol=normalizeSymbol(q.symbol);if(!symbol||seen.has(symbol))continue;seen.add(symbol);rows.push({symbol,name:q.longName||q.shortName||q.displayName||symbol,exchange:q.exchange||'NMS',marketCapB:typeof q.marketCap==='number'?q.marketCap/1e9:null,universe:'NASDAQ500',sector:'',industry:''});if(rows.length>=500)break;}
-    if(rows.length<450)throw new Error(`NASDAQ500_SHORT_${rows.length}_${first?.message||first}`);ndCache={rows,source:'Yahoo NASDAQ market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+    const [allRes,listRes]=await Promise.all([
+      fetch('https://raw.githubusercontent.com/zyhe16/top-us-stock-tickers/main/tickers/all.csv',{headers:{'User-Agent':UA},cache:'no-store'}),
+      fetch('https://raw.githubusercontent.com/datasets/nasdaq-listings/main/data/nasdaq-listed.csv',{headers:{'User-Agent':UA},cache:'no-store'})
+    ]);
+    if(!allRes.ok||!listRes.ok)throw new Error(`GITHUB_NASDAQ_${allRes.status}_${listRes.status}`);
+    const allRows=parseCsv(await allRes.text()),listed=new Set(parseCsv(await listRes.text()).map((x:any)=>normalizeSymbol(x.Symbol)).filter(Boolean));
+    const parsed=allRows.map((q:any)=>{const symbol=normalizeSymbol(q.symbol),cap=Number(String(q.marketCap??'').replace(/[$,]/g,'')),name=String(q.name||symbol);return {symbol,name,exchange:'NASDAQ',marketCapB:Number.isFinite(cap)&&cap>0?cap/1e9:null,universe:'NASDAQ500',sector:q.industry||'',industry:q.industry||''};})
+      .filter((x:any)=>x.symbol&&listed.has(x.symbol)&&Number(x.marketCapB)>0&&!/(warrant|rights?\b|units?\b|preferred|etf|fund)/i.test(x.name))
+      .sort((a:any,b:any)=>Number(b.marketCapB)-Number(a.marketCapB)).slice(0,500);
+    if(parsed.length<450)throw new Error(`GITHUB_NASDAQ_SHORT_${parsed.length}`);
+    ndCache={rows:parsed,source:'Daily GitHub Nasdaq screener snapshot + Nasdaq listing directory',expiresAt:Date.now()+60*60e3};return ndCache;
+  }catch(gitErr:any){
+    try{
+      const url='https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&offset=0&exchange=nasdaq&download=true';
+      const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'en-US,en;q=0.9','Origin':'https://www.nasdaq.com','Referer':'https://www.nasdaq.com/market-activity/stocks/screener'},cache:'no-store'});
+      if(!r.ok)throw new Error(`NASDAQ_API_${r.status}`);const j=await r.json(),rawRows=j?.data?.table?.rows||j?.data?.rows;if(!Array.isArray(rawRows))throw new Error('NASDAQ_API_FORMAT');
+      const parsed=rawRows.map((q:any)=>{const symbol=normalizeSymbol(q.symbol),cap=Number(String(q.marketCap??q.marketcap??'').replace(/[$,]/g,''));return {symbol,name:q.name||symbol,exchange:'NASDAQ',marketCapB:Number.isFinite(cap)&&cap>0?cap/1e9:null,universe:'NASDAQ500',sector:q.sector||'',industry:q.industry||''};}).filter((x:any)=>x.symbol&&Number(x.marketCapB)>0).sort((a:any,b:any)=>Number(b.marketCapB)-Number(a.marketCapB)).slice(0,500);
+      if(parsed.length<450)throw new Error(`NASDAQ_API_SHORT_${parsed.length}`);ndCache={rows:parsed,source:'Nasdaq official screener market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+    }catch(apiErr:any){
+      try{
+        const quotes=[...(await screenerPage(0,250)),...(await screenerPage(250,250))],seen=new Set<string>(),rows:any[]=[];
+        for(const q of quotes){const symbol=normalizeSymbol(q.symbol);if(!symbol||seen.has(symbol))continue;seen.add(symbol);rows.push({symbol,name:q.longName||q.shortName||q.displayName||symbol,exchange:q.exchange||'NMS',marketCapB:typeof q.marketCap==='number'?q.marketCap/1e9:null,universe:'NASDAQ500',sector:'',industry:''});if(rows.length>=500)break;}
+        if(rows.length<450)throw new Error(`YAHOO_NASDAQ_SHORT_${rows.length}`);ndCache={rows,source:'Yahoo NASDAQ market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+      }catch(yahooErr:any){throw new Error(`NASDAQ_UNIVERSE_FAILED: ${gitErr?.message}; ${apiErr?.message}; ${yahooErr?.message}`);}
+    }
   }
 }
 async function universe(kind:string){
