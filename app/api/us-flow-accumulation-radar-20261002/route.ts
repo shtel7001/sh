@@ -69,9 +69,19 @@ async function screenerPage(offset:number,size:number){
 }
 async function nasdaq500(){
   if(ndCache.rows.length>=480&&Date.now()<ndCache.expiresAt)return ndCache;
-  const quotes=[...(await screenerPage(0,250)),...(await screenerPage(250,250))];
-  const seen=new Set<string>(),rows:any[]=[];for(const q of quotes){const symbol=normalizeSymbol(q.symbol);if(!symbol||seen.has(symbol))continue;seen.add(symbol);rows.push({symbol,name:q.longName||q.shortName||q.displayName||symbol,exchange:q.exchange||'NMS',marketCapB:typeof q.marketCap==='number'?q.marketCap/1e9:null,universe:'NASDAQ500',sector:'',industry:''});if(rows.length>=500)break;}
-  if(rows.length<450)throw new Error(`NASDAQ500_SHORT_${rows.length}`);ndCache={rows,source:'Yahoo NASDAQ market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+  try{
+    const url='https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&offset=0&exchange=nasdaq&download=true';
+    const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'en-US,en;q=0.9','Origin':'https://www.nasdaq.com','Referer':'https://www.nasdaq.com/market-activity/stocks/screener'},cache:'no-store'});
+    if(!r.ok)throw new Error(`NASDAQ_API_${r.status}`);
+    const j=await r.json(),rawRows=j?.data?.table?.rows;if(!Array.isArray(rawRows))throw new Error('NASDAQ_API_FORMAT');
+    const parsed=rawRows.map((q:any)=>{const symbol=normalizeSymbol(q.symbol),cap=Number(String(q.marketCap??q.marketcap??'').replace(/[$,]/g,''));return {symbol,name:q.name||symbol,exchange:'NASDAQ',marketCapB:Number.isFinite(cap)&&cap>0?cap/1e9:null,universe:'NASDAQ500',sector:q.sector||'',industry:q.industry||''};}).filter((x:any)=>x.symbol&&Number(x.marketCapB)>0).sort((a:any,b:any)=>Number(b.marketCapB)-Number(a.marketCapB)).slice(0,500);
+    if(parsed.length<450)throw new Error(`NASDAQ_API_SHORT_${parsed.length}`);
+    ndCache={rows:parsed,source:'Nasdaq official screener market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+  }catch(first:any){
+    const quotes=[...(await screenerPage(0,250)),...(await screenerPage(250,250))];
+    const seen=new Set<string>(),rows:any[]=[];for(const q of quotes){const symbol=normalizeSymbol(q.symbol);if(!symbol||seen.has(symbol))continue;seen.add(symbol);rows.push({symbol,name:q.longName||q.shortName||q.displayName||symbol,exchange:q.exchange||'NMS',marketCapB:typeof q.marketCap==='number'?q.marketCap/1e9:null,universe:'NASDAQ500',sector:'',industry:''});if(rows.length>=500)break;}
+    if(rows.length<450)throw new Error(`NASDAQ500_SHORT_${rows.length}_${first?.message||first}`);ndCache={rows,source:'Yahoo NASDAQ market-cap ranking',expiresAt:Date.now()+60*60e3};return ndCache;
+  }
 }
 async function universe(kind:string){
   if(kind==='SP500')return (await sp500()).rows;
@@ -91,11 +101,19 @@ function clamp(v:number,a:number,b:number){return Math.max(a,Math.min(b,v));}
 type Bar={date:string;open:number;high:number;low:number;close:number;volume:number};
 async function history(symbol:string,startDate:string,endDate:string){
   const p1=addDays(startDate,-70),p2=addDays(endDate,2);
-  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
-  const r=await yahooFetch(url);if(!r.ok)throw new Error(`CHART_${r.status}`);const j=await r.json(),root=j?.chart?.result?.[0];if(!root)throw new Error(j?.chart?.error?.description||'CHART_EMPTY');
-  const ts=root.timestamp||[],q=root.indicators?.quote?.[0]||{},adj=root.indicators?.adjclose?.[0]?.adjclose||[];
-  const out:Bar[]=[];for(let i=0;i<ts.length;i++){const close=Number(adj[i]??q.close?.[i]);if(!Number.isFinite(close)||close<=0)continue;out.push({date:fmtDate(ts[i]),open:Number(q.open?.[i])||close,high:Number(q.high?.[i])||close,low:Number(q.low?.[i])||close,close,volume:Number(q.volume?.[i])||0});}
-  if(out.length<3)throw new Error('HISTORY_SHORT');return {bars:out,meta:root.meta||{}};
+  try{
+    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
+    const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Referer':'https://finance.yahoo.com/'},cache:'no-store'});
+    if(!r.ok)throw new Error(`YAHOO_CHART_${r.status}`);const j=await r.json(),root=j?.chart?.result?.[0];if(!root)throw new Error(j?.chart?.error?.description||'YAHOO_CHART_EMPTY');
+    const ts=root.timestamp||[],q=root.indicators?.quote?.[0]||{},adj=root.indicators?.adjclose?.[0]?.adjclose||[],out:Bar[]=[];
+    for(let i=0;i<ts.length;i++){const close=Number(adj[i]??q.close?.[i]);if(!Number.isFinite(close)||close<=0)continue;out.push({date:fmtDate(ts[i]),open:Number(q.open?.[i])||close,high:Number(q.high?.[i])||close,low:Number(q.low?.[i])||close,close,volume:Number(q.volume?.[i])||0});}
+    if(out.length>=3)return {bars:out,meta:root.meta||{},source:'Yahoo Finance chart'};
+  }catch{}
+  const d1=fmtDate(p1).replace(/-/g,''),d2=fmtDate(p2).replace(/-/g,''),stooq=String(symbol).toLowerCase().replace(/\//g,'-')+'.us';
+  const sr=await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooq)}&d1=${d1}&d2=${d2}&i=d`,{headers:{'User-Agent':UA,'Accept':'text/csv,text/plain,*/*'},cache:'no-store'});
+  if(!sr.ok)throw new Error(`STOOQ_${sr.status}`);const tx=await sr.text(),lines=tx.trim().split(/\r?\n/),out:Bar[]=[];
+  for(let i=1;i<lines.length;i++){const [date,o,h,l,c,v]=lines[i].split(','),close=Number(c);if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(close)||close<=0)continue;out.push({date,open:Number(o)||close,high:Number(h)||close,low:Number(l)||close,close,volume:Number(v)||0});}
+  if(out.length<3)throw new Error('HISTORY_SHORT_YAHOO_STOOQ');return {bars:out,meta:{symbol},source:'Stooq daily fallback'};
 }
 function analyze(all:Bar[],startDate:string,endDate:string,cfg:any){
   const sy=startDate,ey=endDate,inRange=all.filter(x=>x.date>=sy&&x.date<=ey);if(inRange.length<3)return {pass:false,reason:'RANGE_SHORT',tradingDays:inRange.length};
@@ -123,8 +141,8 @@ function analyze(all:Bar[],startDate:string,endDate:string,cfg:any){
   return {pass,score:round(score,1),mode,checks,startDate:first.date,endDate:last.date,tradingDays:inRange.length,startPrice:round(first.close,2),endPrice:round(last.close,2),returnPct:round(ret,2),upVolumeSharePct:round(upShare,2),obvBalancePct:round(obvBalance,2),cmfPct:round(cmf,2),recentVolumeRatio:round(volRatio,2),accumulationDays:acc,distributionDays:dist,highVolumeUpDays:spikeUp,priceVsVwapPct:round(vsVwap,2),rangePositionPct:round(rangePos,1),vwap:round(vwap,2),recent:inRange.slice(-20).reverse().map((x,i)=>({date:x.date,close:round(x.close,2),volume:x.volume}))};
 }
 async function scanOne(s:any,startDate:string,endDate:string,cfg:any){
-  const {bars,meta}=await history(s.symbol,startDate,endDate),flow=analyze(bars,startDate,endDate,cfg);
-  return {...s,name:s.name||meta.longName||meta.shortName||s.symbol,exchange:s.exchange||meta.exchangeName||meta.exchange||'',flow,totalScore:flow.score,pass:flow.pass,yahoo:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/`,chart:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/chart/`,news:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/news/`};
+  const {bars,meta,source}=await history(s.symbol,startDate,endDate),flow=analyze(bars,startDate,endDate,cfg);
+  return {...s,name:s.name||meta.longName||meta.shortName||s.symbol,exchange:s.exchange||meta.exchangeName||meta.exchange||'',priceSource:source||'US daily',flow,totalScore:flow.score,pass:flow.pass,yahoo:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/`,chart:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/chart/`,news:`https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}/news/`};
 }
 
 export async function GET(req:Request){
