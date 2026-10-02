@@ -116,9 +116,11 @@ type Bar={date:string;open:number;high:number;low:number;close:number;volume:num
 async function googleFinanceRpcHistory(symbol:string,startDate:string,endDate:string){
   const endpoint='https://www.google.com/finance/_/GoogleFinanceUi/data/batchexecute',wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
   let best:Bar[]=[];
+  const spanDays=Math.max(1,Math.ceil((Date.parse(endDate)-Date.parse(startDate))/86400000)+1);
+  const mode=spanDays<=35?3:spanDays<=210?4:spanDays<=310?5:6;
   for(const exchange of ['NASDAQ','NYSE']){
     try{
-      const ticker=`${symbol}:${exchange}`,t=[null,[symbol,exchange]],req=[[t],3];
+      const ticker=`${symbol}:${exchange}`,t=[null,[symbol,exchange]],req=[[t],mode];
       const arr=[['AiCwsd',JSON.stringify(req),null,'1']];
       const body='f.req='+encodeURIComponent(JSON.stringify([arr]));
       const url=`${endpoint}?rpcids=AiCwsd&source-path=${encodeURIComponent('/finance/quote/'+ticker)}&hl=en&gl=us&rt=c`;
@@ -178,7 +180,8 @@ async function googleFinanceHistory(symbol:string,startDate:string,endDate:strin
 }
 async function history(symbol:string,startDate:string,endDate:string){
   try{return await googleFinanceRpcHistory(symbol,startDate,endDate);}catch{}
-  try{return await googleFinanceHistory(symbol,startDate,endDate);}catch{}
+  const spanDays=Math.max(1,Math.ceil((Date.parse(endDate)-Date.parse(startDate))/86400000)+1);
+  if(spanDays<=35){try{return await googleFinanceHistory(symbol,startDate,endDate);}catch{}}
   const p1=addDays(startDate,-70),p2=addDays(endDate,2),parseYahoo=async(host:string)=>{
     const url=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
     const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Referer':'https://finance.yahoo.com/'},cache:'no-store'});
@@ -265,14 +268,6 @@ async function googleRpcModeProbe(symbol:string,exchange:string){
 
 export async function GET(req:Request){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
-  if(op==='rpcModeProbe'){
-    try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),exchange=String(u.searchParams.get('exchange')||'NASDAQ').toUpperCase();return json({ok:true,modes:await googleRpcModeProbe(symbol,exchange)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
-  }
-
-  if(op==='googleProbe'){
-    try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),exchange=String(u.searchParams.get('exchange')||'NASDAQ').toUpperCase();const url=`https://www.google.com/finance/quote/${encodeURIComponent(symbol+':'+exchange)}`;const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'text/html,*/*','Accept-Language':'en-US,en;q=0.9'},cache:'no-store'});const tx=await r.text();return json({ok:r.ok,status:r.status,length:tx.length,arrays:googleSeriesProbe(tx)});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
-  }
-
   if(op==='health'){
     try{const symbol=String(u.searchParams.get('symbol')||'MSFT').toUpperCase(),start=String(u.searchParams.get('start')||'2026-08-01'),end=String(u.searchParams.get('end')||'2026-10-01');const r=await scanOne({symbol,name:symbol,universe:'HEALTH'},start,end,{minUpVolumeShare:0,minObvBalance:-100,minCmf:-100,minAccumDays:0,maxDistributionDays:999,minVolumeRatio:0,minPriceVsVwap:-100});return json({ok:true,result:r});}catch(e:any){return json({ok:false,error:String(e?.message||e)},502);}
   }
