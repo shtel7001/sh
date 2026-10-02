@@ -100,20 +100,30 @@ function clamp(v:number,a:number,b:number){return Math.max(a,Math.min(b,v));}
 
 type Bar={date:string;open:number;high:number;low:number;close:number;volume:number};
 async function history(symbol:string,startDate:string,endDate:string){
-  const p1=addDays(startDate,-70),p2=addDays(endDate,2);
-  try{
-    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
+  const p1=addDays(startDate,-70),p2=addDays(endDate,2),parseYahoo=async(host:string)=>{
+    const url=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
     const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Referer':'https://finance.yahoo.com/'},cache:'no-store'});
     if(!r.ok)throw new Error(`YAHOO_CHART_${r.status}`);const j=await r.json(),root=j?.chart?.result?.[0];if(!root)throw new Error(j?.chart?.error?.description||'YAHOO_CHART_EMPTY');
     const ts=root.timestamp||[],q=root.indicators?.quote?.[0]||{},adj=root.indicators?.adjclose?.[0]?.adjclose||[],out:Bar[]=[];
     for(let i=0;i<ts.length;i++){const close=Number(adj[i]??q.close?.[i]);if(!Number.isFinite(close)||close<=0)continue;out.push({date:fmtDate(ts[i]),open:Number(q.open?.[i])||close,high:Number(q.high?.[i])||close,low:Number(q.low?.[i])||close,close,volume:Number(q.volume?.[i])||0});}
-    if(out.length>=3)return {bars:out,meta:root.meta||{},source:'Yahoo Finance chart'};
+    if(out.length<3)throw new Error('YAHOO_HISTORY_SHORT');return {bars:out,meta:root.meta||{},source:'Yahoo Finance chart'};
+  };
+  try{return await parseYahoo('query2.finance.yahoo.com');}catch{}
+  try{return await parseYahoo('query1.finance.yahoo.com');}catch{}
+  try{
+    const iso1=fmtDate(p1),iso2=fmtDate(p2),toUS=(iso:string)=>{const [y,m,d]=iso.split('-');return `${m}/${d}/${y}`;};
+    const url=`https://api.nasdaq.com/api/quote/${encodeURIComponent(symbol)}/historical?assetclass=stocks&fromdate=${encodeURIComponent(toUS(iso1))}&todate=${encodeURIComponent(toUS(iso2))}&limit=5000`;
+    const r=await fetch(url,{headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'en-US,en;q=0.9','Origin':'https://www.nasdaq.com','Referer':`https://www.nasdaq.com/market-activity/stocks/${encodeURIComponent(symbol.toLowerCase())}/historical`},cache:'no-store'});
+    if(!r.ok)throw new Error(`NASDAQ_HISTORY_${r.status}`);const j=await r.json(),rows=j?.data?.tradesTable?.rows;
+    if(!Array.isArray(rows))throw new Error('NASDAQ_HISTORY_FORMAT');const num=(v:any)=>Number(String(v??'').replace(/[$,]/g,'')),out:Bar[]=[];
+    for(const x of rows){const md=String(x.date||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!md)continue;const date=`${md[3]}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`,close=num(x.close);if(!Number.isFinite(close)||close<=0)continue;out.push({date,open:num(x.open)||close,high:num(x.high)||close,low:num(x.low)||close,close,volume:num(x.volume)||0});}
+    out.sort((a,b)=>a.date.localeCompare(b.date));if(out.length<3)throw new Error('NASDAQ_HISTORY_SHORT');return {bars:out,meta:{symbol},source:'Nasdaq historical'};
   }catch{}
   const d1=fmtDate(p1).replace(/-/g,''),d2=fmtDate(p2).replace(/-/g,''),stooq=String(symbol).toLowerCase().replace(/\//g,'-')+'.us';
   const sr=await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooq)}&d1=${d1}&d2=${d2}&i=d`,{headers:{'User-Agent':UA,'Accept':'text/csv,text/plain,*/*'},cache:'no-store'});
-  if(!sr.ok)throw new Error(`STOOQ_${sr.status}`);const tx=await sr.text(),lines=tx.trim().split(/\r?\n/),out:Bar[]=[];
+  if(!sr.ok)throw new Error(`HISTORY_ALL_SOURCES_FAILED_STOOQ_${sr.status}`);const tx=await sr.text(),lines=tx.trim().split(/\r?\n/),out:Bar[]=[];
   for(let i=1;i<lines.length;i++){const [date,o,h,l,c,v]=lines[i].split(','),close=Number(c);if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(close)||close<=0)continue;out.push({date,open:Number(o)||close,high:Number(h)||close,low:Number(l)||close,close,volume:Number(v)||0});}
-  if(out.length<3)throw new Error('HISTORY_SHORT_YAHOO_STOOQ');return {bars:out,meta:{symbol},source:'Stooq daily fallback'};
+  if(out.length<3)throw new Error('HISTORY_SHORT_ALL_SOURCES');return {bars:out,meta:{symbol},source:'Stooq daily fallback'};
 }
 function analyze(all:Bar[],startDate:string,endDate:string,cfg:any){
   const sy=startDate,ey=endDate,inRange=all.filter(x=>x.date>=sy&&x.date<=ey);if(inRange.length<3)return {pass:false,reason:'RANGE_SHORT',tradingDays:inRange.length};
