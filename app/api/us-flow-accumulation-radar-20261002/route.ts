@@ -113,6 +113,39 @@ function round(v:number,p=2){const m=10**p;return Math.round(v*m)/m;}
 function clamp(v:number,a:number,b:number){return Math.max(a,Math.min(b,v));}
 
 type Bar={date:string;open:number;high:number;low:number;close:number;volume:number};
+async function googleFinanceRpcHistory(symbol:string,startDate:string,endDate:string){
+  const endpoint='https://www.google.com/finance/_/GoogleFinanceUi/data/batchexecute',wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
+  let best:Bar[]=[];
+  for(const exchange of ['NASDAQ','NYSE']){
+    try{
+      const ticker=`${symbol}:${exchange}`,t=[null,[symbol,exchange]],req=[[t],3];
+      const arr=[['AiCwsd',JSON.stringify(req),null,'1']];
+      const body='f.req='+encodeURIComponent(JSON.stringify([arr]));
+      const url=`${endpoint}?rpcids=AiCwsd&source-path=${encodeURIComponent('/finance/quote/'+ticker)}&hl=en&gl=us&rt=c`;
+      const r=await fetch(url,{method:'POST',headers:{'User-Agent':UA,'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9','Accept-Encoding':'identity','Cookie':'CONSENT=YES+','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body,cache:'no-store'});
+      if(!r.ok)continue;const raw=await r.text(),stripped=raw.replace(/^\)\]\}'\n\n?/,'').split('\n');let data:any=null;
+      for(let i=0;i<stripped.length-1;i++){
+        if(!/^[0-9 a-f A-F]+$/.test(stripped[i].trim()))continue;
+        try{for(const entry of JSON.parse(stripped[i+1]))if(entry?.[0]==='wrb.fr'&&entry?.[1]==='AiCwsd'){data=JSON.parse(entry[2]);break;}}catch{}
+        if(data)break;
+      }
+      const chartRaw=data?.[0]?.[0],out:Bar[]=[];
+      for(const period of chartRaw?.[3]||[])for(const pt of period?.[1]||[]){
+        if(!Array.isArray(pt?.[0])||!Array.isArray(pt?.[1]))continue;
+        const y=Number(pt[0][0]),mo=Number(pt[0][1]),d=Number(pt[0][2]),close=Number(pt[1][0]),volume=Number(pt[2]??0);
+        if(!Number.isFinite(y)||!Number.isFinite(mo)||!Number.isFinite(d)||!Number.isFinite(close)||close<=0)continue;
+        const date=`${String(y).padStart(4,'0')}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`,ts=dayStart(date);
+        if(ts<wantStart||ts>wantEnd)continue;
+        out.push({date,open:close,high:close,low:close,close,volume:Number.isFinite(volume)&&volume>0?volume:0});
+      }
+      const uniq=[...new Map(out.map(x=>[x.date,x])).values()].sort((a,b)=>a.date.localeCompare(b.date));
+      if(uniq.length>best.length&&uniq.filter(x=>x.volume>0).length>=Math.max(2,Math.floor(uniq.length*.5)))best=uniq;
+      if(best.length>=Math.min(200,Math.max(20,Math.ceil((Date.parse(endDate)-Date.parse(startDate))/86400000*.55))))break;
+    }catch{}
+  }
+  if(best.length<3)throw new Error('GOOGLE_FINANCE_RPC_HISTORY_SHORT');
+  return {bars:best,meta:{symbol},source:'Google Finance chart RPC'};
+}
 async function googleFinanceHistory(symbol:string,startDate:string,endDate:string){
   const candidates=[`${symbol}:NASDAQ`,`${symbol}:NYSE`],wantStart=addDays(startDate,-70),wantEnd=addDays(endDate,2);
   let best:Bar[]=[];
@@ -144,6 +177,7 @@ async function googleFinanceHistory(symbol:string,startDate:string,endDate:strin
   return {bars:best,meta:{symbol},source:'Google Finance page timeline'};
 }
 async function history(symbol:string,startDate:string,endDate:string){
+  try{return await googleFinanceRpcHistory(symbol,startDate,endDate);}catch{}
   try{return await googleFinanceHistory(symbol,startDate,endDate);}catch{}
   const p1=addDays(startDate,-70),p2=addDays(endDate,2),parseYahoo=async(host:string)=>{
     const url=`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1d&events=div%2Csplits&includeAdjustedClose=true`;
