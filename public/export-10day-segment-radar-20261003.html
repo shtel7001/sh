@@ -25,12 +25,12 @@
 </style>
 </head>
 <body>
-<div id="login" class="login">
+<div id="authOverlay" class="login">
   <div class="box">
     <h2>개인 1회 영구 인증</h2>
     <div class="small">이 브라우저에서 처음 한 번만 인증합니다. 기존 개인 레이더에서 사용하던 인증방식을 그대로 사용합니다.</div>
-    <input id="authCode" inputmode="numeric" maxlength="20" placeholder="인증번호 입력" style="margin:14px 0 9px">
-    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <input id="authCode" type="password" inputmode="numeric" maxlength="20" autocomplete="one-time-code" placeholder="인증번호 입력" onkeydown="if(event.key==='Enter')doAuthLogin()" style="margin:14px 0 9px">
+    <button class="btn primary" style="width:100%" onclick="doAuthLogin()">인증하고 시작</button>
     <div id="loginMsg" class="small" style="margin-top:8px"></div>
   </div>
 </div>
@@ -164,9 +164,34 @@ function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Se
 function shiftMonths(dateStr,n){const [y,m,d]=dateStr.split('-').map(Number),x=new Date(Date.UTC(y,m-1+n,Math.min(d,28)));return x.toISOString().slice(0,10)}
 $('endDate').value=kstDate();$('startDate').value=shiftMonths(kstDate(),-3);
 function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
-async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok){const e=new Error(j.message||j.error||('HTTP '+r.status));e.code=j.error;e.detail=j;throw e}return j}
-async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent=''}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
-(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=ping');$('login').classList.add('hidden')}catch{TOKEN='';localStorage.removeItem(TOKEN_KEY);$('login').classList.remove('hidden')}})();
+async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('authOverlay').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok){const e=new Error(j.message||j.error||('HTTP '+r.status));e.code=j.error;e.detail=j;throw e}return j}
+async function doAuthLogin(){
+  const code=$('authCode').value.trim();
+  if(!code){$('loginMsg').textContent='인증번호를 입력해 주세요.';return}
+  $('loginMsg').textContent='인증 확인 중...';
+  try{
+    const r=await fetch(API+'?op=login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code}),
+      cache:'no-store'
+    });
+    let j={};try{j=await r.json()}catch{}
+    if(!r.ok||!j.token)throw new Error(j.message||j.error||('HTTP '+r.status));
+    TOKEN=j.token;
+    localStorage.setItem(TOKEN_KEY,TOKEN);
+    await api(API+'?op=ping');
+    $('authOverlay').classList.add('hidden');
+    $('loginMsg').textContent='';
+    $('authCode').value='';
+  }catch(e){
+    TOKEN='';
+    localStorage.removeItem(TOKEN_KEY);
+    $('authOverlay').classList.remove('hidden');
+    $('loginMsg').textContent='인증 실패: '+(e?.message||e);
+  }
+}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('authOverlay').classList.remove('hidden');return}try{await api(API+'?op=ping');$('authOverlay').classList.add('hidden')}catch{TOKEN='';localStorage.removeItem(TOKEN_KEY);$('authOverlay').classList.remove('hidden')}})();
 function openKey(){$('serviceKey').value=localStorage.getItem(DATA_KEY)||'';$('keyModal').classList.remove('hidden')}function closeKey(){$('keyModal').classList.add('hidden')}function saveKey(){const v=$('serviceKey').value.trim();if(!v)return alert('서비스키를 입력해 주세요.');localStorage.setItem(DATA_KEY,v);closeKey();setStatus('공공데이터 서비스키를 이 브라우저에 저장했습니다. 이제 조회할 수 있습니다.','ok')}function removeKey(){localStorage.removeItem(DATA_KEY);$('serviceKey').value='';setStatus('저장된 공공데이터 서비스키를 삭제했습니다.','')}
 function setRecent(m){$('endDate').value=kstDate();$('startDate').value=shiftMonths(kstDate(),-m)}
 function setStatus(t,type=''){$('status').textContent=t;$('status').className='status'+(type?' '+type:'')}
