@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>관세청 수출실적 10일 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#061a3a;--navy2:#0b3470;--cyan:#08b7ef;--blue:#00a9ed;--red:#ef4d66;--ink:#13233f;--muted:#6f7d93;--bg:#eef4fb;--line:#d8e2ef;--card:#fff;--green:#0a8f65;--shadow:0 14px 35px rgba(24,54,88,.10)}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#dff2ff 0,#eef4fb 280px,#eef4fb 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}
+.wrap{max-width:1500px;margin:auto;padding:12px}.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#061a3a 0%,#0a387d 52%,#0aa6da 100%);color:#fff;padding:25px 24px;border-radius:24px;box-shadow:0 16px 42px rgba(4,33,77,.25)}
+.hero:after{content:"↗";position:absolute;right:24px;top:-28px;font-size:160px;font-weight:900;color:rgba(255,255,255,.13);transform:rotate(-8deg)}.hero h1{position:relative;z-index:2;font-size:31px;margin:0 0 7px;letter-spacing:-1px}.hero h1 b{color:#ffe83b}.hero p{position:relative;z-index:2;margin:0;line-height:1.65;max-width:1050px}.chips{position:relative;z-index:2;display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.chip{padding:7px 10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);border-radius:999px;font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:12px;box-shadow:var(--shadow)}h2{font-size:18px;margin:0 0 10px}.small{font-size:12px;color:var(--muted);line-height:1.55}.controls{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:9px}.field label{display:block;font-size:12px;font-weight:850;color:#637289;margin-bottom:5px}.field input,.field select{width:100%;height:43px;border:1px solid #cbd7e6;border-radius:11px;padding:0 10px;background:#fff;font-size:14px}
+.actions,.seg{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.btn{border:1px solid #cbd7e6;background:#fff;color:#30405a;border-radius:11px;padding:10px 14px;font-weight:850;cursor:pointer}.btn.primary{background:#154cc1;color:#fff;border-color:#154cc1}.btn.dark{background:#13233f;color:#fff;border-color:#13233f}.btn.cyan{background:#e5f8ff;border-color:#9eddf3;color:#006b91}.btn:disabled{opacity:.45;cursor:not-allowed}
+.status{margin-top:10px;padding:11px 12px;border-radius:12px;background:#f5f8fc;border:1px solid #e0e7f0;font-size:12px;line-height:1.6}.status.error{background:#fff2f2;border-color:#efc9c9;color:#8b1e1e}.status.ok{background:#ecfbf5;border-color:#bde8d4;color:#0a6b4d}
+.releasebar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.releaseTitle{font-weight:950;font-size:20px}.releaseMeta{font-size:13px;color:var(--muted)}.selectRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.selectRow select{height:40px;border:1px solid #ccd7e5;border-radius:10px;padding:0 10px;background:white;min-width:190px}
+.infographic{margin-top:12px;display:grid;grid-template-columns:repeat(10,minmax(112px,1fr));gap:8px;align-items:stretch}.metric{border:1px solid #d8e4ef;background:linear-gradient(180deg,#f7fbff,#fff);border-radius:15px;padding:10px 8px 8px;min-height:290px;display:flex;flex-direction:column;box-shadow:0 6px 16px rgba(30,70,110,.06)}.metricName{text-align:center;font-weight:950;font-size:13px;min-height:36px;display:flex;align-items:center;justify-content:center}.bars{height:185px;display:flex;align-items:flex-end;justify-content:center;gap:7px;padding:9px 4px 0;border-bottom:1px solid #dde7f2}.barCol{height:100%;width:42%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}.barVal{font-size:13px;font-weight:950;white-space:nowrap}.barShape{width:100%;border-radius:7px 7px 2px 2px;min-height:3px;box-shadow:inset 0 1px rgba(255,255,255,.35)}.yy .barVal{color:#087ac4}.yy .barShape{background:linear-gradient(180deg,#09c4f3,#098bda)}.mm .barVal{color:#d93552}.mm .barShape{background:linear-gradient(180deg,#ff7c8d,#e8435f)}.labels{display:flex;justify-content:center;gap:18px;font-weight:850;font-size:10px;color:#66758b;margin-top:5px}.amount{text-align:center;margin-top:auto;font-size:11px;color:#65758b}.amount b{display:block;color:#172943;font-size:13px;margin-top:2px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.sum{background:#f7faff;border:1px solid #dce6f1;border-radius:13px;padding:11px}.sum span{font-size:11px;color:var(--muted)}.sum b{display:block;margin-top:3px;font-size:20px}
+.tableWrap{overflow:auto;max-height:56vh;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:1450px}th,td{border-bottom:1px solid #edf1f6;padding:8px 7px;text-align:center;font-size:11px;white-space:nowrap}th{position:sticky;top:0;background:#f5f8fc;z-index:2;color:#53647e}td.item{text-align:left;font-weight:850}.pos{color:#d92d20}.neg{color:#2563eb}.muted{color:#8793a5}
+.login,.modal{position:fixed;inset:0;z-index:100;background:rgba(3,17,42,.76);display:flex;align-items:center;justify-content:center;padding:18px}.login{background:linear-gradient(135deg,#061a3a,#0b4e87)}.box{width:min(470px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.box input{width:100%;height:49px;border:1px solid #cbd7e6;border-radius:12px;padding:0 13px;font-size:17px}.box h2{font-size:22px}.hidden{display:none!important}.keyHelp{background:#f4f8fc;border-radius:12px;padding:10px;margin:10px 0;font-size:12px;line-height:1.55}.keyHelp a{color:#135dcc;text-decoration:none;font-weight:800}.footnote{font-size:11px;color:#7c8797;line-height:1.6;margin-top:10px}
+@media(max-width:1250px){.infographic{grid-template-columns:repeat(5,1fr)}.controls{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.wrap{padding:8px}.hero{padding:20px 16px}.hero h1{font-size:23px}.controls{grid-template-columns:repeat(2,1fr)}.infographic{grid-template-columns:repeat(2,1fr)}.metric{min-height:250px}.bars{height:155px}.summary{grid-template-columns:repeat(2,1fr)}.btn{flex:1}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="box">
+    <h2>개인 1회 영구 인증</h2>
+    <div class="small">이 브라우저에서 처음 한 번만 인증합니다. 기존 개인 레이더에서 사용하던 인증방식을 그대로 사용합니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="20" placeholder="인증번호 입력" style="margin:14px 0 9px">
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" class="small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div id="keyModal" class="modal hidden" onclick="if(event.target===this)closeKey()">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 style="margin:0">관세청 공공데이터 키</h2><button class="btn" onclick="closeKey()">닫기</button></div>
+    <div class="keyHelp">
+      관세청의 공식 10일 잠정치를 자동 조회하려면 공공데이터포털 서비스키가 필요합니다. 한 번 저장하면 이 기기의 브라우저에만 보관됩니다.<br>
+      <a href="https://www.data.go.kr/data/15157908/openapi.do" target="_blank">관세청 ‘수출 주요품목별 10일 단위 잠정치 통계’ 활용신청 열기 ↗</a>
+    </div>
+    <input id="serviceKey" autocomplete="off" placeholder="일반 인증키(Encoding/Decoding 어느 쪽도 가능)">
+    <div class="actions"><button class="btn primary" onclick="saveKey()">키 저장</button><button class="btn" onclick="removeKey()">저장키 삭제</button></div>
+    <div class="footnote">서비스키는 localStorage에 저장되고 조회할 때 Vercel API를 거쳐 관세청 OpenAPI 호출에만 사용합니다. 사이트 DB에는 따로 저장하지 않습니다.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="hero">
+    <h1><b>수출실적</b> 10일 레이더</h1>
+    <p>관세청이 매월 <b>11일(1~10일)</b> · <b>21일(1~20일)</b> · <b>익월 1일(월 전체)</b> 공개하는 주요품목 잠정 수출액을 사진처럼 Y/Y·M/M 막대로 단순하게 봅니다.</p>
+    <div class="chips"><span class="chip">관세청 공식 잠정치</span><span class="chip">2016년~</span><span class="chip">기간 직접 지정</span><span class="chip">Y/Y + M/M</span><span class="chip">Excel .xlsx 저장</span><span class="chip">1회 영구 인증</span></div>
+  </section>
+
+  <section class="card">
+    <h2>조회 기간</h2>
+    <div class="controls">
+      <div class="field"><label>시작일</label><input id="startDate" type="date"></div>
+      <div class="field"><label>종료일</label><input id="endDate" type="date"></div>
+      <div class="field"><label>발표 구간</label><select id="cadence" onchange="applyFilter()"><option value="ALL">전체 (1·11·21일)</option><option value="1">1일 · 전월 전체</option><option value="11">11일 · 1~10일</option><option value="21">21일 · 1~20일</option></select></div>
+      <div class="field"><label>품목 정렬</label><select id="sortMode" onchange="renderInfographic()"><option value="FIXED">공식 순서</option><option value="YOY">Y/Y 큰 순</option><option value="MOM">M/M 큰 순</option><option value="AMOUNT">수출액 큰 순</option></select></div>
+      <div class="field"><label>단위</label><select id="unitMode" onchange="renderAll()"><option value="100M">억 달러</option><option value="M">백만 달러</option><option value="K">천 달러(원자료)</option></select></div>
+      <div class="field"><label>공식 데이터 연결</label><button class="btn cyan" style="width:100%;height:43px" onclick="openKey()">API 키 설정</button></div>
+    </div>
+    <div class="actions">
+      <button id="runBtn" class="btn primary" onclick="runQuery()">수출실적 조회</button>
+      <button id="excelBtn" class="btn dark" onclick="exportExcel()" disabled>Excel 최신형(.xlsx) 저장</button>
+      <button class="btn" onclick="setRecent(3)">최근 3개월</button>
+      <button class="btn" onclick="setRecent(12)">최근 1년</button>
+    </div>
+    <div id="status" class="status">기간을 지정한 뒤 ‘수출실적 조회’를 누르세요.</div>
+  </section>
+
+  <section class="card">
+    <div class="releasebar">
+      <div><div class="releaseTitle" id="releaseTitle">발표 데이터를 선택하세요</div><div class="releaseMeta" id="releaseMeta">파랑=전년 동기 대비(Y/Y) · 빨강=전월 같은 구간 대비(M/M)</div></div>
+      <div class="selectRow"><span class="small">화면 기준</span><select id="releaseSelect" onchange="selectRelease()"><option>조회 후 선택</option></select></div>
+    </div>
+    <div id="infographic" class="infographic"></div>
+    <div class="footnote">※ 1~10일과 1~20일 수치는 누적 잠정치입니다. Y/Y·M/M은 같은 구간끼리 비교합니다. 관세청 원자료의 단위는 천 달러입니다.</div>
+  </section>
+
+  <section class="card">
+    <h2>한눈에 요약</h2>
+    <div class="summary">
+      <div class="sum"><span>조회 발표 건수</span><b id="sumCount">0</b></div>
+      <div class="sum"><span>Y/Y 상승 품목</span><b id="sumYoy">-</b></div>
+      <div class="sum"><span>M/M 상승 품목</span><b id="sumMom">-</b></div>
+      <div class="sum"><span>현재 표시 구간</span><b id="sumPeriod" style="font-size:15px">-</b></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>기간별 상세 데이터</h2>
+    <div class="tableWrap">
+      <table>
+        <thead><tr><th>발표일</th><th>집계구간</th><th>품목</th><th>수출액</th><th>Y/Y</th><th>M/M</th><th>원자료 단위</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="7" class="muted" style="padding:28px">아직 조회하지 않았습니다.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const API='/api/export-flash-radar-20261003';
+const TOKEN_KEY='gcFlowRadarTokenV1', DATA_KEY='kcsExport10dServiceKeyV1';
+let TOKEN='', ALL_ROWS=[], FILTERED=[], CURRENT=null, ITEM_NAMES={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
+const $=id=>document.getElementById(id);
+function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
+function shiftMonths(dateStr,n){const [y,m,d]=dateStr.split('-').map(Number),x=new Date(Date.UTC(y,m-1+n,Math.min(d,28)));return x.toISOString().slice(0,10)}
+$('endDate').value=kstDate();$('startDate').value=shiftMonths(kstDate(),-3);
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok){const e=new Error(j.message||j.error||('HTTP '+r.status));e.code=j.error;e.detail=j;throw e}return j}
+async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent=''}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
+function openKey(){$('serviceKey').value=localStorage.getItem(DATA_KEY)||'';$('keyModal').classList.remove('hidden')}function closeKey(){$('keyModal').classList.add('hidden')}function saveKey(){const v=$('serviceKey').value.trim();if(!v)return alert('서비스키를 입력해 주세요.');localStorage.setItem(DATA_KEY,v);closeKey();setStatus('공공데이터 서비스키를 이 브라우저에 저장했습니다. 이제 조회할 수 있습니다.','ok')}function removeKey(){localStorage.removeItem(DATA_KEY);$('serviceKey').value='';setStatus('저장된 공공데이터 서비스키를 삭제했습니다.','')}
+function setRecent(m){$('endDate').value=kstDate();$('startDate').value=shiftMonths(kstDate(),-m)}
+function setStatus(t,type=''){$('status').textContent=t;$('status').className='status'+(type?' '+type:'')}
+async function runQuery(){
+  const start=$('startDate').value,end=$('endDate').value,key=localStorage.getItem(DATA_KEY)||'';
+  if(!start||!end||start>end)return alert('시작일과 종료일을 확인해 주세요.');
+  if(!key){openKey();setStatus('공식 데이터를 불러오려면 공공데이터포털 서비스키를 한 번 저장해 주세요.','error');return}
+  $('runBtn').disabled=true;$('excelBtn').disabled=true;setStatus('관세청 10일 단위 잠정 수출실적을 불러오는 중…');
+  try{
+    const j=await api(API+'?op=query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startDate:start,endDate:end,serviceKey:key})});
+    ALL_ROWS=j.rows||[];ITEM_NAMES=j.itemNames||ITEM_NAMES;
+    if(!ALL_ROWS.length)throw new Error('선택 기간에 표시할 데이터가 없습니다.');
+    applyFilter();
+    $('excelBtn').disabled=false;
+    setStatus('조회 완료 · '+ALL_ROWS.length+'개 발표 구간 · 원천: '+(j.source||'관세청·공공데이터포털'),'ok');
+  }catch(e){
+    let msg=e.message||String(e);
+    if(e.code==='DATA_GO_KR_KEY_REQUIRED')msg='공공데이터포털 서비스키가 필요합니다.';
+    if(e.code==='OFFICIAL_API_FAILED')msg='관세청 API 연결에 실패했습니다. 서비스키의 활용신청 승인 여부를 확인해 주세요.\n'+msg.replace(/^OFFICIAL_API_NO_ROWS::/,'');
+    setStatus(msg,'error'); if(e.code==='DATA_GO_KR_KEY_REQUIRED')openKey();
+  }finally{$('runBtn').disabled=false}
+}
+function cadenceOf(r){
+  const e=Number(r.rangeEnd||0);
+  if(e===10)return '11';if(e===20)return '21';if(e>=28)return '1';
+  const rd=String(r.releaseDate||'');const d=rd.slice(8,10);return d==='11'?'11':d==='21'?'21':d==='01'?'1':'';
+}
+function periodLabel(r){
+  const d=String(r.date||''),ym=d.slice(0,7).replace('-','.');
+  const e=Number(r.rangeEnd||Number(d.slice(8,10))||0);
+  if(e===10)return ym+' 01~10';if(e===20)return ym+' 01~20';if(e>=28)return ym+' 01~'+String(e).padStart(2,'0');return r.periodKey||d||'-';
+}
+function applyFilter(){
+  const c=$('cadence').value;
+  FILTERED=ALL_ROWS.filter(r=>c==='ALL'||cadenceOf(r)===c);
+  FILTERED.sort((a,b)=>String(a.releaseDate||a.date).localeCompare(String(b.releaseDate||b.date)));
+  const sel=$('releaseSelect');sel.innerHTML='';
+  FILTERED.forEach((r,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=(r.releaseDate||r.date||'-')+' 발표 · '+periodLabel(r);sel.appendChild(o)});
+  $('sumCount').textContent=FILTERED.length;
+  if(FILTERED.length){sel.value=String(FILTERED.length-1);CURRENT=FILTERED[FILTERED.length-1]}else CURRENT=null;
+  renderAll();
+}
+function selectRelease(){const i=Number($('releaseSelect').value);CURRENT=FILTERED[i]||null;renderAll()}
+function metricList(){
+  if(!CURRENT)return [];
+  let a=Object.keys(ITEM_NAMES).map((k,i)=>({k,name:ITEM_NAMES[k],i,m:CURRENT.metrics?.[k]||{value:CURRENT.values?.[k],yoy:null,mom:null}}));
+  const s=$('sortMode').value;
+  const val=x=>s==='YOY'?Number(x.m.yoy??-1e99):s==='MOM'?Number(x.m.mom??-1e99):s==='AMOUNT'?Number(x.m.value??-1e99):-x.i;
+  if(s!=='FIXED')a.sort((x,y)=>val(y)-val(x));
+  return a;
+}
+function pctText(v){const x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+x.toFixed(1)+'%':'-'}
+function cls(v){const x=Number(v);return !Number.isFinite(x)?'muted':x>0?'pos':x<0?'neg':''}
+function amount(v){
+  const x=Number(v);if(!Number.isFinite(x))return '-';const u=$('unitMode').value;
+  if(u==='100M')return (x/10000).toLocaleString(undefined,{maximumFractionDigits:1})+' 억$';
+  if(u==='M')return (x/1000).toLocaleString(undefined,{maximumFractionDigits:1})+' 백만$';
+  return Math.round(x).toLocaleString()+' 천$';
+}
+function barHeight(v,max){const x=Math.abs(Number(v));if(!Number.isFinite(x)||!max)return 3;return Math.max(3,Math.min(100,Math.round(x/max*100)))}
+function renderInfographic(){
+  const box=$('infographic');box.innerHTML='';if(!CURRENT){box.innerHTML='<div class="small" style="grid-column:1/-1;padding:25px;text-align:center">조회 데이터가 없습니다.</div>';return}
+  const list=metricList(),nums=list.flatMap(x=>[Math.abs(Number(x.m.yoy)),Math.abs(Number(x.m.mom))]).filter(Number.isFinite),max=Math.max(10,...nums);
+  list.forEach(x=>{const d=document.createElement('div');d.className='metric';d.innerHTML=
+    '<div class="metricName">'+esc(x.name)+'</div>'+
+    '<div class="bars">'+
+      '<div class="barCol yy"><div class="barVal">'+pctText(x.m.yoy)+'</div><div class="barShape" style="height:'+barHeight(x.m.yoy,max)+'%"></div></div>'+
+      '<div class="barCol mm"><div class="barVal">'+pctText(x.m.mom)+'</div><div class="barShape" style="height:'+barHeight(x.m.mom,max)+'%"></div></div>'+
+    '</div><div class="labels"><span>Y/Y</span><span>M/M</span></div>'+
+    '<div class="amount">수출액<b>'+amount(x.m.value)+'</b></div>';box.appendChild(d)});
+}
+function renderSummary(){
+  if(!CURRENT){$('releaseTitle').textContent='발표 데이터를 선택하세요';$('sumYoy').textContent='-';$('sumMom').textContent='-';$('sumPeriod').textContent='-';return}
+  $('releaseTitle').textContent=periodLabel(CURRENT)+' 주요 수출품목 증가율';
+  $('releaseMeta').textContent=(CURRENT.releaseDate||CURRENT.date||'-')+' 발표 · 파랑=Y/Y · 빨강=M/M';
+  const ms=Object.keys(ITEM_NAMES).map(k=>CURRENT.metrics?.[k]||{});
+  const yc=ms.filter(x=>Number(x.yoy)>0).length,mc=ms.filter(x=>Number(x.mom)>0).length;
+  $('sumYoy').textContent=yc+' / '+ms.length;$('sumMom').textContent=mc+' / '+ms.length;$('sumPeriod').textContent=periodLabel(CURRENT);
+}
+function renderTable(){
+  const tb=$('rows');tb.innerHTML='';if(!FILTERED.length){tb.innerHTML='<tr><td colspan="7" class="muted" style="padding:28px">표시할 데이터가 없습니다.</td></tr>';return}
+  [...FILTERED].reverse().forEach(r=>Object.keys(ITEM_NAMES).forEach(k=>{const m=r.metrics?.[k]||{value:r.values?.[k],yoy:null,mom:null},tr=document.createElement('tr');tr.innerHTML='<td>'+esc(r.releaseDate||r.date||'-')+'</td><td>'+esc(periodLabel(r))+'</td><td class="item">'+esc(ITEM_NAMES[k])+'</td><td>'+esc(amount(m.value))+'</td><td class="'+cls(m.yoy)+'">'+pctText(m.yoy)+'</td><td class="'+cls(m.mom)+'">'+pctText(m.mom)+'</td><td>'+(Number.isFinite(Number(m.value))?Math.round(Number(m.value)).toLocaleString():'-')+'</td>';tb.appendChild(tr)}));
+}
+function renderAll(){renderInfographic();renderSummary();renderTable()}
+function exportExcel(){
+  if(!FILTERED.length)return;
+  const detail=[];FILTERED.forEach(r=>Object.keys(ITEM_NAMES).forEach(k=>{const m=r.metrics?.[k]||{};detail.push({발표일:r.releaseDate||r.date,집계구간:periodLabel(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}));
+  const raw=FILTERED.map(r=>Object.assign({발표일:r.releaseDate,집계구간:periodLabel(r)},r.raw||{}));
+  const cfg=[{항목:'시작일',값:$('startDate').value},{항목:'종료일',값:$('endDate').value},{항목:'발표구간필터',값:$('cadence').options[$('cadence').selectedIndex].text},{항목:'원천',값:'관세청_수출 주요품목별 10일 단위 잠정치 통계'},{항목:'원자료단위',값:'천 달러'}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail),'증가율_상세');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(raw),'관세청_원자료');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cfg),'조회설정');
+  XLSX.writeFile(wb,'관세청_10일_수출실적_'+$('startDate').value+'_'+$('endDate').value+'.xlsx');
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+</script>
+</body></html>
