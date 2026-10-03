@@ -352,18 +352,43 @@ function aggregateSeriesForCode(raw:any[],code:string){
   }
   return sums;
 }
-async function fetchCosmeticsSeries(key:string,startYm:string,endYm:string){
-  const chunks=await Promise.all(COSMETICS_CODES.map(async (x:any)=>{
-    const got=await fetchItemtradeFull(key,startYm,endYm,x.code);
-    return {code:x.code,name:x.name,rows:got.rows,pages:got.pages,pagingMode:got.pagingMode};
-  }));
-  const totals:any={},breakdown:any={};
-  for(const ch of chunks){
-    const part=aggregateSeriesForCode(ch.rows,ch.code);
-    breakdown[ch.code]=part;
-    for(const [ym,v] of Object.entries(part))totals[ym]=(totals[ym]||0)+Number(v);
+function monthWindows(startYm:string,endYm:string,maxMonths=12){
+  const out:any[]=[];
+  let s=String(startYm||'').replace(/\D/g,'').slice(0,6);
+  const end=String(endYm||'').replace(/\D/g,'').slice(0,6);
+  if(!/^20\d{4}$/.test(s)||!/^20\d{4}$/.test(end)||s>end)return out;
+  while(s<=end){
+    const candidate=ymOffset(s,Math.max(1,maxMonths)-1);
+    const e=candidate>end?end:candidate;
+    out.push([s,e]);
+    s=ymOffset(e,1);
   }
-  return {totals,breakdown,chunks};
+  return out;
+}
+async function fetchCosmeticsSeries(key:string,startYm:string,endYm:string){
+  // ITEMTRADE API rejects periods longer than 1 year (error 99).
+  // Split the requested span into inclusive windows of at most 12 months.
+  const windows=monthWindows(startYm,endYm,12);
+  if(!windows.length)throw new Error('ITEMTRADE_BAD_COSMETICS_RANGE');
+
+  const totals:any={},breakdown:any={},chunks:any[]=[];
+  for(const [a,b] of windows){
+    // Keep concurrency to the cosmetics code set per window, then move to the next year-window.
+    const batch=await Promise.all(COSMETICS_CODES.map(async (x:any)=>{
+      const got=await fetchItemtradeFull(key,a,b,x.code);
+      return {code:x.code,name:x.name,startYm:a,endYm:b,rows:got.rows,pages:got.pages,pagingMode:got.pagingMode};
+    }));
+    chunks.push(...batch);
+    for(const ch of batch){
+      const part=aggregateSeriesForCode(ch.rows,ch.code);
+      const dest=breakdown[ch.code]||(breakdown[ch.code]={});
+      for(const [ym,v] of Object.entries(part)){
+        dest[ym]=(dest[ym]||0)+Number(v);
+        totals[ym]=(totals[ym]||0)+Number(v);
+      }
+    }
+  }
+  return {totals,breakdown,chunks,windows};
 }
 function cosmeticsItemFromSeries(series:any,latestYm:string){
   const v=Number(series?.totals?.[latestYm]||0);
@@ -431,7 +456,7 @@ async function fetchExtraTop50(key:string,endDate:string){
     diagnostics:{
       latestYm,rows:latestGot.rows.length,pages:latestGot.pages,pagingMode:latestGot.pagingMode,
       hsChapters:curCoverage,prevHsChapters:prevCoverage,prevYearHsChapters:yrCoverage,
-      hs33Usd:Number(cur['33']||0),cosmeticsUsd:Number(cosmeticsSeries?.totals?.[latestYm]||0),cosmeticsCodes:COSMETICS_CODES.map((x:any)=>x.code)
+      hs33Usd:Number(cur['33']||0),cosmeticsUsd:Number(cosmeticsSeries?.totals?.[latestYm]||0),cosmeticsCodes:COSMETICS_CODES.map((x:any)=>x.code),cosmeticsWindows:cosmeticsSeries?.windows||[]
     }
   };
 }
