@@ -70,8 +70,10 @@ function apiError(xml:string){
     const m=xml.match(new RegExp('<'+k+'[^>]*>([\\s\\S]*?)<\\/'+k+'>','i'));
     if(m)pairs[k]=dec(m[1]);
   }
-  const msg=Object.values(pairs).filter(Boolean).join(' / ');
-  return msg && !/NORMAL_SERVICE|정상/i.test(msg) ? msg : '';
+  const code=String(pairs.resultCode??pairs.returnReasonCode??'').trim();
+  const statusMsg=String(pairs.resultMsg??pairs.returnAuthMsg??pairs.errMsg??'').trim();
+  if(code==='00'||/NORMAL[\\s_]*SERVICE/i.test(statusMsg)||/정상/.test(statusMsg))return '';
+  return Object.values(pairs).filter(Boolean).join(' / ');
 }
 function ymdFromAny(v:any){
   const s=String(v??'').trim();
