@@ -373,9 +373,17 @@ async function fetchExtraTop50(key:string,endDate:string){
     };
   });
   const cosmetics=ranked.findIndex(([code]:any)=>code==='33');
+  const cosmeticsRank=cosmetics>=0?cosmetics+1:null;
+  const cv=Number(cur['33']||0),cp=Number(prev['33']||0),cy=Number(yr['33']||0);
+  const cosmeticsItem=cv>0?{
+    key:'hs33',hs2:'33',rank:cosmeticsRank,name:HS2_NAMES['33'],
+    month:displayYm(latestYm),value:cv/1000,
+    yoy:cy?Math.round(((cv/cy)-1)*1000)/10:null,
+    mom:cp?Math.round(((cv/cp)-1)*1000)/10:null
+  }:null;
   return {
     month:displayYm(latestYm),items,
-    cosmeticsRank:cosmetics>=0?cosmetics+1:null,
+    cosmeticsRank,cosmeticsItem,
     diagnostics:{
       latestYm,rows:latestGot.rows.length,pages:latestGot.pages,pagingMode:latestGot.pagingMode,
       hsChapters:curCoverage,prevHsChapters:prevCoverage,prevYearHsChapters:yrCoverage,
@@ -552,16 +560,16 @@ export async function POST(req:Request){
           date:r.date,releaseDate:r.releaseDate,periodKey:r.periodKey,rangeEnd:r.rangeEnd,
           metrics:r.metrics
         }));
-      let extraItems:any[]=[],extraMonth='',extraError='',extraDiagnostics:any=null,cosmeticsRank:any=null;
+      let extraItems:any[]=[],extraMonth='',extraError='',extraDiagnostics:any=null,cosmeticsRank:any=null,cosmeticsItem:any=null;
       try{
         const extra=await fetchExtraTop50(String(body.serviceKey||envKey),endDate);
-        extraItems=extra.items;extraMonth=extra.month;extraDiagnostics=extra.diagnostics;cosmeticsRank=extra.cosmeticsRank;
+        extraItems=extra.items;extraMonth=extra.month;extraDiagnostics=extra.diagnostics;cosmeticsRank=extra.cosmeticsRank;cosmeticsItem=extra.cosmeticsItem;
       }catch(ex:any){
         extraError=String(ex?.message||ex).slice(0,1000);
       }
       return NextResponse.json({
         ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',
-        extraItems,extraMonth,extraError,extraDiagnostics,cosmeticsRank,
+        extraItems,extraMonth,extraError,extraDiagnostics,cosmeticsRank,cosmeticsItem,
         endpoint:got.endpoint,diagnostics:got.diagnostics,
         source:'관세청·공공데이터포털',
         extraSource:'관세청 품목별 수출입실적(GW) · HS 2단위 월간 통계'
