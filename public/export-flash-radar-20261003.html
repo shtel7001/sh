@@ -463,11 +463,11 @@ function renderTable(){
 function renderAll(){renderInfographic();renderExtraInfographic();renderSummary();renderTable()}
 function exportExcel(){
   if(!FILTERED.length)return;
-  const detail=[];FILTERED.forEach(r=>ITEM_KEYS.forEach(k=>{const m=r.metrics?.[k]||{};detail.push({발표일:r.releaseDate||r.date,집계구간:periodLabel(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}));
-  const extra=EXTRA_ITEMS.map(x=>({기준월:x.month,순위:x.rank,품목:String(x.hs2)==='33'?'향료·화장품 등(HS33)':x.name,'HS2':x.hs2,'수출액(천달러)':x.value,'Y/Y(%)':x.yoy,'M/M(%)':x.mom}));
-  const cosmetics=COSMETICS_ITEM?[{기준월:COSMETICS_ITEM.month,품목:'화장품(세부 HS 합산)','수출액(천달러)':COSMETICS_ITEM.value,'Y/Y(%)':COSMETICS_ITEM.yoy,'M/M(%)':COSMETICS_ITEM.mom,포함세번:(COSMETICS_ITEM.scope||[]).join(', ')}]:[];
+  const detail=[];FILTERED.forEach(r=>ITEM_KEYS.forEach(k=>{const m=r.metrics?.[k]||{};detail.push({발표일:r.releaseDate||r.date,집계구간:periodLabel(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'수출액(억달러)':Number.isFinite(Number(m.value))?Math.round((Number(m.value)/100000)*10)/10:null,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}));
+  const extra=EXTRA_ITEMS.map(x=>({기준월:x.month,순위:x.rank,품목:String(x.hs2)==='33'?'향료·화장품 등(HS33)':x.name,'HS2':x.hs2,'수출액(천달러)':x.value,'수출액(억달러)':Number.isFinite(Number(x.value))?Math.round((Number(x.value)/100000)*10)/10:null,'Y/Y(%)':x.yoy,'M/M(%)':x.mom}));
+  const cosmetics=COSMETICS_ITEM?[{기준월:COSMETICS_ITEM.month,품목:'화장품(세부 HS 합산)','수출액(천달러)':COSMETICS_ITEM.value,'수출액(억달러)':Number.isFinite(Number(COSMETICS_ITEM.value))?Math.round((Number(COSMETICS_ITEM.value)/100000)*10)/10:null,'Y/Y(%)':COSMETICS_ITEM.yoy,'M/M(%)':COSMETICS_ITEM.mom,포함세번:(COSMETICS_ITEM.scope||[]).join(', ')}]:[];
   const raw=FILTERED.map(r=>Object.assign({발표일:r.releaseDate,집계구간:periodLabel(r)},r.raw||{}));
-  const cfg=[{항목:'시작일',값:$('startDate').value},{항목:'종료일',값:$('endDate').value},{항목:'발표구간필터',값:$('cadence').options[$('cadence').selectedIndex].text},{항목:'원천',값:'관세청_수출 주요품목별 10일 단위 잠정치 통계'},{항목:'원자료단위',값:'천 달러'}];
+  const cfg=[{항목:'시작일',값:$('startDate').value},{항목:'종료일',값:$('endDate').value},{항목:'발표구간필터',값:$('cadence').options[$('cadence').selectedIndex].text},{항목:'원천',값:'관세청_수출 주요품목별 10일 단위 잠정치 통계'},{항목:'원자료단위',값:'천 달러'},{항목:'억달러변환',값:'천 달러 ÷ 100,000 = 억 달러'}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail),'주요품목10_증가율');if(cosmetics.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cosmetics),'화장품_세부HS합산');if(extra.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(extra),'HS_11_50위');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(raw),'관세청_원자료');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cfg),'조회설정');
   XLSX.writeFile(wb,'관세청_10일_수출실적_'+$('startDate').value+'_'+$('endDate').value+'.xlsx');
 }
