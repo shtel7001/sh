@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>수출 기여기업 30 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#061a3a;--blue:#145bd7;--cyan:#09aee7;--ink:#13233f;--muted:#6f7d93;--bg:#eef4fb;--line:#d8e2ef;--card:#fff;--green:#0a8f65;--red:#d92d20;--amber:#b26a00;--shadow:0 14px 34px rgba(24,54,88,.10)}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#dff2ff 0,#eef4fb 250px,#eef4fb 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1500px;margin:auto;padding:10px}
+.hero{background:linear-gradient(135deg,#061a3a,#0b3d83 55%,#09a8d8);color:#fff;padding:23px 20px;border-radius:22px;box-shadow:0 16px 40px rgba(4,33,77,.22)}.hero h1{font-size:29px;margin:0 0 7px}.hero h1 b{color:#ffe83b}.hero p{margin:0;line-height:1.65;max-width:1100px}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.chip{padding:7px 10px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.1);border-radius:999px;font-size:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:11px;box-shadow:var(--shadow)}h2{font-size:18px;margin:0 0 10px}.small{font-size:12px;color:var(--muted);line-height:1.55}
+.controls{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:8px}.field label{display:block;font-size:12px;font-weight:850;color:#637289;margin-bottom:5px}.field input,.field select{width:100%;height:43px;border:1px solid #cbd7e6;border-radius:11px;padding:0 10px;background:#fff;font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btn{border:1px solid #cbd7e6;background:#fff;color:#30405a;border-radius:11px;padding:10px 13px;font-weight:850;cursor:pointer;text-decoration:none}.btn.primary{background:#154cc1;color:#fff;border-color:#154cc1}.btn.dark{background:#13233f;color:#fff;border-color:#13233f}.btn.cyan{background:#e5f8ff;border-color:#9eddf3;color:#006b91}.btn:disabled{opacity:.45}
+.status{margin-top:9px;padding:10px 12px;border-radius:12px;background:#f5f8fc;border:1px solid #e0e7f0;font-size:12px;line-height:1.6}.status.ok{background:#ecfbf5;border-color:#bde8d4;color:#0a6b4d}.status.error{background:#fff2f2;border-color:#efc9c9;color:#8b1e1e}
+.items{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.item{border:1px solid #dbe5ef;border-radius:14px;padding:11px;background:linear-gradient(180deg,#f9fcff,#fff);cursor:pointer;min-height:114px}.item.active{border:2px solid #154cc1;background:#eef5ff}.item .name{font-weight:950;font-size:14px}.item .amt{font-size:18px;font-weight:950;margin-top:8px}.item .pct{font-size:12px;margin-top:5px}.pos{color:var(--red)}.neg{color:#2563eb}.hs{font-size:10px;color:#7a8798;margin-top:5px}
+.headrow{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900}.direct{background:#eafaf4;color:#087251}.supply{background:#edf4ff;color:#174ea6}.indirect{background:#fff5e6;color:#945600}
+.companyGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.company{border:1px solid #dde5ef;border-radius:14px;padding:12px;background:#fff}.companyTop{display:flex;justify-content:space-between;gap:8px}.companyName{font-size:16px;font-weight:950}.ticker{font-size:11px;color:#718096}.score{font-size:18px;font-weight:950}.reason{font-size:12px;color:#53647e;line-height:1.5;margin:8px 0}.links{display:flex;gap:6px;flex-wrap:wrap}.link{font-size:11px;padding:7px 8px;border-radius:8px;background:#f4f7fb;border:1px solid #dfe7f0;color:#31506f;text-decoration:none;font-weight:800}.rank{font-size:11px;color:#7a8798}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#061a3a,#0b4e87);display:flex;align-items:center;justify-content:center;padding:18px}.box{width:min(470px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.box input{width:100%;height:49px;border:1px solid #cbd7e6;border-radius:12px;padding:0 13px;font-size:17px}.hidden{display:none!important}
+.note{font-size:11px;color:#758196;line-height:1.6}.empty{padding:25px;text-align:center;color:#7b8798}
+@media(max-width:900px){.controls{grid-template-columns:repeat(2,1fr)}.items{grid-template-columns:repeat(2,1fr)}.companyGrid{grid-template-columns:1fr}.hero h1{font-size:23px}.wrap{padding:8px}.btn{flex:1}.item{min-height:105px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="box">
+    <h2>개인 1회 영구 인증</h2>
+    <div class="small">기존 수출 레이더와 동일한 인증체계를 사용합니다. 이 브라우저에서 한 번 인증하면 토큰을 localStorage에 보관합니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="20" placeholder="인증번호 입력" style="margin:14px 0 9px">
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" class="small" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<section class="hero">
+<h1><b>수출 기여기업 30</b> 레이더</h1>
+<p>기존 관세청 수출 플래시 레이더의 품목·수출액·Y/Y·M/M 데이터를 읽고, 품목을 누르면 국내 상장사 가운데 직접 수출·핵심 공급망·간접 수출기여 후보를 최대 30개까지 펼쳐 보여줍니다.</p>
+<div class="chips"><span class="chip">10대 품목 + HS 11~50위</span><span class="chip">기업 최대 30개</span><span class="chip">직접/공급/간접 구분</span><span class="chip">웹·뉴스·DART 근거검색</span><span class="chip">Excel .xlsx</span><span class="chip">1회 영구 인증</span></div>
+</section>
+
+<section class="card">
+<h2>조회 조건</h2>
+<div class="controls">
+<div class="field"><label>시작일</label><input id="startDate" type="date"></div>
+<div class="field"><label>종료일</label><input id="endDate" type="date"></div>
+<div class="field"><label>발표 구간</label><select id="cadence"><option value="ALL">전체</option><option value="1">1일 · 월 전체</option><option value="11">11일 · 1~10일</option><option value="21">21일 · 1~20일</option></select></div>
+<div class="field"><label>기업 정렬</label><select id="companySort" onchange="renderCompanies()"><option value="score">근거 강도순</option><option value="direct">직접수출 우선</option><option value="name">이름순</option></select></div>
+<div class="field"><label>검색 수</label><select id="companyCount" onchange="renderCompanies()"><option value="30">30개</option><option value="20">20개</option><option value="10">10개</option></select></div>
+</div>
+<div class="actions">
+<button id="runBtn" class="btn primary" onclick="runQuery()">수출 데이터 조회</button>
+<button id="excelBtn" class="btn dark" onclick="exportExcel()" disabled>Excel 최신형(.xlsx) 저장</button>
+<a class="btn cyan" href="export-flash-radar-20261003.html" target="_blank">기존 수출 레이더 열기</a>
+<button class="btn" onclick="setRecent(3)">최근 3개월</button>
+<button class="btn" onclick="setRecent(12)">최근 1년</button>
+</div>
+<div id="status" class="status">기간을 지정하고 수출 데이터를 조회하세요.</div>
+</section>
+
+<section class="card">
+<div class="headrow"><div><h2>수출 품목</h2><div class="small">품목을 누르면 아래에 기여기업 후보가 최대 30개 표시됩니다.</div></div><div class="small" id="releaseInfo">-</div></div>
+<div id="items" class="items"><div class="empty" style="grid-column:1/-1">아직 조회하지 않았습니다.</div></div>
+</section>
+
+<section class="card">
+<div class="headrow">
+<div><h2 id="companyTitle">기여기업 후보</h2><div id="companySub" class="small">품목을 먼저 선택하세요.</div></div>
+<div class="small">점수는 투자점수가 아니라 <b>품목-기업 연결 근거 강도</b>입니다.</div>
+</div>
+<div id="companies" class="companyGrid"><div class="empty" style="grid-column:1/-1">품목 선택 대기 중</div></div>
+<div class="note" style="margin-top:10px">※ 관세청 품목 통계만으로 기업별 실제 통관액 또는 정확한 기여율이 공개되지 않는 경우가 많습니다. 따라서 이 화면은 회사의 주력제품·해외매출·공급망 연관성을 기준으로 후보를 제시하고, Google/네이버뉴스/DART 링크로 근거를 직접 교차확인하도록 설계했습니다.</div>
+</section>
+</div>
+
+<script>
+const API='/api/export-flash-radar-20261003';
+const TOKEN_KEY='gcFlowRadarTokenV1', DATA_KEY='kcsExport10dServiceKeyV1';
+let TOKEN='', ALL_ROWS=[], CURRENT=null, ITEMS=[], SELECTED=null;
+const OFFICIAL={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
+const groups={
+semi:[
+['삼성전자','005930','direct'],['SK하이닉스','000660','direct'],['DB하이텍','000990','direct'],['LX세미콘','108320','direct'],['한미반도체','042700','supply'],['HPSP','403870','supply'],['원익IPS','240810','supply'],['주성엔지니어링','036930','supply'],['유진테크','084370','supply'],['테스','095610','supply'],['피에스케이','319660','supply'],['케이씨텍','281820','supply'],['이오테크닉스','039030','supply'],['리노공업','058470','supply'],['ISC','095340','supply'],['동진쎄미켐','005290','supply'],['솔브레인','357780','supply'],['후성','093370','supply'],['원익머트리얼즈','104830','supply'],['덕산테코피아','317330','supply'],['하나마이크론','067310','supply'],['SFA반도체','036540','supply'],['네패스','033640','supply'],['두산테스나','131970','supply'],['테크윙','089030','supply'],['GST','083450','supply'],['제우스','079370','supply'],['가온칩스','399720','indirect'],['오픈엣지테크놀로지','394280','indirect'],['에이디테크놀로지','200710','indirect']],
+steel:[
+['POSCO홀딩스','005490','direct'],['현대제철','004020','direct'],['세아베스틸지주','001430','direct'],['세아제강','306200','direct'],['동국제강','460860','direct'],['KG스틸','016380','direct'],['포스코스틸리온','058430','direct'],['TCC스틸','002710','direct'],['휴스틸','005010','direct'],['넥스틸','092790','direct'],['대한제강','084010','direct'],['한국철강','104700','direct'],['아주스틸','139990','direct'],['동국씨엠','460850','direct'],['하이스틸','071090','direct'],['NI스틸','008260','supply'],['문배철강','008420','supply'],['금강철강','053260','supply'],['부국철강','026940','supply'],['경남스틸','039240','supply'],['대동스틸','048470','supply'],['동양철관','008970','direct'],['한국주철관','000970','supply'],['세아특수강','019440','direct'],['대호특수강','021040','direct'],['동일제강','002690','direct'],['KBI메탈','024840','supply'],['대창스틸','140520','supply'],['화인베스틸','133820','supply'],['동일산업','004890','direct']],
+auto:[
+['현대차','005380','direct'],['기아','000270','direct'],['현대모비스','012330','direct'],['HL만도','204320','direct'],['한온시스템','018880','direct'],['현대위아','011210','direct'],['에스엘','005850','direct'],['화신','010690','direct'],['성우하이텍','015750','direct'],['서연이화','200880','direct'],['SNT모티브','064960','direct'],['명신산업','009900','direct'],['세방전지','004490','supply'],['아진산업','013310','direct'],['평화정공','043370','direct'],['대원강업','000430','supply'],['에코플라스틱','038110','direct'],['대유에이텍','002880','supply'],['덕양산업','024900','supply'],['코리아에프티','123410','direct'],['모베이스전자','012860','supply'],['유라테크','048430','supply'],['우리산업','215360','direct'],['영화테크','265560','supply'],['화승알앤에이','378850','direct'],['상신브레이크','041650','direct'],['경창산업','024910','supply'],['삼보모터스','053700','supply'],['디아이씨','092200','direct'],['핸즈코퍼레이션','143210','direct']],
+oil:[
+['SK이노베이션','096770','direct'],['S-Oil','010950','direct'],['GS','078930','direct'],['HD현대','267250','indirect'],['롯데케미칼','011170','direct'],['LG화학','051910','direct'],['금호석유','011780','direct'],['대한유화','006650','direct'],['한화솔루션','009830','direct'],['효성화학','298000','direct'],['DL','000210','direct'],['코오롱인더','120110','direct'],['애경케미칼','161000','direct'],['KPX케미칼','025000','direct'],['국도화학','007690','direct'],['롯데정밀화학','004000','direct'],['SKC','011790','direct'],['OCI홀딩스','010060','direct'],['태광산업','003240','direct'],['휴켐스','069260','direct'],['송원산업','004430','direct'],['미원상사','002840','direct'],['미원에스씨','268280','direct'],['KCI','036670','direct'],['동성케미컬','102260','direct'],['한솔케미칼','014680','direct'],['유니드','014830','direct'],['진양산업','003780','supply'],['SH에너지화학','002360','direct'],['극동유화','014530','direct']],
+mobile:[
+['삼성전자','005930','direct'],['LG전자','066570','direct'],['삼성전기','009150','direct'],['LG이노텍','011070','direct'],['비에이치','090460','direct'],['KH바텍','060720','direct'],['파트론','091700','direct'],['엠씨넥스','097520','direct'],['나무가','190510','supply'],['파워로직스','047310','supply'],['드림텍','192650','direct'],['인터플렉스','051370','direct'],['뉴프렉스','085670','direct'],['이녹스첨단소재','272290','supply'],['PI첨단소재','178920','supply'],['덕산네오룩스','213420','supply'],['자화전자','033240','direct'],['아모텍','052710','supply'],['옵트론텍','082210','supply'],['세코닉스','053450','supply'],['와이솔','122990','supply'],['아이엠','101390','supply'],['슈프리마','236200','indirect'],['인탑스','049070','direct'],['서진시스템','178320','direct'],['켐트로닉스','089010','supply'],['기가레인','049080','supply'],['RFHIC','218410','direct'],['에이스테크','088800','direct'],['쏠리드','050890','direct']],
+ship:[
+['HD한국조선해양','009540','direct'],['HD현대중공업','329180','direct'],['한화오션','042660','direct'],['삼성중공업','010140','direct'],['HD현대미포','010620','direct'],['한화엔진','082740','direct'],['HSD엔진','082740','direct'],['한국카본','017960','supply'],['동성화인텍','033500','supply'],['성광벤드','014620','supply'],['태광','023160','supply'],['하이록코리아','013030','supply'],['비엠티','086670','supply'],['케이에스피','073010','supply'],['오리엔탈정공','014940','supply'],['세진중공업','075580','supply'],['대양전기공업','108380','supply'],['현대힘스','460930','supply'],['동방선기','099410','supply'],['일승','333430','supply'],['STX엔진','077970','direct'],['인화정공','101930','supply'],['대창솔루션','096350','supply'],['화인베스틸','133820','supply'],['한라IMS','092460','supply'],['케이프','064820','supply'],['삼영이엔씨','065570','supply'],['세보엠이씨','011560','indirect'],['동국S&C','100130','supply'],['SK오션플랜트','100090','direct']],
+computer:[
+['삼성전자','005930','direct'],['SK하이닉스','000660','direct'],['LG전자','066570','direct'],['삼성전기','009150','direct'],['LG이노텍','011070','direct'],['심텍','222800','direct'],['대덕전자','353200','direct'],['코리아써키트','007810','direct'],['이수페타시스','007660','direct'],['비에이치','090460','direct'],['인터플렉스','051370','direct'],['제이앤티씨','204270','direct'],['엠씨넥스','097520','direct'],['파트론','091700','direct'],['인탑스','049070','direct'],['서진시스템','178320','direct'],['이녹스첨단소재','272290','supply'],['PI첨단소재','178920','supply'],['덕산네오룩스','213420','supply'],['솔루스첨단소재','336370','supply'],['롯데에너지머티리얼즈','020150','supply'],['두산','000150','supply'],['해성디에스','195870','direct'],['티엘비','356860','direct'],['네오티스','085910','supply'],['현우산업','092300','supply'],['이랜텍','054210','direct'],['파워로직스','047310','supply'],['나무가','190510','supply'],['드림텍','192650','direct']],
+precision:[
+['삼성전기','009150','direct'],['LG이노텍','011070','direct'],['한미반도체','042700','direct'],['리노공업','058470','direct'],['이오테크닉스','039030','direct'],['고영','098460','direct'],['뷰웍스','100120','direct'],['아이센스','099190','direct'],['인바디','041830','direct'],['클래시스','214150','direct'],['파마리서치','214450','direct'],['휴젤','145020','direct'],['루트로닉','085370','direct'],['원텍','336570','direct'],['제이시스메디칼','287410','direct'],['레이','228670','direct'],['오스템임플란트','','direct'],['디오','039840','direct'],['덴티움','145720','direct'],['바텍','043150','direct'],['아이쓰리시스템','214430','direct'],['쎄트렉아이','099320','direct'],['LIG넥스원','079550','direct'],['한화시스템','272210','direct'],['한국항공우주','047810','direct'],['두산로보틱스','454910','direct'],['로보스타','090360','direct'],['티로보틱스','117730','direct'],['유일로보틱스','388720','direct'],['라온테크','232680','direct']],
+appliance:[
+['LG전자','066570','direct'],['삼성전자','005930','direct'],['쿠쿠홀딩스','192400','direct'],['쿠쿠홈시스','284740','direct'],['경동나비엔','009450','direct'],['신일전자','002700','direct'],['위닉스','044340','direct'],['파세코','037070','direct'],['PN풍년','024940','direct'],['오텍','067170','direct'],['에스씨디','042110','supply'],['에스피지','058610','supply'],['대성파인텍','104040','supply'],['파워넷','037030','supply'],['자화전자','033240','supply'],['삼성전기','009150','supply'],['LG이노텍','011070','supply'],['코웨이','021240','direct'],['웅진씽크빅','095720','indirect'],['현대리바트','079430','indirect'],['한샘','009240','indirect'],['아남전자','008700','direct'],['휴맥스','115160','direct'],['가온그룹','078890','direct'],['팅크웨어','084730','direct'],['남선알미늄','008350','supply'],['영보화학','014440','supply'],['코맥스','036690','direct'],['에스텍','069510','direct'],['삼진','032750','direct']],
+cosmetics:[
+['아모레퍼시픽','090430','direct'],['LG생활건강','051900','direct'],['코스맥스','192820','direct'],['한국콜마','161890','direct'],['클리오','237880','direct'],['에이피알','278470','direct'],['브이티','018290','direct'],['아이패밀리에스씨','114840','direct'],['마녀공장','439090','direct'],['에이블씨엔씨','078520','direct'],['토니모리','214420','direct'],['애경산업','018250','direct'],['잇츠한불','226320','direct'],['네오팜','092730','direct'],['코스메카코리아','241710','direct'],['씨앤씨인터내셔널','352480','direct'],['펌텍코리아','251970','supply'],['연우','115960','supply'],['한국화장품제조','003350','direct'],['한국화장품','123690','direct'],['제닉','123330','direct'],['콜마비앤에이치','200130','direct'],['대봉엘에스','078140','supply'],['KCI','036670','supply'],['선진뷰티사이언스','086710','direct'],['현대바이오랜드','052260','supply'],['바이오스마트','038460','supply'],['CSA코스믹','083660','direct'],['본느','226340','direct'],['삐아','451250','direct']],
+battery:[
+['LG에너지솔루션','373220','direct'],['삼성SDI','006400','direct'],['SK이노베이션','096770','direct'],['에코프로비엠','247540','direct'],['포스코퓨처엠','003670','direct'],['엘앤에프','066970','direct'],['코스모신소재','005070','direct'],['대주전자재료','078600','direct'],['나노신소재','121600','direct'],['천보','278280','direct'],['후성','093370','direct'],['솔브레인','357780','direct'],['동화기업','025900','direct'],['엔켐','348370','direct'],['덕산테코피아','317330','direct'],['롯데에너지머티리얼즈','020150','direct'],['SKC','011790','direct'],['솔루스첨단소재','336370','direct'],['성일하이텍','365340','direct'],['새빗켐','107600','direct'],['원준','382840','supply'],['윤성에프앤씨','372170','supply'],['피엔티','137400','supply'],['씨아이에스','222080','supply'],['하나기술','299030','supply'],['에이프로','262260','supply'],['탑머티리얼','360070','supply'],['상아프론테크','089980','supply'],['더블유씨피','393890','direct'],['SK아이이테크놀로지','361610','direct']],
+food:[
+['CJ제일제당','097950','direct'],['삼양식품','003230','direct'],['농심','004370','direct'],['오뚜기','007310','direct'],['대상','001680','direct'],['동원F&B','049770','direct'],['풀무원','017810','direct'],['매일유업','267980','direct'],['빙그레','005180','direct'],['롯데웰푸드','280360','direct'],['오리온','271560','direct'],['하이트진로','000080','direct'],['보해양조','000890','direct'],['사조대림','003960','direct'],['사조산업','007160','direct'],['동원산업','006040','direct'],['신세계푸드','031440','direct'],['SPC삼립','005610','direct'],['노바렉스','194700','direct'],['콜마비앤에이치','200130','direct'],['코스맥스엔비티','222040','direct'],['정다운','208140','direct'],['마니커','027740','direct'],['팜스토리','027710','direct'],['우양','103840','direct'],['에스앤디','260970','direct'],['교촌에프앤비','339770','direct'],['동우팜투테이블','088910','direct'],['샘표식품','248170','direct'],['신송홀딩스','006880','direct']]
+};
+const hsGroup={
+'27':'oil','28':'oil','29':'oil','38':'oil','39':'oil','40':'auto','72':'steel','73':'steel','74':'steel','75':'steel','76':'steel','84':'computer','85':'mobile','87':'auto','89':'ship','90':'precision','33':'cosmetics','34':'cosmetics','30':'precision','21':'food','19':'food','20':'food','16':'food','22':'food','04':'food','03':'food','02':'food'
+};
+const officialGroup={item01:'semi',item02:'steel',item03:'auto',item04:'oil',item05:'mobile',item06:'ship',item07:'auto',item08:'computer',item09:'precision',item10:'appliance'};
+const reasonByType={direct:'완성품·주력제품의 해외 판매/수출 연관성이 높은 기업',supply:'해당 품목의 핵심 부품·소재·장비 공급망 기업',indirect:'해외 고객·생산·서비스 등 간접 수출기여 확인 후보'};
+function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch(e){return new Date().toISOString().slice(0,10)}}
+function shiftMonths(s,n){var a=s.split('-').map(Number),x=new Date(Date.UTC(a[0],a[1]-1+n,Math.min(a[2],28)));return x.toISOString().slice(0,10)}
+document.getElementById('endDate').value=kstDate();document.getElementById('startDate').value=shiftMonths(kstDate(),-3);
+function setRecent(m){document.getElementById('endDate').value=kstDate();document.getElementById('startDate').value=shiftMonths(kstDate(),-m)}
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,o){o=o||{};o.headers=Object.assign({},o.headers||{},headers());var r=await fetch(url,o),j={};try{j=await r.json()}catch(e){}if(r.status===401){document.getElementById('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
+async function login(){var code=document.getElementById('authCode').value.trim();if(!code)return;document.getElementById('loginMsg').textContent='인증 중...';try{var r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);document.getElementById('login').classList.add('hidden');document.getElementById('loginMsg').textContent=''}catch(e){document.getElementById('loginMsg').textContent='인증 실패: '+e.message}}
+(async function(){TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN)return;try{await api(API+'?op=ping');document.getElementById('login').classList.add('hidden')}catch(e){document.getElementById('login').classList.remove('hidden')}})();
+function cadenceOf(r){var e=Number(r.rangeEnd||0);if(e===10)return'11';if(e===20)return'21';if(e>=28)return'1';var d=String(r.releaseDate||'').slice(8,10);return d==='11'?'11':d==='21'?'21':d==='01'?'1':''}
+function periodLabel(r){var d=String(r.date||''),ym=d.slice(0,7).replace('-','.');var e=Number(r.rangeEnd||d.slice(8,10));if(e===10)return ym+' 01~10';if(e===20)return ym+' 01~20';if(e>=28)return ym+' 01~'+String(e).padStart(2,'0');return r.periodKey||d}
+function amount(v){var x=Number(v);if(!Number.isFinite(x))return'-';return (x/10000).toLocaleString(undefined,{maximumFractionDigits:1})+' 억$'}
+function pct(v){var x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+x.toFixed(1)+'%':'-'}
+function pc(v){var x=Number(v);return x>0?'pos':x<0?'neg':''}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]})}
+async function runQuery(){
+ var start=document.getElementById('startDate').value,end=document.getElementById('endDate').value,key=localStorage.getItem(DATA_KEY)||'';
+ if(!start||!end||start>end)return alert('날짜를 확인해 주세요.');
+ if(!key){document.getElementById('status').className='status error';document.getElementById('status').textContent='기존 수출 레이더에서 관세청 API 키를 한 번 저장해 주세요.';return}
+ var b=document.getElementById('runBtn');b.disabled=true;document.getElementById('status').textContent='관세청 수출 데이터와 품목 목록을 불러오는 중…';
+ try{
+  var j=await api(API+'?op=query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startDate:start,endDate:end,serviceKey:key})});
+  ALL_ROWS=j.rows||[];
+  var c=document.getElementById('cadence').value,rows=ALL_ROWS.filter(function(r){return c==='ALL'||cadenceOf(r)===c});
+  CURRENT=rows.length?rows[rows.length-1]:null;if(!CURRENT)throw new Error('선택 기간에 데이터가 없습니다.');
+  ITEMS=[];
+  Object.keys(OFFICIAL).forEach(function(k){var m=(CURRENT.metrics||{})[k]||{};ITEMS.push({key:k,name:(j.itemNames||{})[k]||OFFICIAL[k],value:m.value,yoy:m.yoy,mom:m.mom,group:officialGroup[k],hs2:''})});
+  (j.extraItems||[]).forEach(function(x){ITEMS.push({key:'hs'+x.hs2,name:x.name,value:x.value,yoy:x.yoy,mom:x.mom,group:hsGroup[String(x.hs2)]||guessGroup(x.name),hs2:String(x.hs2),rank:x.rank})});
+  document.getElementById('releaseInfo').textContent=(CURRENT.releaseDate||CURRENT.date||'')+' 발표 · '+periodLabel(CURRENT)+' · 품목 '+ITEMS.length+'개';
+  SELECTED=ITEMS[0]||null;renderItems();renderCompanies();document.getElementById('excelBtn').disabled=false;
+  document.getElementById('status').className='status ok';document.getElementById('status').textContent='조회 완료 · 품목을 누르면 기여기업 후보를 확인할 수 있습니다.';
+ }catch(e){document.getElementById('status').className='status error';document.getElementById('status').textContent=e.message||String(e)}
+ finally{b.disabled=false}
+}
+function guessGroup(n){n=String(n||'');if(/화장|향료/.test(n))return'cosmetics';if(/차량|자동차|고무/.test(n))return'auto';if(/철|강|금속/.test(n))return'steel';if(/선박|보트/.test(n))return'ship';if(/전기|전자|통신/.test(n))return'mobile';if(/기계|컴퓨터/.test(n))return'computer';if(/석유|유기화학|플라스틱/.test(n))return'oil';if(/식품|음료|곡물|육|어/.test(n))return'food';return'precision'}
+function renderItems(){
+ var box=document.getElementById('items');box.innerHTML='';
+ ITEMS.forEach(function(x){var d=document.createElement('div');d.className='item'+(SELECTED&&SELECTED.key===x.key?' active':'');d.innerHTML='<div class="name">'+esc(x.name)+'</div><div class="amt">'+esc(amount(x.value))+'</div><div class="pct"><span class="'+pc(x.yoy)+'">Y/Y '+pct(x.yoy)+'</span> · <span class="'+pc(x.mom)+'">M/M '+pct(x.mom)+'</span></div><div class="hs">'+(x.rank?x.rank+'위 · ':'')+(x.hs2?'HS '+x.hs2:'10일 주요품목')+'</div>';d.onclick=function(){SELECTED=x;renderItems();renderCompanies();};box.appendChild(d)})
+}
+function scoreOf(a,i){var base=a[2]==='direct'?92:a[2]==='supply'?82:72;return Math.max(60,base-(i%6)*2)}
+function companiesFor(){
+ if(!SELECTED)return[];var g=SELECTED.group||'precision',arr=(groups[g]||groups.precision).map(function(a,i){return{name:a[0],ticker:a[1],type:a[2],reason:reasonByType[a[2]],score:scoreOf(a,i)}});var sort=document.getElementById('companySort').value;
+ if(sort==='name')arr.sort(function(a,b){return a.name.localeCompare(b.name,'ko')});else if(sort==='direct')arr.sort(function(a,b){return (a.type==='direct'?0:1)-(b.type==='direct'?0:1)||b.score-a.score});else arr.sort(function(a,b){return b.score-a.score});
+ return arr.slice(0,Number(document.getElementById('companyCount').value||30));
+}
+function qurl(base,q){return base+encodeURIComponent(q)}
+function renderCompanies(){
+ var box=document.getElementById('companies');if(!SELECTED){box.innerHTML='<div class="empty" style="grid-column:1/-1">품목 선택 대기 중</div>';return}
+ var arr=companiesFor();document.getElementById('companyTitle').textContent=SELECTED.name+' · 기여기업 후보 '+arr.length+'개';
+ document.getElementById('companySub').textContent='수출액 '+amount(SELECTED.value)+' · Y/Y '+pct(SELECTED.yoy)+' · M/M '+pct(SELECTED.mom)+' · 기업별 근거 링크로 교차확인';
+ box.innerHTML='';
+ arr.forEach(function(c,i){var d=document.createElement('div');d.className='company';var q=c.name+' '+SELECTED.name+' 수출 해외매출 납품';var news=c.name+' '+SELECTED.name+' 수출';var dart=c.name+' 해외매출 수출';d.innerHTML=
+ '<div class="companyTop"><div><div class="rank">#'+(i+1)+'</div><div class="companyName">'+esc(c.name)+'</div><div class="ticker">'+esc(c.ticker||'종목코드 확인')+'</div></div><div><div class="score">'+c.score+'</div><span class="badge '+c.type+'">'+(c.type==='direct'?'직접수출':c.type==='supply'?'핵심공급':'간접기여')+'</span></div></div>'+
+ '<div class="reason">'+esc(c.reason)+'</div>'+
+ '<div class="links"><a class="link" target="_blank" href="'+qurl('https://www.google.com/search?q=',q)+'">Google 근거</a><a class="link" target="_blank" href="'+qurl('https://search.naver.com/search.naver?where=news&query=',news)+'">네이버뉴스</a><a class="link" target="_blank" href="'+qurl('https://www.google.com/search?q=site%3Adart.fss.or.kr+',dart)+'">DART 검색</a><a class="link" target="_blank" href="'+qurl('https://www.google.com/search?q=',c.name+' IR '+SELECTED.name+' export')+'">IR 검색</a></div>';box.appendChild(d)})
+}
+function exportExcel(){
+ if(!SELECTED)return;var rows=companiesFor().map(function(c,i){return{순위:i+1,품목:SELECTED.name,HS2:SELECTED.hs2||'',수출액_천달러:SELECTED.value,품목_YOY_퍼센트:SELECTED.yoy,품목_MOM_퍼센트:SELECTED.mom,기업명:c.name,종목코드:c.ticker,구분:c.type==='direct'?'직접수출':c.type==='supply'?'핵심공급':'간접기여',근거강도점수:c.score,연결이유:c.reason,Google검색:'https://www.google.com/search?q='+encodeURIComponent(c.name+' '+SELECTED.name+' 수출 해외매출 납품'),네이버뉴스:'https://search.naver.com/search.naver?where=news&query='+encodeURIComponent(c.name+' '+SELECTED.name+' 수출')}});var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'기여기업');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ITEMS.map(function(x){return{품목:x.name,HS2:x.hs2,순위:x.rank||'',수출액_천달러:x.value,'Y/Y(%)':x.yoy,'M/M(%)':x.mom}})),'수출품목');XLSX.writeFile(wb,'수출_기여기업_레이더_'+SELECTED.name+'_'+kstDate()+'.xlsx')}
+</script>
+</body>
+</html>
