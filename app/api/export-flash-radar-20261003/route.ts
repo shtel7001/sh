@@ -271,12 +271,14 @@ async function fetchItemtradeFull(key:string,startYm:string,endYm:string,hs2='')
   if(declaredTotal>0 && all.length>=declaredTotal){
     return {rows:all,pages:1,totalCount:declaredTotal,pagingMode:'paged'};
   }
-  // If the gateway returns fewer than the requested page size and has no larger declared total,
-  // this is already the complete response.
-  if(first.items.length<pageSize && !(declaredTotal>first.items.length)){
-    return {rows:all,pages:1,totalCount:declaredTotal||all.length,pagingMode:first.pageNo||first.numOfRows?'paged':'single-response'};
+  const hasPagingMeta=Boolean(first.pageNo||first.numOfRows||declaredTotal);
+  // With explicit paging metadata, a short first page is complete. Without metadata,
+  // probe page 2 because some gateways silently cap rows even when numOfRows is ignored.
+  if(hasPagingMeta && first.items.length<pageSize && !(declaredTotal>first.items.length)){
+    return {rows:all,pages:1,totalCount:declaredTotal||all.length,pagingMode:'paged'};
   }
 
+  const effectivePageSize=Number(first.numOfRows||0)>0?Number(first.numOfRows):Math.max(1,Math.min(pageSize,first.items.length||pageSize));
   let pages=1,lastFirstSig=first.items.length?rowSig(first.items[0]):'';
   for(let page=2;page<=maxPages;page++){
     const p=await fetchItemtradePage(key,startYm,endYm,hs2,page,pageSize,true);
@@ -294,7 +296,7 @@ async function fetchItemtradeFull(key:string,startYm:string,endYm:string,hs2='')
     const added=add(p.items);pages++;
     if(!added)break;
     if(declaredTotal>0 && all.length>=declaredTotal)break;
-    if(p.items.length<pageSize)break;
+    if(p.items.length<effectivePageSize)break;
     lastFirstSig=firstSig;
   }
   return {rows:all,pages,totalCount:declaredTotal||all.length,pagingMode:'paged'};
