@@ -253,7 +253,8 @@ function renderCosmeticsCard(){
     st.className='extraStatus error';return;
   }
   const x=COSMETICS_ITEM,max=Math.max(10,Math.abs(Number(x.yoy)||0),Math.abs(Number(x.mom)||0));
-  st.textContent=EXTRA_MONTH+' 월 기준 · 실제 화장품 세부 HS 합산 · HS33 전체와 별도';
+  const cw=Array.isArray(EXTRA_DIAGNOSTICS?.cosmeticsWindows)?EXTRA_DIAGNOSTICS.cosmeticsWindows.length:0;
+  st.textContent=EXTRA_MONTH+' 월 기준 · 실제 화장품 세부 HS 합산 · HS33 전체와 별도'+(cw?(' · 1년 제한 자동분할 '+cw+'구간'):'');
   st.className='extraStatus';
   const d=document.createElement('div');d.className='metric cosmeticsMetric';d.setAttribute('role','button');d.setAttribute('tabindex','0');
   d.setAttribute('aria-label','화장품 세부 HS 합산 최근 24개월 월별 증가율 보기');
@@ -275,7 +276,8 @@ function renderExtraInfographic(){
   if(!EXTRA_ITEMS.length){
     let msg='HS 11~50위 데이터를 불러오지 못했습니다.';
     if(EXTRA_ERROR){
-      if(/PERMISSION|ACCESS_DENIED|SERVICE_KEY|403|ITEMTRADE/i.test(EXTRA_ERROR))msg='품목별 수출입실적(GW) API 활용신청 승인이 필요할 수 있습니다. 위의 ‘품목별 API 활용신청’을 눌러 승인 후 다시 조회해 주세요.';
+      if(/ITEMTRADE_ERROR::99|1년이내|조회기간/i.test(EXTRA_ERROR))msg='관세청의 1년 조회 제한 오류가 남아 있습니다. 새 버전은 12개월 이하로 자동 분할하므로 페이지를 새로고침한 뒤 다시 조회해 주세요.';
+      else if(/PERMISSION|ACCESS_DENIED|SERVICE_KEY|403/i.test(EXTRA_ERROR))msg='품목별 수출입실적(GW) API 권한을 확인해 주세요. 활용신청 승인 직후에는 반영까지 잠시 걸릴 수 있습니다.';
       else msg+=' '+EXTRA_ERROR.slice(0,180);
     }
     st.textContent=msg;st.className='extraStatus error';
