@@ -10,12 +10,35 @@ export const maxDuration = 60;
 const SCOPE = 'gc-flow-accumulation-radar-20261002-v1';
 const ACCESS_CODE_HASH = '696db21cbff09ada1a61dce8499bd5de35f5f8a7f68a90ac294e091a131ca70f';
 const BASE = 'https://apis.data.go.kr/1220000/prlstMmUtPrviExpAcrs';
+const ITEMTRADE_ENDPOINT = 'https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList';
 const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
 
 const ITEM_NAMES:any = {
   item01:'반도체', item02:'철강제품', item03:'승용차', item04:'석유제품',
   item05:'무선통신기기', item06:'선박', item07:'자동차부품',
   item08:'컴퓨터 주변기기', item09:'정밀기기', item10:'가전제품'
+};
+
+const HS2_NAMES:any = {
+  '01':'살아있는 동물','02':'육류','03':'수산물','04':'낙농품·조란·천연꿀','05':'기타 동물성 생산품',
+  '06':'화훼류','07':'채소','08':'과실·견과류','09':'커피·차·향신료','10':'곡물',
+  '11':'제분공업 생산품','12':'채유용 종자·약용식물','13':'수액·식물성 추출물','14':'기타 식물성 생산품','15':'동식물성 유지',
+  '16':'육·어류 조제품','17':'당류·설탕과자','18':'코코아·초콜릿','19':'곡물·전분 조제품','20':'채소·과실 조제품',
+  '21':'기타 조제식료품','22':'음료·주류','23':'식품공업 잔재물·사료','24':'담배','25':'토석류·시멘트 원료',
+  '26':'광·슬래그·회','27':'광물성연료·석유제품','28':'무기화학품','29':'유기화학품','30':'의약품',
+  '31':'비료','32':'염료·안료·페인트','33':'향료·화장품','34':'비누·세제·왁스','35':'단백질계 물질·효소',
+  '36':'화약류','37':'사진·영화용 재료','38':'기타 화학공업제품','39':'플라스틱·제품','40':'고무·제품',
+  '41':'원피·가죽','42':'가죽제품·가방','43':'모피·제품','44':'목재·목제품','45':'코르크·제품',
+  '46':'짚·조물제품','47':'펄프','48':'종이·판지','49':'인쇄물','50':'견',
+  '51':'양모·동물모','52':'면','53':'기타 식물성 방직섬유','54':'인조필라멘트','55':'인조스테이플섬유',
+  '56':'워딩·펠트·부직포','57':'양탄자','58':'특수직물','59':'도포직물','60':'편물',
+  '61':'의류(편물)','62':'의류(비편물)','63':'기타 섬유제품','64':'신발','65':'모자',
+  '66':'우산·지팡이','67':'깃털·조화·인조모발','68':'석재·플라스터·시멘트제품','69':'도자제품','70':'유리·유리제품',
+  '71':'귀금속·보석류','72':'철강','73':'철강제품','74':'구리·제품','75':'니켈·제품',
+  '76':'알루미늄·제품','78':'납·제품','79':'아연·제품','80':'주석·제품','81':'기타 비금속',
+  '82':'공구·칼붙이','83':'각종 비금속제품','84':'기계·컴퓨터','85':'전기기기·전자제품','86':'철도차량',
+  '87':'자동차·차량','88':'항공기·우주선','89':'선박','90':'광학·정밀·의료기기','91':'시계',
+  '92':'악기','93':'무기·탄약','94':'가구·조명기구','95':'완구·스포츠용품','96':'잡품','97':'예술품·골동품'
 };
 
 function secret(){ return process.env.SESSION_SECRET || ''; }
@@ -172,6 +195,117 @@ async function callUrl(url:string){
     return {ok:r.ok,status:r.status,text};
   }finally{clearTimeout(t);}
 }
+
+function ymOffset(ym:string,delta:number){
+  const s=String(ym||'').replace(/\D/g,'').slice(0,6), y=Number(s.slice(0,4)),m=Number(s.slice(4,6));
+  if(!y||!m)return '';
+  const d=new Date(Date.UTC(y,m-1+delta,1));
+  return String(d.getUTCFullYear())+String(d.getUTCMonth()+1).padStart(2,'0');
+}
+function ymFromDate(s:string){return String(s||'').slice(0,7).replace('-','');}
+function displayYm(ym:string){const s=String(ym||'').replace(/\D/g,'').slice(0,6);return s.length===6?s.slice(0,4)+'-'+s.slice(4,6):'';}
+async function callUrlLong(url:string,ms=26000){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+  try{
+    const r=await fetch(url,{signal:c.signal,cache:'no-store',headers:{'User-Agent':UA,'Accept':'application/xml,text/xml,text/plain,*/*'}});
+    const text=await r.text();
+    return {ok:r.ok,status:r.status,text};
+  }finally{clearTimeout(t);}
+}
+function hsCodeOf(o:any){return String(o.hsCode??o.hsCd??o.hsSgn??'').replace(/\D/g,'');}
+function yearYmOf(o:any){
+  const s=String(o.year??o.priodMon??o.periodMon??'').replace(/\D/g,'').slice(0,6);
+  return /^20\d{4}$/.test(s)?s:'';
+}
+function expDlrOf(o:any){return n(o.expDlr??o.expUsdAmt??o.exportDlr??o.expAmt);}
+async function fetchItemtrade(key:string,startYm:string,endYm:string,hs2=''){
+  const serviceKey=cleanKey(key); if(!serviceKey)throw new Error('DATA_GO_KR_KEY_REQUIRED');
+  const q=new URLSearchParams({serviceKey,strtYymm:startYm,endYymm:endYm});
+  if(hs2)q.set('hsSgn',hs2);
+  const url=ITEMTRADE_ENDPOINT+'?'+q.toString();
+  const r=await callUrlLong(url,hs2?18000:30000);
+  const err=apiError(r.text);
+  if(!r.ok)throw new Error('ITEMTRADE_HTTP_'+r.status+'::'+(err||r.text.slice(0,400)));
+  if(err)throw new Error('ITEMTRADE_ERROR::'+err);
+  return xmlObjects(r.text);
+}
+function aggregateHs2(raw:any[],ym:string){
+  const sums:any={};
+  for(const o of raw){
+    if(yearYmOf(o)!==ym)continue;
+    const hs=hsCodeOf(o); if(!/^\d{2,10}$/.test(hs))continue;
+    const code=hs.slice(0,2),v=expDlrOf(o); if(v===null)continue;
+    sums[code]=(sums[code]||0)+Number(v);
+  }
+  return sums;
+}
+function aggregateSeriesForHs2(raw:any[],hs2:string){
+  const exact=raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o)===hs2);
+  const src=exact.length?exact:raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o).startsWith(hs2));
+  const sums:any={};
+  for(const o of src){const ym=yearYmOf(o),v=expDlrOf(o);if(!ym||v===null)continue;sums[ym]=(sums[ym]||0)+Number(v);}
+  return sums;
+}
+async function fetchExtraTop20(key:string,endDate:string){
+  let latestYm=ymOffset(ymFromDate(endDate),-1), latestRaw:any[]=[];
+  for(let i=0;i<3;i++){
+    const ym=ymOffset(latestYm,-i);
+    const raw=await fetchItemtrade(key,ym,ym);
+    const snap=aggregateHs2(raw,ym);
+    if(Object.keys(snap).length){latestYm=ym;latestRaw=raw;break;}
+  }
+  if(!latestRaw.length)throw new Error('ITEMTRADE_NO_LATEST_MONTH');
+  const prevYm=ymOffset(latestYm,-1), prevYearYm=ymOffset(latestYm,-12);
+  const [prevRaw,yearRaw]=await Promise.all([
+    fetchItemtrade(key,prevYm,prevYm),
+    fetchItemtrade(key,prevYearYm,prevYearYm)
+  ]);
+  const cur=aggregateHs2(latestRaw,latestYm),prev=aggregateHs2(prevRaw,prevYm),yr=aggregateHs2(yearRaw,prevYearYm);
+  const ranked=Object.entries(cur)
+    .filter(([code,v]:any)=>Number(v)>0 && Number(code)>=1 && Number(code)<=97)
+    .sort((a:any,b:any)=>Number(b[1])-Number(a[1]));
+  const items=ranked.slice(10,20).map(([code,value]:any,i:number)=>{
+    const pv=Number(prev[code]||0),yv=Number(yr[code]||0),v=Number(value);
+    return {
+      key:'hs'+code,hs2:code,rank:11+i,name:HS2_NAMES[code]||('HS '+code),
+      month:displayYm(latestYm),value:v/1000,
+      yoy:yv?Math.round(((v/yv)-1)*1000)/10:null,
+      mom:pv?Math.round(((v/pv)-1)*1000)/10:null
+    };
+  });
+  return {month:displayYm(latestYm),items};
+}
+async function fetchExtraTrend(key:string,hs2:string,endDate:string){
+  const endYm=ymOffset(ymFromDate(endDate),-1);
+  const startYm=ymOffset(endYm,-35);
+  const windows:any[]=[];
+  let s=startYm;
+  while(s<=endYm){
+    const eCandidate=ymOffset(s,11),e=eCandidate>endYm?endYm:eCandidate;
+    windows.push([s,e]); s=ymOffset(e,1);
+  }
+  const chunks=await Promise.all(windows.map(([a,b])=>fetchItemtrade(key,a,b,hs2)));
+  const sums:any={};
+  for(const raw of chunks){
+    const part=aggregateSeriesForHs2(raw,hs2);
+    for(const [ym,v] of Object.entries(part))sums[ym]=(sums[ym]||0)+Number(v);
+  }
+  const months=Object.keys(sums).sort();
+  const out:any[]=[];
+  for(const ym of months){
+    const v=Number(sums[ym]),pm=Number(sums[ymOffset(ym,-1)]||0),py=Number(sums[ymOffset(ym,-12)]||0);
+    out.push({
+      date:displayYm(ym)+'-01',
+      metrics:{['hs'+hs2]:{
+        value:v/1000,
+        yoy:py?Math.round(((v/py)-1)*1000)/10:null,
+        mom:pm?Math.round(((v/pm)-1)*1000)/10:null
+      }}
+    });
+  }
+  return out.slice(-24);
+}
+
 async function fetchOfficial(key:string,startDate:string,endDate:string){
   const serviceKey=cleanKey(key);
   if(!serviceKey)throw new Error('DATA_GO_KR_KEY_REQUIRED');
@@ -280,6 +414,17 @@ export async function POST(req:Request){
     return NextResponse.json({ok:true,token:createToken()},{headers:{'Cache-Control':'no-store'}});
   }
   if(!validToken(requestToken(req)))return unauthorized();
+  if(op==='extraTrend'){
+    const endDate=String(body.endDate||''),hs2=String(body.hs2||'').replace(/\D/g,'').slice(0,2);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||!/^\d{2}$/.test(hs2))return NextResponse.json({error:'BAD_EXTRA_TREND_REQUEST'},{status:400});
+    const envKey=process.env.DATA_GO_KR_SERVICE_KEY||process.env.KCS_SERVICE_KEY||process.env.PUBLIC_DATA_SERVICE_KEY||'';
+    try{
+      const rows=await fetchExtraTrend(String(body.serviceKey||envKey),hs2,endDate);
+      return NextResponse.json({ok:true,rows,hs2,name:HS2_NAMES[hs2]||('HS '+hs2),source:'관세청 품목별 수출입실적(GW)'},{headers:{'Cache-Control':'no-store'}});
+    }catch(e:any){
+      return NextResponse.json({error:'ITEMTRADE_FAILED',message:String(e?.message||e).slice(0,1200)},{status:502,headers:{'Cache-Control':'no-store'}});
+    }
+  }
   if(op==='query'){
     const startDate=String(body.startDate||''),endDate=String(body.endDate||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||startDate>endDate)
@@ -299,7 +444,20 @@ export async function POST(req:Request){
           date:r.date,releaseDate:r.releaseDate,periodKey:r.periodKey,rangeEnd:r.rangeEnd,
           metrics:r.metrics
         }));
-      return NextResponse.json({ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',endpoint:got.endpoint,diagnostics:got.diagnostics,source:'관세청·공공데이터포털'},{headers:{'Cache-Control':'no-store'}});
+      let extraItems:any[]=[],extraMonth='',extraError='';
+      try{
+        const extra=await fetchExtraTop20(String(body.serviceKey||envKey),endDate);
+        extraItems=extra.items;extraMonth=extra.month;
+      }catch(ex:any){
+        extraError=String(ex?.message||ex).slice(0,1000);
+      }
+      return NextResponse.json({
+        ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',
+        extraItems,extraMonth,extraError,
+        endpoint:got.endpoint,diagnostics:got.diagnostics,
+        source:'관세청·공공데이터포털',
+        extraSource:'관세청 품목별 수출입실적(GW) · HS 2단위 월간 통계'
+      },{headers:{'Cache-Control':'no-store'}});
     }catch(e:any){
       const msg=String(e?.message||e);
       if(msg==='DATA_GO_KR_KEY_REQUIRED')return NextResponse.json({error:'DATA_GO_KR_KEY_REQUIRED',message:'공공데이터포털 서비스키를 한 번 등록해 주세요.'},{status:428});
