@@ -7,6 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
 <title>관세청 수출실적 10일 레이더</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 :root{--navy:#061a3a;--navy2:#0b3470;--cyan:#08b7ef;--blue:#00a9ed;--red:#ef4d66;--ink:#13233f;--muted:#6f7d93;--bg:#eef4fb;--line:#d8e2ef;--card:#fff;--green:#0a8f65;--shadow:0 14px 35px rgba(24,54,88,.10)}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#dff2ff 0,#eef4fb 280px,#eef4fb 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}
@@ -16,11 +17,11 @@
 .actions,.seg{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.btn{border:1px solid #cbd7e6;background:#fff;color:#30405a;border-radius:11px;padding:10px 14px;font-weight:850;cursor:pointer}.btn.primary{background:#154cc1;color:#fff;border-color:#154cc1}.btn.dark{background:#13233f;color:#fff;border-color:#13233f}.btn.cyan{background:#e5f8ff;border-color:#9eddf3;color:#006b91}.btn:disabled{opacity:.45;cursor:not-allowed}
 .status{margin-top:10px;padding:11px 12px;border-radius:12px;background:#f5f8fc;border:1px solid #e0e7f0;font-size:12px;line-height:1.6}.status.error{background:#fff2f2;border-color:#efc9c9;color:#8b1e1e}.status.ok{background:#ecfbf5;border-color:#bde8d4;color:#0a6b4d}
 .releasebar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.releaseTitle{font-weight:950;font-size:20px}.releaseMeta{font-size:13px;color:var(--muted)}.selectRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.selectRow select{height:40px;border:1px solid #ccd7e5;border-radius:10px;padding:0 10px;background:white;min-width:190px}
-.infographic{margin-top:12px;display:grid;grid-template-columns:repeat(10,minmax(112px,1fr));gap:8px;align-items:stretch}.metric{border:1px solid #d8e4ef;background:linear-gradient(180deg,#f7fbff,#fff);border-radius:15px;padding:10px 8px 8px;min-height:290px;display:flex;flex-direction:column;box-shadow:0 6px 16px rgba(30,70,110,.06)}.metricName{text-align:center;font-weight:950;font-size:13px;min-height:36px;display:flex;align-items:center;justify-content:center}.bars{height:185px;display:flex;align-items:flex-end;justify-content:center;gap:7px;padding:9px 4px 0;border-bottom:1px solid #dde7f2}.barCol{height:100%;width:42%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}.barVal{font-size:13px;font-weight:950;white-space:nowrap}.barShape{width:100%;border-radius:7px 7px 2px 2px;min-height:3px;box-shadow:inset 0 1px rgba(255,255,255,.35)}.yy .barVal{color:#087ac4}.yy .barShape{background:linear-gradient(180deg,#09c4f3,#098bda)}.mm .barVal{color:#d93552}.mm .barShape{background:linear-gradient(180deg,#ff7c8d,#e8435f)}.labels{display:flex;justify-content:center;gap:18px;font-weight:850;font-size:10px;color:#66758b;margin-top:5px}.amount{text-align:center;margin-top:auto;font-size:11px;color:#65758b}.amount b{display:block;color:#172943;font-size:13px;margin-top:2px}
+.infographic{margin-top:12px;display:grid;grid-template-columns:repeat(10,minmax(112px,1fr));gap:8px;align-items:stretch}.metric{border:1px solid #d8e4ef;background:linear-gradient(180deg,#f7fbff,#fff);border-radius:15px;padding:10px 8px 8px;min-height:290px;display:flex;flex-direction:column;box-shadow:0 6px 16px rgba(30,70,110,.06);cursor:pointer;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}.metric:hover,.metric:focus{transform:translateY(-2px);box-shadow:0 10px 24px rgba(30,70,110,.14);border-color:#9ccbe5;outline:none}.metricName{text-align:center;font-weight:950;font-size:13px;min-height:36px;display:flex;align-items:center;justify-content:center}.bars{height:185px;display:flex;align-items:flex-end;justify-content:center;gap:7px;padding:9px 4px 0;border-bottom:1px solid #dde7f2}.barCol{height:100%;width:42%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}.barVal{font-size:13px;font-weight:950;white-space:nowrap}.barShape{width:100%;border-radius:7px 7px 2px 2px;min-height:3px;box-shadow:inset 0 1px rgba(255,255,255,.35)}.yy .barVal{color:#087ac4}.yy .barShape{background:linear-gradient(180deg,#09c4f3,#098bda)}.mm .barVal{color:#d93552}.mm .barShape{background:linear-gradient(180deg,#ff7c8d,#e8435f)}.labels{display:flex;justify-content:center;gap:18px;font-weight:850;font-size:10px;color:#66758b;margin-top:5px}.amount{text-align:center;margin-top:auto;font-size:11px;color:#65758b}.amount b{display:block;color:#172943;font-size:13px;margin-top:2px}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.sum{background:#f7faff;border:1px solid #dce6f1;border-radius:13px;padding:11px}.sum span{font-size:11px;color:var(--muted)}.sum b{display:block;margin-top:3px;font-size:20px}
 .tableWrap{overflow:auto;max-height:56vh;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:1450px}th,td{border-bottom:1px solid #edf1f6;padding:8px 7px;text-align:center;font-size:11px;white-space:nowrap}th{position:sticky;top:0;background:#f5f8fc;z-index:2;color:#53647e}td.item{text-align:left;font-weight:850}.pos{color:#d92d20}.neg{color:#2563eb}.muted{color:#8793a5}
-.login,.modal{position:fixed;inset:0;z-index:100;background:rgba(3,17,42,.76);display:flex;align-items:center;justify-content:center;padding:18px}.login{background:linear-gradient(135deg,#061a3a,#0b4e87)}.box{width:min(470px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.box input{width:100%;height:49px;border:1px solid #cbd7e6;border-radius:12px;padding:0 13px;font-size:17px}.box h2{font-size:22px}.hidden{display:none!important}.keyHelp{background:#f4f8fc;border-radius:12px;padding:10px;margin:10px 0;font-size:12px;line-height:1.55}.keyHelp a{color:#135dcc;text-decoration:none;font-weight:800}.footnote{font-size:11px;color:#7c8797;line-height:1.6;margin-top:10px}
-@media(max-width:1250px){.infographic{grid-template-columns:repeat(5,1fr)}.controls{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.wrap{padding:8px}.hero{padding:20px 16px}.hero h1{font-size:23px}.controls{grid-template-columns:repeat(2,1fr)}.infographic{grid-template-columns:repeat(2,1fr)}.metric{min-height:250px}.bars{height:155px}.summary{grid-template-columns:repeat(2,1fr)}.btn{flex:1}}
+.login,.modal{position:fixed;inset:0;z-index:100;background:rgba(3,17,42,.76);display:flex;align-items:center;justify-content:center;padding:18px}.login{background:linear-gradient(135deg,#061a3a,#0b4e87)}.box{width:min(470px,100%);background:#fff;border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.box input{width:100%;height:49px;border:1px solid #cbd7e6;border-radius:12px;padding:0 13px;font-size:17px}.box h2{font-size:22px}.hidden{display:none!important}.keyHelp{background:#f4f8fc;border-radius:12px;padding:10px;margin:10px 0;font-size:12px;line-height:1.55}.keyHelp a{color:#135dcc;text-decoration:none;font-weight:800}.footnote{font-size:11px;color:#7c8797;line-height:1.6;margin-top:10px}.metricHint{text-align:center;font-size:10px;font-weight:850;color:#2680b7;margin-top:7px}.trendBox{width:min(1100px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.28)}.trendHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.trendHead h2{font-size:22px;margin:0}.trendTabs{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}.trendTab{border:1px solid #cbd7e6;background:#fff;border-radius:999px;padding:8px 12px;font-weight:900;color:#53647e;cursor:pointer}.trendTab.active{background:#154cc1;border-color:#154cc1;color:#fff}.trendChartWrap{position:relative;height:430px;min-width:760px}.trendScroll{overflow-x:auto;border:1px solid #e0e8f1;border-radius:14px;padding:10px;background:#fbfdff}.trendNote{font-size:12px;color:#718096;line-height:1.55;margin-top:9px}
+@media(max-width:1250px){.infographic{grid-template-columns:repeat(5,1fr)}.controls{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.wrap{padding:8px}.hero{padding:20px 16px}.hero h1{font-size:23px}.controls{grid-template-columns:repeat(2,1fr)}.infographic{grid-template-columns:repeat(2,1fr)}.metric{min-height:250px}.bars{height:155px}.summary{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.trendBox{padding:14px}.trendHead h2{font-size:19px}.trendChartWrap{height:360px;min-width:900px}}
 </style>
 </head>
 <body>
@@ -44,6 +45,24 @@
     <input id="serviceKey" autocomplete="off" placeholder="일반 인증키(Encoding/Decoding 어느 쪽도 가능)">
     <div class="actions"><button class="btn primary" onclick="saveKey()">키 저장</button><button class="btn" onclick="removeKey()">저장키 삭제</button></div>
     <div class="footnote">서비스키는 localStorage에 저장되고 조회할 때 Vercel API를 거쳐 관세청 OpenAPI 호출에만 사용합니다. 사이트 DB에는 따로 저장하지 않습니다.</div>
+  </div>
+</div>
+
+<div id="trendModal" class="modal hidden" onclick="if(event.target===this)closeTrend()">
+  <div class="trendBox">
+    <div class="trendHead">
+      <div>
+        <h2 id="trendTitle">24개월 월별 증가율</h2>
+        <div id="trendSub" class="small" style="margin-top:5px">월 전체 실적 기준</div>
+      </div>
+      <button class="btn" onclick="closeTrend()">닫기</button>
+    </div>
+    <div class="trendTabs">
+      <button id="trendYoyBtn" class="trendTab active" onclick="setTrendMode('yoy')">Y/Y 전년동월 대비</button>
+      <button id="trendMomBtn" class="trendTab" onclick="setTrendMode('mom')">M/M 전월 대비</button>
+    </div>
+    <div class="trendScroll"><div class="trendChartWrap"><canvas id="trendChart"></canvas></div></div>
+    <div class="trendNote">※ 최근 완료된 월 전체 실적을 기준으로 최대 24개월을 표시합니다. 막대가 0선 위면 증가, 아래면 감소입니다. 좌우로 밀어서 24개월 전체를 볼 수 있습니다.</div>
   </div>
 </div>
 
@@ -108,7 +127,8 @@ const API='/api/export-flash-radar-20261003';
 const TOKEN_KEY='gcFlowRadarTokenV1', DATA_KEY='kcsExport10dServiceKeyV1';
 const CANONICAL_ITEM_NAMES={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
 const ITEM_KEYS=Object.keys(CANONICAL_ITEM_NAMES);
-let TOKEN='', ALL_ROWS=[], FILTERED=[], CURRENT=null, ITEM_NAMES={...CANONICAL_ITEM_NAMES};
+let TOKEN='', ALL_ROWS=[], TREND_ROWS=[], FILTERED=[], CURRENT=null, ITEM_NAMES={...CANONICAL_ITEM_NAMES};
+let TREND_KEY='', TREND_MODE='yoy', TREND_CHART=null;
 function mergeItemNames(v){return Object.assign({},CANONICAL_ITEM_NAMES,(v&&typeof v==='object')?v:{})}
 const $=id=>document.getElementById(id);
 function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
@@ -128,7 +148,7 @@ async function runQuery(){
   $('runBtn').disabled=true;$('excelBtn').disabled=true;setStatus('관세청 10일 단위 잠정 수출실적을 불러오는 중…');
   try{
     const j=await api(API+'?op=query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startDate:start,endDate:end,serviceKey:key})});
-    ALL_ROWS=j.rows||[];ITEM_NAMES=mergeItemNames(j.itemNames);
+    ALL_ROWS=j.rows||[];TREND_ROWS=j.trendRows||[];ITEM_NAMES=mergeItemNames(j.itemNames);
     if(!ALL_ROWS.length)throw new Error('선택 기간에 표시할 데이터가 없습니다.');
     applyFilter();
     $('excelBtn').disabled=false;
@@ -181,13 +201,69 @@ function barHeight(v,max){const x=Math.abs(Number(v));if(!Number.isFinite(x)||!m
 function renderInfographic(){
   const box=$('infographic');box.innerHTML='';if(!CURRENT){box.innerHTML='<div class="small" style="grid-column:1/-1;padding:25px;text-align:center">조회 데이터가 없습니다.</div>';return}
   const list=metricList(),nums=list.flatMap(x=>[Math.abs(Number(x.m.yoy)),Math.abs(Number(x.m.mom))]).filter(Number.isFinite),max=Math.max(10,...nums);
-  list.forEach(x=>{const d=document.createElement('div');d.className='metric';d.innerHTML=
+  list.forEach(x=>{const d=document.createElement('div');d.className='metric';d.setAttribute('role','button');d.setAttribute('tabindex','0');d.setAttribute('aria-label',x.name+' 최근 24개월 월별 증가율 보기');d.innerHTML=
     '<div class="metricName">'+esc(x.name)+'</div>'+
     '<div class="bars">'+
       '<div class="barCol yy"><div class="barVal">'+pctText(x.m.yoy)+'</div><div class="barShape" style="height:'+barHeight(x.m.yoy,max)+'%"></div></div>'+
       '<div class="barCol mm"><div class="barVal">'+pctText(x.m.mom)+'</div><div class="barShape" style="height:'+barHeight(x.m.mom,max)+'%"></div></div>'+
     '</div><div class="labels"><span>Y/Y</span><span>M/M</span></div>'+
-    '<div class="amount">수출액<b>'+amount(x.m.value)+'</b></div>';box.appendChild(d)});
+    '<div class="amount">수출액<b>'+amount(x.m.value)+'</b></div><div class="metricHint">눌러서 24개월 보기</div>';
+    d.onclick=()=>openTrend(x.k);
+    d.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openTrend(x.k)}};
+    box.appendChild(d)});
+}
+function openTrend(k){
+  TREND_KEY=k;TREND_MODE='yoy';
+  $('trendYoyBtn').classList.add('active');$('trendMomBtn').classList.remove('active');
+  $('trendTitle').textContent=(ITEM_NAMES[k]||CANONICAL_ITEM_NAMES[k]||k)+' · 최근 24개월 월별 증가율';
+  $('trendSub').textContent='월 전체 수출실적 기준 · Y/Y 전년동월 대비';
+  $('trendModal').classList.remove('hidden');
+  renderTrendChart();
+}
+function closeTrend(){$('trendModal').classList.add('hidden')}
+function setTrendMode(mode){
+  TREND_MODE=mode==='mom'?'mom':'yoy';
+  $('trendYoyBtn').classList.toggle('active',TREND_MODE==='yoy');
+  $('trendMomBtn').classList.toggle('active',TREND_MODE==='mom');
+  $('trendSub').textContent='월 전체 수출실적 기준 · '+(TREND_MODE==='yoy'?'Y/Y 전년동월 대비':'M/M 전월 대비');
+  renderTrendChart();
+}
+function renderTrendChart(){
+  const rows=(TREND_ROWS||[]).filter(r=>r?.metrics?.[TREND_KEY]).slice(-24);
+  const labels=rows.map(r=>String(r.date||'').slice(2,7).replace('-','.'));
+  const data=rows.map(r=>{const v=Number(r.metrics?.[TREND_KEY]?.[TREND_MODE]);return Number.isFinite(v)?v:null});
+  if(TREND_CHART){TREND_CHART.destroy();TREND_CHART=null}
+  const canvas=$('trendChart'); if(!canvas||typeof Chart==='undefined')return;
+  TREND_CHART=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{labels,datasets:[{
+      label:TREND_MODE==='yoy'?'Y/Y (%)':'M/M (%)',
+      data,
+      backgroundColor:data.map(v=>v===null?'rgba(150,160,170,.35)':v>=0?'rgba(10,167,222,.78)':'rgba(239,77,102,.78)'),
+      borderColor:data.map(v=>v===null?'rgba(150,160,170,.55)':v>=0?'rgba(8,123,196,1)':'rgba(217,45,68,1)'),
+      borderWidth:1,borderRadius:5,borderSkipped:false
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,font:{size:10}}},
+        y:{title:{display:true,text:'증가율 (%)'},grid:{color:'rgba(120,135,155,.16)'},ticks:{callback:v=>v+'%'}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.raw===null?' 데이터 없음':(' '+(ctx.raw>0?'+':'')+Number(ctx.raw).toFixed(1)+'%')}}
+      }
+    },
+    plugins:[{
+      id:'zeroLine',
+      afterDraw(chart){
+        const y=chart.scales.y;if(!y)return;
+        const py=y.getPixelForValue(0),ctx=chart.ctx;
+        ctx.save();ctx.strokeStyle='rgba(40,55,75,.55)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(chart.chartArea.left,py);ctx.lineTo(chart.chartArea.right,py);ctx.stroke();ctx.restore();
+      }
+    }]
+  });
 }
 function renderSummary(){
   if(!CURRENT){$('releaseTitle').textContent='발표 데이터를 선택하세요';$('sumYoy').textContent='-';$('sumMom').textContent='-';$('sumPeriod').textContent='-';return}
