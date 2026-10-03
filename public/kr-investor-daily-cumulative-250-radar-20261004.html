@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>외국인·기관·개인 1일 단위 누적순매수 레이더</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#152033;--muted:#67758c;--line:#dbe4ef;--brand:#253fb7;--brand2:#6d28d9;--red:#d92d20;--blue:#2563eb;--green:#087f5b;--orange:#b45309;--shadow:0 10px 28px rgba(24,36,66,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}
+.wrap{max-width:1900px;margin:auto;padding:12px}.hero{background:linear-gradient(135deg,#102660,#4a1d78);color:#fff;padding:24px;border-radius:22px;box-shadow:var(--shadow)}
+.hero h1{margin:0 0 9px;font-size:28px}.hero p{margin:0;line-height:1.65}.tags,.segrow,.actions,.rankrow{display:flex;gap:8px;flex-wrap:wrap}.tags{margin-top:13px}.tag{background:rgba(255,255,255,.14);padding:7px 10px;border-radius:999px;font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:12px;box-shadow:var(--shadow)}h2{margin:0;font-size:18px}.small{font-size:12px;color:var(--muted);line-height:1.55}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:9px;margin-top:11px}.field label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.filters input,.filters select{width:100%;height:42px;border:1px solid #cad5e3;border-radius:10px;padding:0 10px;background:#fff}
+.btn,.seg,.rankbtn{border:1px solid #cad5e3;background:#fff;color:#334155;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer}
+.seg.active,.rankbtn.active{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.dark{background:#172033;color:#fff;border-color:#172033}.btn.soft{background:#eef2ff;color:#3045a0;border-color:#cfd7ff}.btn.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+.note{margin-top:10px;padding:10px 12px;background:#eef6ff;border:1px solid #cbdcf4;border-radius:12px;color:#23415e;font-size:12px;line-height:1.6}.warnbox{margin-top:10px;padding:10px 12px;background:#fff8e6;border:1px solid #efd99e;border-radius:12px;color:#72500c;font-size:12px;line-height:1.55}
+.searchbar,.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.searchbar input{height:42px;border:1px solid #cad5e3;border-radius:10px;padding:0 11px;flex:1;min-width:240px}.filters>*{min-width:140px}.filters input{flex:1;min-width:220px}
+.progress{height:12px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#2848c7,#8b5cf6);transition:.18s}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}.stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#f8fafc}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:20px;margin-top:2px}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px;max-height:70vh}table{border-collapse:collapse;width:100%;background:#fff}th,td{padding:8px;border-bottom:1px solid #edf1f6;font-size:11px;text-align:center;white-space:nowrap}
+th{position:sticky;top:0;background:#f7f9fc;z-index:2;color:#455269}.sticky1{position:sticky;left:0;z-index:3;background:#fff}.sticky2{position:sticky;left:48px;z-index:3;background:#fff}.sticky3{position:sticky;left:208px;z-index:3;background:#fff}
+th.sticky1,th.sticky2,th.sticky3{z-index:5;background:#f7f9fc}td.name{text-align:left;font-weight:900;min-width:160px}.pos{color:var(--red)}.neg{color:var(--blue)}.muted{color:#94a3b8}
+.flowcell{text-align:left;line-height:1.45;min-width:130px}.flowcell b{display:inline-block;min-width:18px}.rank{font-weight:900;color:#4c2c9d}.toprank{background:#fff9db}.empty{padding:32px!important;color:var(--muted)}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0d225c,#542078);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px}.loginbox input{width:100%;height:50px;border:1px solid #cad5e3;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.hidden{display:none!important}.errorbox{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff4f4;border:1px solid #f1c8c8;color:#7f1d1d;font-size:12px;white-space:pre-wrap}a{color:#245bd4;text-decoration:none}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.wrap{padding:8px}.hero{padding:18px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:10px}.field input,.field select{height:40px}.seg,.rankbtn{padding:9px 10px;font-size:12px}.sticky2{left:42px}.sticky3{left:182px}td.name{min-width:140px}}
+</style>
+</head>
+<body>
+<div id="login" class="login hidden">
+  <div class="loginbox">
+    <h2>개인 인증</h2>
+    <p class="small">기존 외국인·기관 수급 레이더와 같은 1회용 영구인증을 사용합니다. 한 번 인증한 브라우저에서는 저장된 영구 토큰을 계속 재사용합니다.</p>
+    <input id="authCode" type="password" inputmode="numeric" placeholder="인증번호" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn primary" onclick="login()">인증</button>
+    <div id="loginMsg" class="small"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<section class="hero">
+  <h1>외국인·기관·개인 1일 단위 누적순매수 레이더</h1>
+  <p>최장 <b>250거래일</b>부터 최단 <b>1거래일</b>까지 <b>1일 단위</b>로 누적순매수를 계산합니다. 즉 1일·2일·3일…250일까지 매 거래일 간격으로 누적 흐름을 확인하고, 최근 60거래일의 <b>기관 / 외국인 / 외국인+기관</b> 순위도 함께 비교할 수 있습니다.</p>
+  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">250→1일 최대 250구간</span><span class="tag">외국인 누적</span><span class="tag">기관 누적</span><span class="tag">개인 누적</span><span class="tag">60일 큰손 3종 순위</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+</section>
+
+<section class="card">
+  <h2>1. 시장 · 기준일 · 기간</h2>
+  <div class="segrow" style="margin-top:10px">
+    <button class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
+    <button class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
+    <button class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
+  </div>
+  <div class="grid">
+    <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
+    <div class="field"><label>최장 누적기간</label><select id="maxDays"></select></div>
+    <div class="field"><label>최단 누적기간</label><select id="minDays"></select></div>
+    <div class="field"><label>최대 스캔 종목 (0=전체)</label><input id="maxStocks" type="number" min="0" max="3000" value="0"></div>
+    <div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+    <div class="field"><label>스팩 제외</label><select id="excludeSpac"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+  </div>
+  <div id="windowPreview" class="note"></div>
+  <div class="searchbar"><input id="directCodes" placeholder="직접 검증 종목코드: 005930,000660,035420"><button class="btn soft" onclick="runDirect()">입력 종목만 검증</button></div>
+</section>
+
+<section class="card">
+  <h2>2. 최근 60거래일 큰손 순위 기준</h2>
+  <div class="small">세 순위는 모두 계산됩니다. 아래 버튼은 화면 정렬 기준만 바꿉니다.</div>
+  <div class="rankrow" style="margin-top:10px">
+    <button class="rankbtn active" data-rank="combined" onclick="setRank(this)">외국인+기관 합산순</button>
+    <button class="rankbtn" data-rank="institution" onclick="setRank(this)">기관 누적순</button>
+    <button class="rankbtn" data-rank="foreign" onclick="setRank(this)">외국인 누적순</button>
+  </div>
+  <div class="warnbox"><b>핵심 해석:</b> 60일 합산순은 큰손 전체의 누적 강도를, 기관순과 외국인순은 각각 어느 주체가 주도적으로 매집했는지를 보여줍니다. 오른쪽으로는 250일→1일까지 하루씩 누적값이 이어집니다. 개인 누적순매수는 순위 산정에는 넣지 않고 비교용으로 제공합니다.</div>
+</section>
+
+<section class="card">
+  <h2>3. 실행 · 결과</h2>
+  <div class="actions" style="margin-top:10px">
+    <button id="runBtn" class="btn primary" onclick="runAll()">전종목 누적순매수 스캔</button>
+    <button id="stopBtn" class="btn warn" onclick="stopScan()" disabled>중지</button>
+    <button id="excelBtn" class="btn dark" onclick="exportExcel()" disabled>Excel 최신형 저장</button>
+    <button class="btn" onclick="clearAuth()">이 브라우저 인증 해제</button>
+  </div>
+  <div id="runMsg" class="small" style="margin-top:10px">기간과 시장을 선택한 뒤 실행하세요.</div>
+  <div class="progress"><div id="bar" class="bar"></div></div>
+  <div class="stats">
+    <div class="stat"><span>대상</span><b id="stUniverse">0</b></div>
+    <div class="stat"><span>조회완료</span><b id="stScanned">0</b></div>
+    <div class="stat"><span>정상결과</span><b id="stOk">0</b></div>
+    <div class="stat"><span>오류</span><b id="stErr">0</b></div>
+    <div class="stat"><span>개인 선택구간 완전</span><b id="stPersonal">0</b></div>
+    <div class="stat"><span>현재 정렬</span><b id="stRankMode" style="font-size:14px">합산</b></div>
+  </div>
+  <div id="errorBox" class="errorbox hidden"></div>
+  <div class="filters">
+    <input id="stockSearch" placeholder="종목명/코드 검색" oninput="render()">
+    <select id="marketFilter" onchange="render()"><option value="ALL">시장 전체</option><option value="KOSPI">KOSPI</option><option value="KOSDAQ">KOSDAQ</option></select>
+    <select id="displayLimit" onchange="render()"><option value="100">화면 100개</option><option value="300" selected>화면 300개</option><option value="500">화면 500개</option><option value="9999">화면 전체</option></select>
+  </div>
+  <div class="tableWrap"><table id="resultTable"><thead id="thead"></thead><tbody id="rows"><tr><td class="empty">아직 실행하지 않았습니다.</td></tr></tbody></table></div>
+</section>
+</div>
+
+<script>
+const API='/api/kr-investor-daily-cumulative-250-radar';
+const TOKEN_KEY='gcFlowRadarTokenV1';
+let TOKEN='',MARKET='ALL',RESULTS=[],ERRORS=[],RANK_MODE='combined',STOP=false;
+const $=id=>document.getElementById(id);
+
+function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
+$('asOf').value=kstDate();
+for(let d=1;d<=250;d++){$('maxDays').insertAdjacentHTML('beforeend','<option value="'+d+'" '+(d===250?'selected':'')+'>'+d+'거래일</option>');$('minDays').insertAdjacentHTML('beforeend','<option value="'+d+'" '+(d===1?'selected':'')+'>'+d+'거래일</option>')}
+$('maxDays').onchange=previewWindows;$('minDays').onchange=previewWindows;previewWindows();
+
+function windowList(){const min=Number($('minDays').value),max=Number($('maxDays').value),a=[];for(let d=max;d>=min;d--)a.push(d);return a}
+function previewWindows(){const a=windowList(),sample=a.length>24?(a.slice(0,12).join(' · ')+' · … · '+a.slice(-12).join(' · ')):a.join(' · ');$('windowPreview').innerHTML='<b>현재 추출구간 '+a.length+'칸:</b> '+(a.length?sample+'일':'최장기간이 최단기간보다 작습니다.')+'<br><b>계산 방식:</b> 1일은 최신 1거래일, 2일은 최신 2거래일 … 선택한 최대기간까지 매 1거래일 간격의 누적순매수입니다. Excel에는 모든 선택 구간이 저장됩니다.';buildHead()}
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
+async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent=''}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').value='';$('login').classList.remove('hidden')}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=universe&market=KOSPI');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
+
+function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
+function setRank(el){RANK_MODE=el.dataset.rank;document.querySelectorAll('[data-rank]').forEach(x=>x.classList.toggle('active',x===el));$('stRankMode').textContent=RANK_MODE==='combined'?'합산':RANK_MODE==='institution'?'기관':'외국인';render()}
+function val(id,d=0){const x=Number($(id).value);return Number.isFinite(x)?x:d}
+function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
+function prepareUniverse(rows){let a=rows.slice();if($('excludePref').value==='1')a=a.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')a=a.filter(x=>!String(x.name).includes('스팩'));const m=Math.max(0,val('maxStocks',0));if(m)a=a.slice(0,m);return a}
+function cfg(){return{asOf:$('asOf').value,minDays:val('minDays',1),maxDays:val('maxDays',250)}}
+function valid(){if(!$('asOf').value){alert('기준일을 선택해 주세요.');return false}if(val('minDays')>val('maxDays')){alert('최장기간은 최단기간보다 크거나 같아야 합니다.');return false}return true}
+function reset(){RESULTS=[];ERRORS=[];STOP=false;['stUniverse','stScanned','stOk','stErr','stPersonal'].forEach(x=>$(x).textContent='0');$('errorBox').classList.add('hidden');$('excelBtn').disabled=true;$('rows').innerHTML='<tr><td class="empty">검사 중...</td></tr>';buildHead()}
+function stopScan(){STOP=true;$('runMsg').textContent='중지 요청됨 · 현재 묶음 처리 후 멈춥니다.'}
+function rankValue(r,mode){return mode==='institution'?Number(r.institution60||0):mode==='foreign'?Number(r.foreign60||0):Number(r.combined60||0)}
+function assignRanks(){
+  [['foreign','_rankF'],['institution','_rankI'],['combined','_rankC']].forEach(([mode,key])=>{
+    RESULTS.slice().sort((a,b)=>rankValue(b,mode)-rankValue(a,mode)).forEach((r,i)=>r[key]=i+1);
+  });
+}
+function currentRank(r){return RANK_MODE==='institution'?r._rankI:RANK_MODE==='foreign'?r._rankF:r._rankC}
+async function scanStocks(stocks){
+  let out=[];
+  for(let i=0;i<stocks.length;i+=10){
+    if(STOP)break;
+    const end=Math.min(i+10,stocks.length);$('runMsg').textContent='누적순매수 분석 '+end+' / '+stocks.length+' · 최대 '+cfg().maxDays+'거래일';
+    try{
+      const j=await api(API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:stocks.slice(i,end),cfg:cfg()})});
+      out=out.concat(j.results||[]);ERRORS=ERRORS.concat(j.errors||[]);
+    }catch(e){ERRORS.push({scanError:'BATCH: '+e.message,codes:stocks.slice(i,end).map(x=>x.code).join(',')})}
+    RESULTS=out;assignRanks();$('stScanned').textContent=end;$('stOk').textContent=RESULTS.length;$('stErr').textContent=ERRORS.length;
+    $('stPersonal').textContent=RESULTS.filter(r=>Number(r.individual250Known||0)>=cfg().maxDays).length;
+    $('bar').style.width=(100*end/Math.max(1,stocks.length))+'%';render();
+  }
+  return out;
+}
+async function runAll(){
+  if(!valid())return;reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
+  try{
+    $('runMsg').textContent='전종목 목록 불러오는 중...';const u=await api(API+'?op=universe&market='+MARKET),stocks=prepareUniverse(u.rows||[]);
+    $('stUniverse').textContent=stocks.length;RESULTS=await scanStocks(stocks);assignRanks();render();$('excelBtn').disabled=!RESULTS.length;
+    $('runMsg').textContent=(STOP?'중지됨':'완료')+' · 대상 '+stocks.length+'개 · 정상 '+RESULTS.length+'개 · 오류 '+ERRORS.length+'개';
+    if(!STOP)$('bar').style.width='100%';
+  }catch(e){$('runMsg').textContent='실패: '+e.message;alert(e.message)}
+  finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
+}
+async function runDirect(){
+  if(!valid())return;const codes=($('directCodes').value.match(/\d{6}/g)||[]);if(!codes.length)return alert('종목코드를 입력해 주세요.');
+  reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
+  try{const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;RESULTS=await scanStocks(stocks);assignRanks();render();$('excelBtn').disabled=!RESULTS.length;$('runMsg').textContent='입력 종목 검증 완료'}
+  catch(e){alert(e.message)}finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
+}
+function errorSummary(){const m={};ERRORS.forEach(e=>{const k=String(e.scanError||'UNKNOWN').split(':')[0];m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>k+' : '+v+'건').join('\n')}
+function buildHead(){
+  const ws=windowList();let h='<tr><th class="sticky1">정렬순위</th><th class="sticky2">종목</th><th class="sticky3">시장</th><th>기관60 순위</th><th>외인60 순위</th><th>합산60 순위</th><th>기관60</th><th>외인60</th><th>합산60</th><th>개인60</th><th>현재가</th><th>시총</th><th>개인데이터</th>';
+  ws.forEach(d=>h+='<th>'+d+'일 누적<br><span class="small">외/기/개</span></th>');h+='<th>링크</th></tr>';$('thead').innerHTML=h;
+}
+function flowCell(w){
+  if(!w)return '<span class="muted">-</span>';
+  const pi=w.individualSum===null?'<span class="muted">-</span>':'<span class="'+pn(w.individualSum)+'">'+signed(w.individualSum)+'</span>';
+  return '<div class="flowcell"><div><b>외</b> <span class="'+pn(w.foreignSum)+'">'+signed(w.foreignSum)+'</span></div><div><b>기</b> <span class="'+pn(w.institutionSum)+'">'+signed(w.institutionSum)+'</span></div><div><b>개</b> '+pi+'</div></div>';
+}
+function render(){
+  assignRanks();const q=$('stockSearch').value.trim().toLowerCase(),mf=$('marketFilter').value,limit=Number($('displayLimit').value)||300;
+  let list=RESULTS.filter(r=>(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q)));
+  list.sort((a,b)=>currentRank(a)-currentRank(b));const visible=list.slice(0,limit),ws=windowList(),tb=$('rows');tb.innerHTML='';
+  const eb=$('errorBox');if(ERRORS.length){eb.textContent='오류 유형\n'+errorSummary();eb.classList.remove('hidden')}else eb.classList.add('hidden');
+  if(!visible.length){tb.innerHTML='<tr><td colspan="'+(14+ws.length)+'" class="empty">표시할 결과가 없습니다.</td></tr>';return}
+  visible.forEach(r=>{
+    const tr=document.createElement('tr');if(currentRank(r)<=20)tr.className='toprank';
+    let html='<td class="sticky1 rank">'+currentRank(r)+'</td><td class="sticky2 name">'+esc(r.name)+' <span class="small">'+r.code+'</span></td><td class="sticky3">'+esc(r.market)+'</td>';
+    html+='<td class="rank">'+num(r._rankI)+'</td><td class="rank">'+num(r._rankF)+'</td><td class="rank">'+num(r._rankC)+'</td>';
+    html+='<td class="'+pn(r.institution60)+'">'+signed(r.institution60)+'</td><td class="'+pn(r.foreign60)+'">'+signed(r.foreign60)+'</td><td class="'+pn(r.combined60)+'">'+signed(r.combined60)+'</td><td class="'+pn(r.individual60)+'">'+(r.individual60==null?'-':signed(r.individual60))+'</td>';
+    html+='<td>'+money(r.currentPrice)+'</td><td>'+money(r.marketValue)+'</td><td>'+num(r.individual250Known)+'/'+cfg().maxDays+'</td>';
+    ws.forEach(d=>html+='<td>'+flowCell(r.windows?.[String(d)])+'</td>');
+    html+='<td><a href="'+r.naver+'" target="_blank">증권</a> · <a href="'+r.investor+'" target="_blank">수급</a></td>';tr.innerHTML=html;tb.appendChild(tr);
+  });
+}
+function exportExcel(){
+  if(!RESULTS.length)return;assignRanks();const ws=windowList(),ordered=RESULTS.slice().sort((a,b)=>currentRank(a)-currentRank(b));
+  const summary=ordered.map(r=>{
+    const o={정렬순위:currentRank(r),종목:r.name,코드:r.code,시장:r.market,기관60순위:r._rankI,외국인60순위:r._rankF,합산60순위:r._rankC,기관60일누적:r.institution60,외국인60일누적:r.foreign60,외국인기관60일합산:r.combined60,개인60일누적:r.individual60,현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,수급소스:r.source};
+    ws.forEach(d=>{const w=r.windows?.[String(d)]||{};o[d+'일_누적순매수_외기개']='외 '+fmtPlain(w.foreignSum)+' / 기 '+fmtPlain(w.institutionSum)+' / 개 '+(w.individualSum==null?'-':fmtPlain(w.individualSum))});
+    return o;
+  });
+  const detail=ordered.map(r=>{
+    const o={정렬순위:currentRank(r),종목:r.name,코드:r.code,시장:r.market,기관60순위:r._rankI,외국인60순위:r._rankF,합산60순위:r._rankC,현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf};
+    ws.forEach(d=>{const w=r.windows?.[String(d)]||{};o[d+'일_외국인누적']=w.foreignSum;o[d+'일_기관누적']=w.institutionSum;o[d+'일_개인누적']=w.individualSum;o[d+'일_외인기관합산']=w.combinedSum;o[d+'일_개인확보일수']=w.individualKnownDays;});
+    return o;
+  });
+  const settings=[{기준일:$('asOf').value,시장:MARKET,최장기간:cfg().maxDays,최단기간:cfg().minDays,구간수:ws.length,정렬기준:RANK_MODE==='combined'?'외국인+기관 60일 합산':RANK_MODE==='institution'?'기관 60일 누적':'외국인 60일 누적',정상종목:RESULTS.length,오류종목:ERRORS.length}];
+  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(summary),s2=XLSX.utils.json_to_sheet(detail),s3=XLSX.utils.json_to_sheet(settings),s4=XLSX.utils.json_to_sheet(ERRORS);
+  s1['!freeze']={xSplit:3,ySplit:1};s2['!freeze']={xSplit:3,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,s1,'1일단위_요약');XLSX.utils.book_append_sheet(wb,s2,'수치데이터');XLSX.utils.book_append_sheet(wb,s3,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,s4,'오류');
+  XLSX.writeFile(wb,'외국인_기관_개인_1일단위_누적순매수_레이더_'+$('asOf').value+'.xlsx',{compression:true});
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function num(v,p=0){const x=Number(v);return Number.isFinite(x)?x.toFixed(p):'-'}
+function money(v){const x=Number(v);return Number.isFinite(x)&&x?x.toLocaleString():'-'}
+function signed(v){const x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+Math.round(x).toLocaleString():'-'}
+function fmtPlain(v){const x=Number(v);return Number.isFinite(x)?Math.round(x).toLocaleString():'-'}
+function pn(v){const x=Number(v);return !Number.isFinite(x)?'':x>0?'pos':x<0?'neg':''}
+buildHead();
+</script>
+</body>
+</html>
