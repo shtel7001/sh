@@ -264,7 +264,7 @@ async function fetchExtraTop20(key:string,endDate:string){
   const ranked=Object.entries(cur)
     .filter(([code,v]:any)=>Number(v)>0 && Number(code)>=1 && Number(code)<=97)
     .sort((a:any,b:any)=>Number(b[1])-Number(a[1]));
-  const items=ranked.slice(10,20).map(([code,value]:any,i:number)=>{
+  const items=ranked.slice(10,50).map(([code,value]:any,i:number)=>{
     const pv=Number(prev[code]||0),yv=Number(yr[code]||0),v=Number(value);
     return {
       key:'hs'+code,hs2:code,rank:11+i,name:HS2_NAMES[code]||('HS '+code),
