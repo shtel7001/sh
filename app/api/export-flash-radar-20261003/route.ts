@@ -115,16 +115,39 @@ function inferRangeEnd(o:any,date:string){
 }
 function normalizeRows(raw:any[]){
   return raw.map((o:any,idx:number)=>{
-    const date=inferDate(o), rangeEnd=inferRangeEnd(o,date);
+    const ym=String(o.priodMon??o.periodMon??'').replace(/\D/g,'').slice(0,6);
+    const pd=String(o.priodDt??o.periodDt??'').trim();
+    let rangeEnd=0;
+    const pm=pd.match(/~\s*(\d{1,2})(?:\D|$)/);
+    if(pm)rangeEnd=Number(pm[1]);
+    if(!rangeEnd){
+      const ds=pd.match(/(?:^|\D)(10|20|28|29|30|31)(?:\D|$)/g);
+      if(ds?.length){
+        const last=ds[ds.length-1].match(/\d+/);
+        if(last)rangeEnd=Number(last[0]);
+      }
+    }
+    if(ym.length===6 && (!rangeEnd || rangeEnd>31)){
+      const y=Number(ym.slice(0,4)),m=Number(ym.slice(4,6));
+      rangeEnd=new Date(Date.UTC(y,m,0)).getUTCDate();
+    }
+    const date=ym.length===6&&rangeEnd
+      ? `${ym.slice(0,4)}-${ym.slice(4,6)}-${String(rangeEnd).padStart(2,'0')}`
+      : inferDate(o);
+    if(!rangeEnd && date)rangeEnd=inferRangeEnd(o,date);
+
     const values:any={};
     for(let i=1;i<=10;i++){
-      const key='item'+String(i).padStart(2,'0');
-      const real=Object.keys(o).find(k=>k.toLowerCase()===key.toLowerCase());
-      values[key]=real?n(o[real]):null;
+      const suffix=String(i).padStart(2,'0');
+      const official='itemUsdAmt'+suffix;
+      const fallback='item'+suffix;
+      const real=Object.keys(o).find(k=>k.toLowerCase()===official.toLowerCase())
+        || Object.keys(o).find(k=>k.toLowerCase()===fallback.toLowerCase());
+      values[fallback]=real?n(o[real]):null;
     }
-    let total:any=null;
-    const totalKey=Object.keys(o).find(k=>/(tot.*exp|exp.*tot|total.*(amt|val|dlr)|all.*exp|item00)/i.test(k));
-    if(totalKey)total=n(o[totalKey]);
+    const totalReal=Object.keys(o).find(k=>k.toLowerCase()==='itemusdamt00')
+      || Object.keys(o).find(k=>/(tot.*exp|exp.*tot|total.*(amt|val|dlr)|all.*exp|item00)/i.test(k));
+    const total=totalReal?n(o[totalReal]):null;
     return {idx,date,rangeEnd,values,total,raw:o};
   }).filter((r:any)=>Object.values(r.values).some(v=>v!==null));
 }
@@ -146,40 +169,42 @@ async function fetchOfficial(key:string,startDate:string,endDate:string){
   const serviceKey=cleanKey(key);
   if(!serviceKey)throw new Error('DATA_GO_KR_KEY_REQUIRED');
   const sm=isoMonth(startDate), em=isoMonth(endDate);
-  const endpoints=[
-    BASE,
-    BASE+'/getPrlstMmUtPrviExpAcrs',
-    BASE+'/getPrlstMmUtPrviExpAcrsList',
-    BASE+'/getPrlstMmUtPrviExpAcrsInfo'
-  ];
-  const paramSets=[
-    {strtYymm:sm,endYymm:em,numOfRows:'1000',pageNo:'1'},
-    {startYymm:sm,endYymm:em,numOfRows:'1000',pageNo:'1'},
-    {strtYmd:startDate.replace(/-/g,''),endYmd:endDate.replace(/-/g,''),numOfRows:'1000',pageNo:'1'},
-    {startDate:startDate.replace(/-/g,''),endDate:endDate.replace(/-/g,''),numOfRows:'1000',pageNo:'1'},
-    {numOfRows:'1000',pageNo:'1'}
-  ];
-  const diagnostics:any[]=[];
-  for(const ep of endpoints){
-    for(const p of paramSets){
-      const q=new URLSearchParams({serviceKey,...p});
-      const url=ep+'?'+q.toString();
-      try{
-        const r=await callUrl(url);
-        const err=apiError(r.text);
-        const raw=xmlObjects(r.text), rows=normalizeRows(raw);
-        diagnostics.push({ep:ep.replace(BASE,'' )||'/',params:Object.keys(p),status:r.status,rows:rows.length,error:err||''});
-        if(r.ok && rows.length){
-          return {rows,endpoint:ep,diagnostics:diagnostics.slice(-3)};
-        }
-      }catch(e:any){
-        diagnostics.push({ep:ep.replace(BASE,'')||'/',params:Object.keys(p),status:0,rows:0,error:String(e?.message||e)});
-      }
-    }
+  const endpoint=BASE+'/getPrlstMmUtPrviExpAcrs';
+  const q=new URLSearchParams({
+    serviceKey,
+    strtYymm:sm,
+    endYymm:em
+  });
+  const url=endpoint+'?'+q.toString();
+  const r=await callUrl(url);
+  const err=apiError(r.text);
+  if(!r.ok)throw new Error(`OFFICIAL_API_HTTP_${r.status}::${err||r.text.slice(0,500)}`);
+  if(err)throw new Error(`OFFICIAL_API_ERROR::${err}`);
+  const raw=xmlObjects(r.text);
+  const rows=normalizeRows(raw);
+  if(!rows.length){
+    const keys=raw.slice(0,3).map((x:any)=>Object.keys(x));
+    throw new Error('OFFICIAL_API_NO_ROWS::'+JSON.stringify({
+      endpoint,
+      params:['serviceKey','strtYymm','endYymm'],
+      rawItems:raw.length,
+      sampleKeys:keys
+    }));
   }
-  const useful=diagnostics.filter(x=>x.error||x.status!==404).slice(-8);
-  throw new Error('OFFICIAL_API_NO_ROWS::'+JSON.stringify(useful));
+  return {
+    rows,
+    endpoint,
+    diagnostics:[{
+      ep:'/getPrlstMmUtPrviExpAcrs',
+      params:['strtYymm','endYymm'],
+      status:r.status,
+      rawItems:raw.length,
+      rows:rows.length,
+      error:''
+    }]
+  };
 }
+
 function releaseDateOf(row:any){
   if(!row.date)return '';
   const [y,m,d]=row.date.split('-').map(Number);
@@ -230,7 +255,7 @@ export async function GET(req:Request){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
   if(op==='source')return NextResponse.json({
     source:'관세청_수출 주요품목별 10일 단위 잠정치 통계',
-    base:BASE,
+    base:BASE+'/getPrlstMmUtPrviExpAcrs',
     itemNames:ITEM_NAMES,
     cadence:'1~10일=11일, 1~20일=21일, 월전체=익월 1일',
     unit:'천 달러'
