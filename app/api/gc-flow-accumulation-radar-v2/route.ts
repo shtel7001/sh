@@ -193,6 +193,87 @@ function analyseFlow(trends:Trend[],rows:Bar[],cfg:FlowCfg,asOf:string){
   let score=0;score+=Math.min(12,Math.round(fDays/cfg.flowDays*14));score+=Math.min(12,Math.round(iDays/cfg.flowDays*14));score+=Math.min(12,Math.round(coverage/cfg.flowDays*14));score+=Math.min(8,joint*2);score+=combPct>0?Math.min(14,Math.round(combPct*8)):0;score+=recentAccel>0?6:0;
   return {pass,score,flowDate:dashDate(r[0].date),oldestFlowDate:dashDate(r[r.length-1].date),source:r[0].source,foreignSum:fsum,institutionSum:isum,combinedSum:csum,foreignPositiveDays:fDays,institutionPositiveDays:iDays,coverageDays:coverage,jointDays:joint,alternateDays:alternate,combinedVolumePct:round(combPct,3),recentAccel:round(recentAccel),mode:alternating?'교대매수':foreignOnly&&instOnly?'외인+기관 누적':foreignOnly?'외국인 누적':'기관 누적',recent:r.map(x=>({date:dashDate(x.date),foreign:x.foreign,institution:x.institution,combined:x.foreign+x.institution,holdRatio:x.holdRatio}))};
 }
+type MultiFlowCfg={
+  minForeignRate:number;minInstRate:number;minCoverageRate:number;minJointRate:number;
+  minForeignVolumePct:number;minInstVolumePct:number;minCombinedVolumePct:number;
+  minAlternateSwitches:number;allowSimultaneous:boolean;allowAlternate:boolean;
+  allowForeignOnly:boolean;allowInstOnly:boolean;requiredWindows:number[];minWindowsPass:number;
+  require60:boolean;usePriceQuiet:boolean;minRet60:number;maxRet10:number;maxRet20:number;
+  maxRet60:number;maxDist60Low:number;
+};
+function multiWindowFlowSummary(trends:Trend[],rows:Bar[],days:number,cfg:MultiFlowCfg,asOf:string){
+  const target=ymd(asOf);
+  const usable=trends.filter(x=>!target||x.date<=target).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,days);
+  if(usable.length<days)return null;
+  const volumeByDate=new Map(rows.map(x=>[x.date,x.volume]));
+  const r=usable.map(x=>({...x,volume:volumeByDate.get(x.date)||0}));
+  const fsum=r.reduce((s,x)=>s+x.foreign,0),isum=r.reduce((s,x)=>s+x.institution,0),csum=fsum+isum,vol=r.reduce((s,x)=>s+x.volume,0);
+  const fDays=r.filter(x=>x.foreign>0).length,iDays=r.filter(x=>x.institution>0).length,joint=r.filter(x=>x.foreign>0&&x.institution>0).length,coverage=r.filter(x=>x.foreign>0||x.institution>0).length;
+  const fRate=fDays/days*100,iRate=iDays/days*100,jointRate=joint/days*100,coverageRate=coverage/days*100;
+  const fVolPct=vol?fsum/vol*100:0,iVolPct=vol?isum/vol*100:0,combPct=vol?csum/vol*100:0;
+  const chronological=r.slice().reverse();let last='';let switches=0;let alternateDays=0;
+  for(const x of chronological){
+    const t=x.foreign>0&&x.institution<=0?'F':x.institution>0&&x.foreign<=0?'I':'';
+    if(!t)continue;
+    alternateDays++;
+    if(last&&t!==last)switches++;
+    last=t;
+  }
+  const baseCoverage=coverageRate>=cfg.minCoverageRate&&combPct>=cfg.minCombinedVolumePct;
+  const simultaneous=cfg.allowSimultaneous&&baseCoverage&&fsum>0&&isum>0&&fRate>=cfg.minForeignRate&&iRate>=cfg.minInstRate&&jointRate>=cfg.minJointRate&&fVolPct>=cfg.minForeignVolumePct&&iVolPct>=cfg.minInstVolumePct;
+  const alternate=cfg.allowAlternate&&baseCoverage&&fsum>0&&isum>0&&fRate>=Math.min(cfg.minForeignRate,35)&&iRate>=Math.min(cfg.minInstRate,35)&&switches>=cfg.minAlternateSwitches&&fVolPct>=cfg.minForeignVolumePct&&iVolPct>=cfg.minInstVolumePct;
+  const foreignOnly=cfg.allowForeignOnly&&fsum>0&&fRate>=cfg.minForeignRate&&fVolPct>=cfg.minForeignVolumePct&&combPct>=cfg.minCombinedVolumePct;
+  const instOnly=cfg.allowInstOnly&&isum>0&&iRate>=cfg.minInstRate&&iVolPct>=cfg.minInstVolumePct&&combPct>=cfg.minCombinedVolumePct;
+  const pass=simultaneous||alternate||foreignOnly||instOnly;
+  const recent5=r.slice(0,Math.min(5,r.length)),prev5=r.slice(5,Math.min(10,r.length));
+  const sum=(a:any[],k:string)=>a.reduce((z,x)=>z+Number(x[k]||0),0);
+  const recentAccel=(sum(recent5,'foreign')+sum(recent5,'institution'))-(sum(prev5,'foreign')+sum(prev5,'institution'));
+  let score=0;
+  score+=Math.min(18,Math.round(fRate/6));
+  score+=Math.min(18,Math.round(iRate/6));
+  score+=Math.min(16,Math.round(coverageRate/6));
+  score+=Math.min(10,Math.round(jointRate/5));
+  score+=Math.min(10,switches*2);
+  score+=combPct>0?Math.min(14,Math.round(combPct*8)):0;
+  score+=recentAccel>0?5:0;
+  if(simultaneous)score+=12;
+  if(alternate)score+=10;
+  const mode=simultaneous&&alternate?'동시+교대매집':simultaneous?'동시매집':alternate?'교대매집':foreignOnly&&instOnly?'외국인+기관 누적':foreignOnly?'외국인 누적':instOnly?'기관 누적':'미통과';
+  return {days,pass,score,mode,flowDate:dashDate(r[0].date),oldestFlowDate:dashDate(r[r.length-1].date),source:r[0].source,
+    foreignSum:fsum,institutionSum:isum,combinedSum:csum,foreignPositiveDays:fDays,institutionPositiveDays:iDays,coverageDays:coverage,jointDays:joint,alternateDays,switches,
+    foreignPositiveRate:round(fRate,1),institutionPositiveRate:round(iRate,1),coverageRate:round(coverageRate,1),jointRate:round(jointRate,1),
+    foreignVolumePct:round(fVolPct,3),institutionVolumePct:round(iVolPct,3),combinedVolumePct:round(combPct,3),recentAccel:round(recentAccel)};
+}
+function priceWindowStats(rows:Bar[],asOf:string,cfg:MultiFlowCfg){
+  const target=ymd(asOf),a=rows.filter(x=>!target||x.date<=target).sort((x,y)=>x.date.localeCompare(y.date));
+  if(!a.length)return null;
+  const end=a.length-1,cur=a[end];
+  const ret=(d:number)=>{const i=end-(d-1);return i>=0&&a[i]?.close?round((cur.close/a[i].close-1)*100,2):null};
+  const last60=a.slice(Math.max(0,a.length-60));
+  const low60=Math.min(...last60.map(x=>x.low||x.close)),high60=Math.max(...last60.map(x=>x.high||x.close));
+  const dist60=low60?round((cur.close/low60-1)*100,2):null,fromHigh60=high60?round((cur.close/high60-1)*100,2):null;
+  const stats={date:dashDate(cur.date),price:cur.close,ret5:ret(5),ret10:ret(10),ret20:ret(20),ret40:ret(40),ret60:ret(60),dist60Low:dist60,from60High:fromHigh60};
+  const okMin60=stats.ret60==null||stats.ret60>=cfg.minRet60;
+  const ok10=stats.ret10==null||stats.ret10<=cfg.maxRet10;
+  const ok20=stats.ret20==null||stats.ret20<=cfg.maxRet20;
+  const ok60=stats.ret60==null||stats.ret60<=cfg.maxRet60;
+  const okLow=stats.dist60Low==null||stats.dist60Low<=cfg.maxDist60Low;
+  return {...stats,quietPass:okMin60&&ok10&&ok20&&ok60&&okLow,checks:{minRet60:okMin60,maxRet10:ok10,maxRet20:ok20,maxRet60:ok60,maxDist60Low:okLow}};
+}
+function overallFlowMode(windows:any[]){
+  const modes=windows.filter(Boolean).map(x=>x.mode);
+  const sim=modes.filter(x=>String(x).includes('동시')).length,alt=modes.filter(x=>String(x).includes('교대')).length;
+  const f=modes.filter(x=>String(x).startsWith('외국인')).length,i=modes.filter(x=>String(x).startsWith('기관')).length;
+  if(sim&&alt)return '동시+교대 장기매집';
+  if(sim>=2)return '외국인·기관 동시매집';
+  if(alt>=2)return '외국인↔기관 교대매집';
+  if(sim)return '동시매집';
+  if(alt)return '교대매집';
+  if(f>i)return '외국인 우위 누적';
+  if(i>f)return '기관 우위 누적';
+  return '혼합 누적';
+}
+
 async function loadBasic(code:string){
   for(const u of [`https://stock.naver.com/api/domestic/detail/${code}/detail?codeType=KRX`,`https://m.stock.naver.com/api/stock/${code}/basic`]){try{const j=await fetchJson(u,9000);return {name:String(j?.stockName??j?.itemName??j?.name??''),market:normalizeMarket(j?.stockExchangeType?.name??j?.marketType??j?.market)};}catch{}}
   return {name:'',market:'UNKNOWN'};
@@ -240,6 +321,66 @@ export async function POST(req:Request){
     for(let i=0;i<stocks.length;i+=6){const rr=await Promise.all(stocks.slice(i,i+6).map(async(s:any)=>{const code=String(s?.code||'').replace(/\D/g,'').slice(0,6);try{const rows=await loadHistory(code,cfg.asOf,cfg.lookbackDays,cfg.gcLookback);return {...s,code,tech:analyseTechnical(rows,cfg)};}catch(e:any){return {...s,code,scanError:String(e?.message||e)};}}));for(const r of rr){if(r.scanError)errors.push(r);else results.push(r);}}
     return NextResponse.json({results,errors,count:results.length},{headers:{'Cache-Control':'no-store'}});
   }
+  if(op==='multiFlow'){
+    const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,12):[];
+    if(!stocks.length)return NextResponse.json({error:'NO_STOCKS'},{status:400});
+    const b=body.cfg||{},asOf=String(b.asOf||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(asOf))return NextResponse.json({error:'BAD_DATE'},{status:400});
+    const rawWindows=Array.isArray(b.requiredWindows)?b.requiredWindows.map((x:any)=>Number(x)).filter((x:number)=>[10,20,40,60].includes(x)):[10,20,40,60];
+    const requiredWindows=[...new Set(rawWindows.length?rawWindows:[10,20,40,60])].sort((a:number,b:number)=>a-b);
+    const cfg:MultiFlowCfg={
+      minForeignRate:clamp(Number(b.minForeignRate??40),0,100),
+      minInstRate:clamp(Number(b.minInstRate??40),0,100),
+      minCoverageRate:clamp(Number(b.minCoverageRate??65),0,100),
+      minJointRate:clamp(Number(b.minJointRate??10),0,100),
+      minForeignVolumePct:clamp(Number(b.minForeignVolumePct??0),-10,20),
+      minInstVolumePct:clamp(Number(b.minInstVolumePct??0),-10,20),
+      minCombinedVolumePct:clamp(Number(b.minCombinedVolumePct??0),-10,30),
+      minAlternateSwitches:clamp(Number(b.minAlternateSwitches??2),0,30),
+      allowSimultaneous:b.allowSimultaneous!==false,
+      allowAlternate:b.allowAlternate!==false,
+      allowForeignOnly:b.allowForeignOnly!==false,
+      allowInstOnly:b.allowInstOnly!==false,
+      requiredWindows,
+      minWindowsPass:clamp(Number(b.minWindowsPass??3),1,4),
+      require60:b.require60!==false,
+      usePriceQuiet:b.usePriceQuiet!==false,
+      minRet60:clamp(Number(b.minRet60??-25),-90,100),
+      maxRet10:clamp(Number(b.maxRet10??10),-50,300),
+      maxRet20:clamp(Number(b.maxRet20??15),-50,500),
+      maxRet60:clamp(Number(b.maxRet60??30),-80,1000),
+      maxDist60Low:clamp(Number(b.maxDist60Low??35),0,1000)
+    };
+    cfg.minWindowsPass=Math.min(cfg.minWindowsPass,requiredWindows.length);
+    const results:any[]=[],errors:any[]=[];
+    for(let i=0;i<stocks.length;i+=4){
+      const rr=await Promise.all(stocks.slice(i,i+4).map(async(s:any)=>{
+        const code=String(s?.code||'').replace(/\D/g,'').slice(0,6);
+        try{
+          const [rows,trends,basic]=await Promise.all([loadHistory(code,asOf,150,45),loadTrend(code,asOf,60),loadBasic(code)]);
+          const summaries=[10,20,40,60].map(d=>multiWindowFlowSummary(trends,rows,d,cfg,asOf));
+          const by:any={};
+          for(const x of summaries)if(x)by[String(x.days)]=x;
+          const required=requiredWindows.map(d=>by[String(d)]).filter(Boolean);
+          const passCount=required.filter((x:any)=>x.pass).length;
+          const price=priceWindowStats(rows,asOf,cfg);
+          const flowPass=passCount>=cfg.minWindowsPass&&(!cfg.require60||!!by['60']?.pass);
+          const pricePass=!cfg.usePriceQuiet||!!price?.quietPass;
+          const pass=flowPass&&pricePass;
+          const totalScore=Math.round(required.reduce((z:number,x:any)=>z+Number(x.score||0)*(x.days/20),0)+(price?.quietPass?18:0)+(by['60']?.pass?12:0));
+          const recent=stocks.length===1&&body.includeRecent===true?trends.filter(x=>x.date<=ymd(asOf)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60).map(x=>({date:dashDate(x.date),foreign:x.foreign,institution:x.institution,combined:x.foreign+x.institution,holdRatio:x.holdRatio})):undefined;
+          return {...s,code,name:s.name||basic.name||code,market:s.market&&s.market!=='UNKNOWN'?s.market:basic.market,asOf:price?.date||asOf,price,windows:by,passWindows:passCount,requiredWindows,minWindowsPass:cfg.minWindowsPass,flowPass,pricePass,pass,totalScore,mode:overallFlowMode(required),source:by['60']?.source||by['40']?.source||'',recent,
+            naver:'https://stock.naver.com/domestic/stock/'+code+'/price',
+            investor:'https://stock.naver.com/domestic/stock/'+code+'/investmentinfo',
+            news:'https://search.naver.com/search.naver?where=news&query='+encodeURIComponent(String(s.name||basic.name||code))};
+        }catch(e:any){return {...s,code,scanError:String(e?.message||e)};}
+      }));
+      for(const r of rr){if(r.scanError)errors.push(r);else results.push(r);}
+    }
+    results.sort((a,b)=>Number(b.totalScore||0)-Number(a.totalScore||0));
+    return NextResponse.json({results,errors,count:results.length,asOf,cfg},{headers:{'Cache-Control':'no-store'}});
+  }
+
   if(op==='flowRange'){
     const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,10):[];if(!stocks.length)return NextResponse.json({error:'NO_STOCKS'},{status:400});
     const b=body.cfg||{},startDate=String(b.startDate||''),endDate=String(b.endDate||'');
