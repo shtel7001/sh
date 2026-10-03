@@ -75,7 +75,7 @@
 
   <section class="card">
     <div class="releasebar">
-      <div><div class="releaseTitle" id="releaseTitle">발표 데이터를 선택하세요</div><div class="releaseMeta" id="releaseMeta">파랑=전년 동기 대비(Y/Y) · 빨강=전월 같은 구간 대비(M/M)</div></div>
+      <div><div class="releaseTitle" id="releaseTitle">발표 데이터를 선택하세요</div><div class="releaseMeta" id="releaseMeta">파랑=전년 동기 대비(Y/Y) · 빨강=전월 같은 구간 대비(M/M) · 관세청 공식 10대 품목 전체 표시</div></div>
       <div class="selectRow"><span class="small">화면 기준</span><select id="releaseSelect" onchange="selectRelease()"><option>조회 후 선택</option></select></div>
     </div>
     <div id="infographic" class="infographic"></div>
@@ -106,7 +106,10 @@
 <script>
 const API='/api/export-flash-radar-20261003';
 const TOKEN_KEY='gcFlowRadarTokenV1', DATA_KEY='kcsExport10dServiceKeyV1';
-let TOKEN='', ALL_ROWS=[], FILTERED=[], CURRENT=null, ITEM_NAMES={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
+const CANONICAL_ITEM_NAMES={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
+const ITEM_KEYS=Object.keys(CANONICAL_ITEM_NAMES);
+let TOKEN='', ALL_ROWS=[], FILTERED=[], CURRENT=null, ITEM_NAMES={...CANONICAL_ITEM_NAMES};
+function mergeItemNames(v){return Object.assign({},CANONICAL_ITEM_NAMES,(v&&typeof v==='object')?v:{})}
 const $=id=>document.getElementById(id);
 function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 function shiftMonths(dateStr,n){const [y,m,d]=dateStr.split('-').map(Number),x=new Date(Date.UTC(y,m-1+n,Math.min(d,28)));return x.toISOString().slice(0,10)}
@@ -125,7 +128,7 @@ async function runQuery(){
   $('runBtn').disabled=true;$('excelBtn').disabled=true;setStatus('관세청 10일 단위 잠정 수출실적을 불러오는 중…');
   try{
     const j=await api(API+'?op=query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startDate:start,endDate:end,serviceKey:key})});
-    ALL_ROWS=j.rows||[];ITEM_NAMES=j.itemNames||ITEM_NAMES;
+    ALL_ROWS=j.rows||[];ITEM_NAMES=mergeItemNames(j.itemNames);
     if(!ALL_ROWS.length)throw new Error('선택 기간에 표시할 데이터가 없습니다.');
     applyFilter();
     $('excelBtn').disabled=false;
@@ -160,7 +163,7 @@ function applyFilter(){
 function selectRelease(){const i=Number($('releaseSelect').value);CURRENT=FILTERED[i]||null;renderAll()}
 function metricList(){
   if(!CURRENT)return [];
-  let a=Object.keys(ITEM_NAMES).map((k,i)=>({k,name:ITEM_NAMES[k],i,m:CURRENT.metrics?.[k]||{value:CURRENT.values?.[k],yoy:null,mom:null}}));
+  let a=ITEM_KEYS.map((k,i)=>({k,name:ITEM_NAMES[k]||CANONICAL_ITEM_NAMES[k],i,m:CURRENT.metrics?.[k]||{value:CURRENT.values?.[k],yoy:null,mom:null}}));
   const s=$('sortMode').value;
   const val=x=>s==='YOY'?Number(x.m.yoy??-1e99):s==='MOM'?Number(x.m.mom??-1e99):s==='AMOUNT'?Number(x.m.value??-1e99):-x.i;
   if(s!=='FIXED')a.sort((x,y)=>val(y)-val(x));
@@ -189,19 +192,19 @@ function renderInfographic(){
 function renderSummary(){
   if(!CURRENT){$('releaseTitle').textContent='발표 데이터를 선택하세요';$('sumYoy').textContent='-';$('sumMom').textContent='-';$('sumPeriod').textContent='-';return}
   $('releaseTitle').textContent=periodLabel(CURRENT)+' 주요 수출품목 증가율';
-  $('releaseMeta').textContent=(CURRENT.releaseDate||CURRENT.date||'-')+' 발표 · 파랑=Y/Y · 빨강=M/M';
-  const ms=Object.keys(ITEM_NAMES).map(k=>CURRENT.metrics?.[k]||{});
+  $('releaseMeta').textContent=(CURRENT.releaseDate||CURRENT.date||'-')+' 발표 · 파랑=Y/Y · 빨강=M/M · 10개 품목 전체 표시';
+  const ms=ITEM_KEYS.map(k=>CURRENT.metrics?.[k]||{});
   const yc=ms.filter(x=>Number(x.yoy)>0).length,mc=ms.filter(x=>Number(x.mom)>0).length;
   $('sumYoy').textContent=yc+' / '+ms.length;$('sumMom').textContent=mc+' / '+ms.length;$('sumPeriod').textContent=periodLabel(CURRENT);
 }
 function renderTable(){
   const tb=$('rows');tb.innerHTML='';if(!FILTERED.length){tb.innerHTML='<tr><td colspan="7" class="muted" style="padding:28px">표시할 데이터가 없습니다.</td></tr>';return}
-  [...FILTERED].reverse().forEach(r=>Object.keys(ITEM_NAMES).forEach(k=>{const m=r.metrics?.[k]||{value:r.values?.[k],yoy:null,mom:null},tr=document.createElement('tr');tr.innerHTML='<td>'+esc(r.releaseDate||r.date||'-')+'</td><td>'+esc(periodLabel(r))+'</td><td class="item">'+esc(ITEM_NAMES[k])+'</td><td>'+esc(amount(m.value))+'</td><td class="'+cls(m.yoy)+'">'+pctText(m.yoy)+'</td><td class="'+cls(m.mom)+'">'+pctText(m.mom)+'</td><td>'+(Number.isFinite(Number(m.value))?Math.round(Number(m.value)).toLocaleString():'-')+'</td>';tb.appendChild(tr)}));
+  [...FILTERED].reverse().forEach(r=>ITEM_KEYS.forEach(k=>{const m=r.metrics?.[k]||{value:r.values?.[k],yoy:null,mom:null},tr=document.createElement('tr');tr.innerHTML='<td>'+esc(r.releaseDate||r.date||'-')+'</td><td>'+esc(periodLabel(r))+'</td><td class="item">'+esc(ITEM_NAMES[k])+'</td><td>'+esc(amount(m.value))+'</td><td class="'+cls(m.yoy)+'">'+pctText(m.yoy)+'</td><td class="'+cls(m.mom)+'">'+pctText(m.mom)+'</td><td>'+(Number.isFinite(Number(m.value))?Math.round(Number(m.value)).toLocaleString():'-')+'</td>';tb.appendChild(tr)}));
 }
 function renderAll(){renderInfographic();renderSummary();renderTable()}
 function exportExcel(){
   if(!FILTERED.length)return;
-  const detail=[];FILTERED.forEach(r=>Object.keys(ITEM_NAMES).forEach(k=>{const m=r.metrics?.[k]||{};detail.push({발표일:r.releaseDate||r.date,집계구간:periodLabel(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}));
+  const detail=[];FILTERED.forEach(r=>ITEM_KEYS.forEach(k=>{const m=r.metrics?.[k]||{};detail.push({발표일:r.releaseDate||r.date,집계구간:periodLabel(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}));
   const raw=FILTERED.map(r=>Object.assign({발표일:r.releaseDate,집계구간:periodLabel(r)},r.raw||{}));
   const cfg=[{항목:'시작일',값:$('startDate').value},{항목:'종료일',값:$('endDate').value},{항목:'발표구간필터',값:$('cadence').options[$('cadence').selectedIndex].text},{항목:'원천',값:'관세청_수출 주요품목별 10일 단위 잠정치 통계'},{항목:'원자료단위',값:'천 달러'}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail),'증가율_상세');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(raw),'관세청_원자료');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cfg),'조회설정');
