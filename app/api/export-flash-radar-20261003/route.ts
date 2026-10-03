@@ -159,6 +159,11 @@ function lastDateOfMonth(s:string){
   const [y,m]=String(s||'').slice(0,7).split('-').map(Number);
   if(!y||!m)return s; return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
 }
+function monthStartOffset(s:string,delta:number){
+  const [y,m]=String(s||'').slice(0,7).split('-').map(Number);
+  if(!y||!m)return s;
+  return new Date(Date.UTC(y,m-1+delta,1)).toISOString().slice(0,10);
+}
 async function callUrl(url:string){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),13000);
   try{
@@ -281,10 +286,20 @@ export async function POST(req:Request){
       return NextResponse.json({error:'BAD_DATE_RANGE'},{status:400});
     const envKey=process.env.DATA_GO_KR_SERVICE_KEY||process.env.KCS_SERVICE_KEY||process.env.PUBLIC_DATA_SERVICE_KEY||'';
     try{
-      const historyStart=(Number(startDate.slice(0,4))-1)+startDate.slice(4,7)+'-01';
+      // Fetch 36 months from the selected end month so a clicked item can show
+      // 24 completed monthly bars while still having the prior 12 months needed for Y/Y.
+      const historyStart=monthStartOffset(endDate,-36);
       const got=await fetchOfficial(String(body.serviceKey||envKey),historyStart,lastDateOfMonth(endDate));
       const rows=enrich(got.rows,startDate,endDate);
-      return NextResponse.json({ok:true,rows,itemNames:ITEM_NAMES,unit:'천 달러',endpoint:got.endpoint,diagnostics:got.diagnostics,source:'관세청·공공데이터포털'},{headers:{'Cache-Control':'no-store'}});
+      const trendRows=got.rows
+        .filter((r:any)=>Number(r.rangeEnd||0)>=28 && (r.releaseDate||r.date) && (r.releaseDate||r.date)<=endDate)
+        .sort((a:any,b:any)=>String(a.date).localeCompare(String(b.date)))
+        .slice(-24)
+        .map((r:any)=>({
+          date:r.date,releaseDate:r.releaseDate,periodKey:r.periodKey,rangeEnd:r.rangeEnd,
+          metrics:r.metrics
+        }));
+      return NextResponse.json({ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',endpoint:got.endpoint,diagnostics:got.diagnostics,source:'관세청·공공데이터포털'},{headers:{'Cache-Control':'no-store'}});
     }catch(e:any){
       const msg=String(e?.message||e);
       if(msg==='DATA_GO_KR_KEY_REQUIRED')return NextResponse.json({error:'DATA_GO_KR_KEY_REQUIRED',message:'공공데이터포털 서비스키를 한 번 등록해 주세요.'},{status:428});
