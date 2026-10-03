@@ -254,7 +254,7 @@ export async function POST(req:Request){
       return NextResponse.json({error:'BAD_DATE_RANGE'},{status:400});
     const envKey=process.env.DATA_GO_KR_SERVICE_KEY||process.env.KCS_SERVICE_KEY||process.env.PUBLIC_DATA_SERVICE_KEY||'';
     try{
-      const got=await fetchOfficial(String(body.serviceKey||envKey),firstDateOfMonth(startDate),lastDateOfMonth(endDate));
+      const historyStart=(Number(startDate.slice(0,4))-1)+startDate.slice(4,7)+'-01';\n      const got=await fetchOfficial(String(body.serviceKey||envKey),historyStart,lastDateOfMonth(endDate));
       const rows=enrich(got.rows,startDate,endDate);
       return NextResponse.json({ok:true,rows,itemNames:ITEM_NAMES,unit:'천 달러',endpoint:got.endpoint,diagnostics:got.diagnostics,source:'관세청·공공데이터포털'},{headers:{'Cache-Control':'no-store'}});
     }catch(e:any){
