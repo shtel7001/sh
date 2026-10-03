@@ -213,7 +213,7 @@ function buildWindows(trends,minDays,maxDays){
 
 export async function GET(req){
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
-  if(op==='probe'){
+  if(op==='probe' && validToken(requestToken(req))){
     const code=String(u.searchParams.get('code')||'005930').replace(/\D/g,'').slice(0,6),asOf=String(u.searchParams.get('asOf')||'2026-10-02'),days=clamp(Number(u.searchParams.get('days')||250),10,250);
     try{
       const rows=await loadTrendLong(code,asOf,days);
