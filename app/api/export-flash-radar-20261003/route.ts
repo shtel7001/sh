@@ -41,6 +41,22 @@ const HS2_NAMES:any = {
   '92':'악기','93':'무기·탄약','94':'가구·조명기구','95':'완구·스포츠용품','96':'잡품','97':'예술품·골동품'
 };
 
+// 관세청 K-뷰티 HS 가이드에 맞춘 완제품 중심 집계.
+// HS33 전체(향료 원료·실내용 방향제 등)는 쓰지 않고 실제 화장품 관련 세번만 합산한다.
+const COSMETICS_CODES:any[] = [
+  {code:'3303',name:'향수·화장수'},
+  {code:'3304',name:'메이크업·기초화장·선제품·네일'},
+  {code:'3305',name:'두발용 제품'},
+  {code:'330710',name:'면도용 제품'},
+  {code:'330720',name:'인체용 탈취제·땀억제제'},
+  {code:'330730',name:'목욕용 제품'},
+  {code:'3307901000',name:'제모제'},
+  {code:'3307904000',name:'마스크팩'},
+  {code:'3307909000',name:'기타 화장품·화장용품'},
+  {code:'3401119000',name:'화장용 비누(기타)'},
+  {code:'3401300000',name:'피부세척용 액체·크림 제품'}
+];
+
 function secret(){ return process.env.SESSION_SECRET || ''; }
 function sign(payload:string){ return crypto.createHmac('sha256', `${secret()}:${SCOPE}`).update(payload).digest('base64url'); }
 function createToken(){ const p=`${SCOPE}.${crypto.randomBytes(24).toString('base64url')}`; return `${p}.${sign(p)}`; }
@@ -324,6 +340,44 @@ async function ensureHs2Value(key:string,ym:string,hs2:string,sums:any){
   const part=aggregateSeriesForHs2(got.rows,hs2);
   if(Number.isFinite(Number(part[ym])))sums[hs2]=Number(part[ym]);
 }
+function aggregateSeriesForCode(raw:any[],code:string){
+  const wanted=String(code||'').replace(/\D/g,'');
+  const exact=raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o)===wanted);
+  const src=exact.length?exact:raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o).startsWith(wanted));
+  const sums:any={};
+  for(const o of src){
+    const ym=yearYmOf(o),v=expDlrOf(o);
+    if(!ym||v===null)continue;
+    sums[ym]=(sums[ym]||0)+Number(v);
+  }
+  return sums;
+}
+async function fetchCosmeticsSeries(key:string,startYm:string,endYm:string){
+  const chunks=await Promise.all(COSMETICS_CODES.map(async (x:any)=>{
+    const got=await fetchItemtradeFull(key,startYm,endYm,x.code);
+    return {code:x.code,name:x.name,rows:got.rows,pages:got.pages,pagingMode:got.pagingMode};
+  }));
+  const totals:any={},breakdown:any={};
+  for(const ch of chunks){
+    const part=aggregateSeriesForCode(ch.rows,ch.code);
+    breakdown[ch.code]=part;
+    for(const [ym,v] of Object.entries(part))totals[ym]=(totals[ym]||0)+Number(v);
+  }
+  return {totals,breakdown,chunks};
+}
+function cosmeticsItemFromSeries(series:any,latestYm:string){
+  const v=Number(series?.totals?.[latestYm]||0);
+  const pm=Number(series?.totals?.[ymOffset(latestYm,-1)]||0);
+  const py=Number(series?.totals?.[ymOffset(latestYm,-12)]||0);
+  if(!v)return null;
+  return {
+    key:'cosmetics',hs2:'COSMETICS',rank:null,name:'화장품(세부 HS 합산)',
+    month:displayYm(latestYm),value:v/1000,
+    yoy:py?Math.round(((v/py)-1)*1000)/10:null,
+    mom:pm?Math.round(((v/pm)-1)*1000)/10:null,
+    scope:COSMETICS_CODES.map((x:any)=>x.code)
+  };
+}
 function aggregateSeriesForHs2(raw:any[],hs2:string){
   const exact=raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o)===hs2);
   const src=exact.length?exact:raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o).startsWith(hs2));
@@ -352,13 +406,6 @@ async function fetchExtraTop50(key:string,endDate:string){
   ]);
   const cur=latestSums,prev=aggregateHs2(prevGot.rows,prevYm),yr=aggregateHs2(yearGot.rows,prevYearYm);
 
-  // Explicitly verify HS33 so cosmetics cannot disappear because of a partial gateway response.
-  await Promise.all([
-    ensureHs2Value(key,latestYm,'33',cur),
-    ensureHs2Value(key,prevYm,'33',prev),
-    ensureHs2Value(key,prevYearYm,'33',yr)
-  ]);
-
   const curCoverage=hs2Coverage(cur),prevCoverage=hs2Coverage(prev),yrCoverage=hs2Coverage(yr);
   if(curCoverage<70)throw new Error('ITEMTRADE_INCOMPLETE_HS_COVERAGE::'+curCoverage);
 
@@ -374,25 +421,40 @@ async function fetchExtraTop50(key:string,endDate:string){
       mom:pv?Math.round(((v/pv)-1)*1000)/10:null
     };
   });
-  const cosmetics=ranked.findIndex(([code]:any)=>code==='33');
-  const cosmeticsRank=cosmetics>=0?cosmetics+1:null;
-  const cv=Number(cur['33']||0),cp=Number(prev['33']||0),cy=Number(yr['33']||0);
-  const cosmeticsItem=cv>0?{
-    key:'hs33',hs2:'33',rank:cosmeticsRank,name:HS2_NAMES['33'],
-    month:displayYm(latestYm),value:cv/1000,
-    yoy:cy?Math.round(((cv/cy)-1)*1000)/10:null,
-    mom:cp?Math.round(((cv/cp)-1)*1000)/10:null
-  }:null;
+  const hs33RankIndex=ranked.findIndex(([code]:any)=>code==='33');
+  const hs33Rank=hs33RankIndex>=0?hs33RankIndex+1:null;
+  const cosmeticsSeries=await fetchCosmeticsSeries(key,prevYearYm,latestYm);
+  const cosmeticsItem=cosmeticsItemFromSeries(cosmeticsSeries,latestYm);
   return {
     month:displayYm(latestYm),items,
-    cosmeticsRank,cosmeticsItem,
+    hs33Rank,cosmeticsItem,
     diagnostics:{
       latestYm,rows:latestGot.rows.length,pages:latestGot.pages,pagingMode:latestGot.pagingMode,
       hsChapters:curCoverage,prevHsChapters:prevCoverage,prevYearHsChapters:yrCoverage,
-      cosmeticsUsd:Number(cur['33']||0)
+      hs33Usd:Number(cur['33']||0),cosmeticsUsd:Number(cosmeticsSeries?.totals?.[latestYm]||0),cosmeticsCodes:COSMETICS_CODES.map((x:any)=>x.code)
     }
   };
 }
+async function fetchCosmeticsTrend(key:string,endDate:string){
+  const endYm=ymOffset(ymFromDate(endDate),-1);
+  const startYm=ymOffset(endYm,-35);
+  const series=await fetchCosmeticsSeries(key,startYm,endYm);
+  const months=Object.keys(series.totals||{}).sort();
+  const out:any[]=[];
+  for(const ym of months){
+    const v=Number(series.totals[ym]||0),pm=Number(series.totals[ymOffset(ym,-1)]||0),py=Number(series.totals[ymOffset(ym,-12)]||0);
+    out.push({
+      date:displayYm(ym)+'-01',
+      metrics:{cosmetics:{
+        value:v/1000,
+        yoy:py?Math.round(((v/py)-1)*1000)/10:null,
+        mom:pm?Math.round(((v/pm)-1)*1000)/10:null
+      }}
+    });
+  }
+  return out.slice(-24);
+}
+
 async function fetchExtraTrend(key:string,hs2:string,endDate:string){
   const endYm=ymOffset(ymFromDate(endDate),-1);
   const startYm=ymOffset(endYm,-35);
@@ -532,6 +594,17 @@ export async function POST(req:Request){
     return NextResponse.json({ok:true,token:createToken()},{headers:{'Cache-Control':'no-store'}});
   }
   if(!validToken(requestToken(req)))return unauthorized();
+  if(op==='cosmeticsTrend'){
+    const endDate=String(body.endDate||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(endDate))return NextResponse.json({error:'BAD_COSMETICS_TREND_REQUEST'},{status:400});
+    const envKey=process.env.DATA_GO_KR_SERVICE_KEY||process.env.KCS_SERVICE_KEY||process.env.PUBLIC_DATA_SERVICE_KEY||'';
+    try{
+      const rows=await fetchCosmeticsTrend(String(body.serviceKey||envKey),endDate);
+      return NextResponse.json({ok:true,rows,name:'화장품(세부 HS 합산)',codes:COSMETICS_CODES,source:'관세청 품목별 수출입실적(GW)'},{headers:{'Cache-Control':'no-store'}});
+    }catch(e:any){
+      return NextResponse.json({error:'ITEMTRADE_FAILED',message:String(e?.message||e).slice(0,1200)},{status:502,headers:{'Cache-Control':'no-store'}});
+    }
+  }
   if(op==='extraTrend'){
     const endDate=String(body.endDate||''),hs2=String(body.hs2||'').replace(/\D/g,'').slice(0,2);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||!/^\d{2}$/.test(hs2))return NextResponse.json({error:'BAD_EXTRA_TREND_REQUEST'},{status:400});
@@ -562,16 +635,16 @@ export async function POST(req:Request){
           date:r.date,releaseDate:r.releaseDate,periodKey:r.periodKey,rangeEnd:r.rangeEnd,
           metrics:r.metrics
         }));
-      let extraItems:any[]=[],extraMonth='',extraError='',extraDiagnostics:any=null,cosmeticsRank:any=null,cosmeticsItem:any=null;
+      let extraItems:any[]=[],extraMonth='',extraError='',extraDiagnostics:any=null,hs33Rank:any=null,cosmeticsItem:any=null;
       try{
         const extra=await fetchExtraTop50(String(body.serviceKey||envKey),endDate);
-        extraItems=extra.items;extraMonth=extra.month;extraDiagnostics=extra.diagnostics;cosmeticsRank=extra.cosmeticsRank;cosmeticsItem=extra.cosmeticsItem;
+        extraItems=extra.items;extraMonth=extra.month;extraDiagnostics=extra.diagnostics;hs33Rank=extra.hs33Rank;cosmeticsItem=extra.cosmeticsItem;
       }catch(ex:any){
         extraError=String(ex?.message||ex).slice(0,1000);
       }
       return NextResponse.json({
         ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',
-        extraItems,extraMonth,extraError,extraDiagnostics,cosmeticsRank,cosmeticsItem,
+        extraItems,extraMonth,extraError,extraDiagnostics,hs33Rank,cosmeticsItem,
         endpoint:got.endpoint,diagnostics:got.diagnostics,
         source:'관세청·공공데이터포털',
         extraSource:'관세청 품목별 수출입실적(GW) · HS 2단위 월간 통계'
