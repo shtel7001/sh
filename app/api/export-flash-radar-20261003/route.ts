@@ -218,16 +218,90 @@ function yearYmOf(o:any){
   return /^20\d{4}$/.test(s)?s:'';
 }
 function expDlrOf(o:any){return n(o.expDlr??o.expUsdAmt??o.exportDlr??o.expAmt);}
-async function fetchItemtrade(key:string,startYm:string,endYm:string,hs2=''){
+function xmlNum(xml:string,tag:string){
+  const m=String(xml||'').match(new RegExp('<'+tag+'[^>]*>([\\s\\S]*?)<\\/'+tag+'>','i'));
+  const v=m?Number(String(m[1]).replace(/[^0-9.-]/g,'')):0;
+  return Number.isFinite(v)?v:0;
+}
+function rowSig(o:any){
+  return [yearYmOf(o),hsCodeOf(o),String(o.statKor??''),String(expDlrOf(o)??'')].join('|');
+}
+async function fetchItemtradePage(key:string,startYm:string,endYm:string,hs2:string,pageNo:number,numOfRows:number,usePaging=true){
   const serviceKey=cleanKey(key); if(!serviceKey)throw new Error('DATA_GO_KR_KEY_REQUIRED');
   const q=new URLSearchParams({serviceKey,strtYymm:startYm,endYymm:endYm});
   if(hs2)q.set('hsSgn',hs2);
+  if(usePaging){q.set('pageNo',String(pageNo));q.set('numOfRows',String(numOfRows));}
   const url=ITEMTRADE_ENDPOINT+'?'+q.toString();
   const r=await callUrlLong(url,hs2?18000:30000);
   const err=apiError(r.text);
   if(!r.ok)throw new Error('ITEMTRADE_HTTP_'+r.status+'::'+(err||r.text.slice(0,400)));
   if(err)throw new Error('ITEMTRADE_ERROR::'+err);
-  return xmlObjects(r.text);
+  const items=xmlObjects(r.text);
+  return {
+    items,
+    totalCount:xmlNum(r.text,'totalCount'),
+    pageNo:xmlNum(r.text,'pageNo'),
+    numOfRows:xmlNum(r.text,'numOfRows'),
+    status:r.status
+  };
+}
+async function fetchItemtradeFull(key:string,startYm:string,endYm:string,hs2=''){
+  const pageSize=5000,maxPages=40;
+  let first:any;
+  try{
+    first=await fetchItemtradePage(key,startYm,endYm,hs2,1,pageSize,true);
+  }catch(e:any){
+    // Some GW variants do not accept paging parameters; fall back to the documented unpaged call.
+    const msg=String(e?.message||e);
+    if(!/INVALID_REQUEST_PARAMETER|ITEMTRADE_ERROR|HTTP_400/i.test(msg))throw e;
+    const one=await fetchItemtradePage(key,startYm,endYm,hs2,1,pageSize,false);
+    return {rows:one.items,pages:1,totalCount:one.items.length,pagingMode:'unpaged-fallback'};
+  }
+  const all:any[]=[],seen=new Set<string>();
+  const add=(rows:any[])=>{
+    let added=0;
+    for(const o of rows){
+      const sig=rowSig(o);
+      if(!seen.has(sig)){seen.add(sig);all.push(o);added++;}
+    }
+    return added;
+  };
+  add(first.items);
+  const declaredTotal=Number(first.totalCount||0);
+  if(declaredTotal>0 && all.length>=declaredTotal){
+    return {rows:all,pages:1,totalCount:declaredTotal,pagingMode:'paged'};
+  }
+  // If the gateway returns fewer than the requested page size and has no larger declared total,
+  // this is already the complete response.
+  if(first.items.length<pageSize && !(declaredTotal>first.items.length)){
+    return {rows:all,pages:1,totalCount:declaredTotal||all.length,pagingMode:first.pageNo||first.numOfRows?'paged':'single-response'};
+  }
+
+  let pages=1,lastFirstSig=first.items.length?rowSig(first.items[0]):'';
+  for(let page=2;page<=maxPages;page++){
+    const p=await fetchItemtradePage(key,startYm,endYm,hs2,page,pageSize,true);
+    if(!p.items.length)break;
+    const firstSig=p.items.length?rowSig(p.items[0]):'';
+    // Some gateways ignore pageNo and keep returning page 1. If so, retry once without paging;
+    // the Customs API's documented call can return the complete dataset in one response.
+    if(firstSig && firstSig===lastFirstSig){
+      const one=await fetchItemtradePage(key,startYm,endYm,hs2,1,pageSize,false);
+      if(one.items.length>all.length){
+        return {rows:one.items,pages:1,totalCount:one.items.length,pagingMode:'unpaged-complete'};
+      }
+      break;
+    }
+    const added=add(p.items);pages++;
+    if(!added)break;
+    if(declaredTotal>0 && all.length>=declaredTotal)break;
+    if(p.items.length<pageSize)break;
+    lastFirstSig=firstSig;
+  }
+  return {rows:all,pages,totalCount:declaredTotal||all.length,pagingMode:'paged'};
+}
+async function fetchItemtrade(key:string,startYm:string,endYm:string,hs2=''){
+  const got=await fetchItemtradeFull(key,startYm,endYm,hs2);
+  return got.rows;
 }
 function aggregateHs2(raw:any[],ym:string){
   const sums:any={};
@@ -239,6 +313,15 @@ function aggregateHs2(raw:any[],ym:string){
   }
   return sums;
 }
+function hs2Coverage(sums:any){
+  return Object.keys(sums||{}).filter(code=>Number(code)>=1&&Number(code)<=97&&Number(sums[code])>=0).length;
+}
+async function ensureHs2Value(key:string,ym:string,hs2:string,sums:any){
+  if(Number.isFinite(Number(sums?.[hs2])) && Number(sums[hs2])>0)return;
+  const got=await fetchItemtradeFull(key,ym,ym,hs2);
+  const part=aggregateSeriesForHs2(got.rows,hs2);
+  if(Number.isFinite(Number(part[ym])))sums[hs2]=Number(part[ym]);
+}
 function aggregateSeriesForHs2(raw:any[],hs2:string){
   const exact=raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o)===hs2);
   const src=exact.length?exact:raw.filter((o:any)=>yearYmOf(o)&&hsCodeOf(o).startsWith(hs2));
@@ -246,21 +329,37 @@ function aggregateSeriesForHs2(raw:any[],hs2:string){
   for(const o of src){const ym=yearYmOf(o),v=expDlrOf(o);if(!ym||v===null)continue;sums[ym]=(sums[ym]||0)+Number(v);}
   return sums;
 }
-async function fetchExtraTop20(key:string,endDate:string){
-  let latestYm=ymOffset(ymFromDate(endDate),-1), latestRaw:any[]=[];
+async function fetchExtraTop50(key:string,endDate:string){
+  let latestYm=ymOffset(ymFromDate(endDate),-1), latestGot:any=null, latestSums:any=null;
   for(let i=0;i<3;i++){
     const ym=ymOffset(latestYm,-i);
-    const raw=await fetchItemtrade(key,ym,ym);
-    const snap=aggregateHs2(raw,ym);
-    if(Object.keys(snap).length){latestYm=ym;latestRaw=raw;break;}
+    const got=await fetchItemtradeFull(key,ym,ym);
+    const snap=aggregateHs2(got.rows,ym);
+    const coverage=hs2Coverage(snap);
+    // A valid full month normally contains the great majority of HS chapters.
+    if(coverage>=70){
+      latestYm=ym;latestGot=got;latestSums=snap;break;
+    }
   }
-  if(!latestRaw.length)throw new Error('ITEMTRADE_NO_LATEST_MONTH');
+  if(!latestGot||!latestSums)throw new Error('ITEMTRADE_INCOMPLETE_HS_COVERAGE');
+
   const prevYm=ymOffset(latestYm,-1), prevYearYm=ymOffset(latestYm,-12);
-  const [prevRaw,yearRaw]=await Promise.all([
-    fetchItemtrade(key,prevYm,prevYm),
-    fetchItemtrade(key,prevYearYm,prevYearYm)
+  const [prevGot,yearGot]=await Promise.all([
+    fetchItemtradeFull(key,prevYm,prevYm),
+    fetchItemtradeFull(key,prevYearYm,prevYearYm)
   ]);
-  const cur=aggregateHs2(latestRaw,latestYm),prev=aggregateHs2(prevRaw,prevYm),yr=aggregateHs2(yearRaw,prevYearYm);
+  const cur=latestSums,prev=aggregateHs2(prevGot.rows,prevYm),yr=aggregateHs2(yearGot.rows,prevYearYm);
+
+  // Explicitly verify HS33 so cosmetics cannot disappear because of a partial gateway response.
+  await Promise.all([
+    ensureHs2Value(key,latestYm,'33',cur),
+    ensureHs2Value(key,prevYm,'33',prev),
+    ensureHs2Value(key,prevYearYm,'33',yr)
+  ]);
+
+  const curCoverage=hs2Coverage(cur),prevCoverage=hs2Coverage(prev),yrCoverage=hs2Coverage(yr);
+  if(curCoverage<70)throw new Error('ITEMTRADE_INCOMPLETE_HS_COVERAGE::'+curCoverage);
+
   const ranked=Object.entries(cur)
     .filter(([code,v]:any)=>Number(v)>0 && Number(code)>=1 && Number(code)<=97)
     .sort((a:any,b:any)=>Number(b[1])-Number(a[1]));
@@ -273,7 +372,16 @@ async function fetchExtraTop20(key:string,endDate:string){
       mom:pv?Math.round(((v/pv)-1)*1000)/10:null
     };
   });
-  return {month:displayYm(latestYm),items};
+  const cosmetics=ranked.findIndex(([code]:any)=>code==='33');
+  return {
+    month:displayYm(latestYm),items,
+    cosmeticsRank:cosmetics>=0?cosmetics+1:null,
+    diagnostics:{
+      latestYm,rows:latestGot.rows.length,pages:latestGot.pages,pagingMode:latestGot.pagingMode,
+      hsChapters:curCoverage,prevHsChapters:prevCoverage,prevYearHsChapters:yrCoverage,
+      cosmeticsUsd:Number(cur['33']||0)
+    }
+  };
 }
 async function fetchExtraTrend(key:string,hs2:string,endDate:string){
   const endYm=ymOffset(ymFromDate(endDate),-1);
@@ -444,16 +552,16 @@ export async function POST(req:Request){
           date:r.date,releaseDate:r.releaseDate,periodKey:r.periodKey,rangeEnd:r.rangeEnd,
           metrics:r.metrics
         }));
-      let extraItems:any[]=[],extraMonth='',extraError='';
+      let extraItems:any[]=[],extraMonth='',extraError='',extraDiagnostics:any=null,cosmeticsRank:any=null;
       try{
-        const extra=await fetchExtraTop20(String(body.serviceKey||envKey),endDate);
-        extraItems=extra.items;extraMonth=extra.month;
+        const extra=await fetchExtraTop50(String(body.serviceKey||envKey),endDate);
+        extraItems=extra.items;extraMonth=extra.month;extraDiagnostics=extra.diagnostics;cosmeticsRank=extra.cosmeticsRank;
       }catch(ex:any){
         extraError=String(ex?.message||ex).slice(0,1000);
       }
       return NextResponse.json({
         ok:true,rows,trendRows,itemNames:ITEM_NAMES,unit:'천 달러',
-        extraItems,extraMonth,extraError,
+        extraItems,extraMonth,extraError,extraDiagnostics,cosmeticsRank,
         endpoint:got.endpoint,diagnostics:got.diagnostics,
         source:'관세청·공공데이터포털',
         extraSource:'관세청 품목별 수출입실적(GW) · HS 2단위 월간 통계'
