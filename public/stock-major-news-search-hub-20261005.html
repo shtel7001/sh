@@ -183,7 +183,7 @@ function renderSlots(){
   const root=document.getElementById('slots');root.innerHTML='';
   slots.forEach((s,i)=>{
     const b=document.createElement('button');b.className='slot'+(i===active?' active':'');
-    b.innerHTML='<b>'+(escapeHtml(s.name||('저장공간 '+(i+1)))+'</b><span>'+(s.queries?.length||0)+'개</span>';
+    b.innerHTML='<b>'+escapeHtml(s.name||('저장공간 '+(i+1)))+'</b><span>'+(s.queries?.length||0)+'개</span>';
     b.onclick=()=>{saveEditor(false);active=i;syncEditor()};
     root.appendChild(b);
   });
@@ -234,7 +234,7 @@ function renderLib(){
 function login(){
   const input=document.getElementById('code');
   const msg=document.getElementById('authMsg');
-  const v=(input.value||'').replace(/\\s+/g,'');
+  const v=(input.value||'').replace(/\s+/g,'');
   if(v===AUTH_CODE){
     try{ localStorage.setItem(AUTH_KEY,'1'); }catch(e){}
     try{ document.cookie='stock_news_hub_auth=1; Max-Age=315360000; Path=/; SameSite=Lax; Secure'; }catch(e){}
