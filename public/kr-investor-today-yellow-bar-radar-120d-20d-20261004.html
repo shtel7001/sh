@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
-<title>120일 조회 · 20일 차트 당일 노란막대 레이더</title>
+<title>1~240일 누적분석 · 당일 노란막대 레이더</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -36,25 +36,25 @@
 
 <div class="wrap">
 <section class="hero">
-  <h1>120일 조회 · 20일 차트 당일 노란막대 레이더</h1>
-  <p><b>최근 120거래일</b> 수급을 조회해 가장 오래된 날부터 누적합니다. 외국인 또는 기관의 누적순매수가 0 이하 구간을 지나 <b>최신 거래일에 처음 +1 이상으로 전환</b>된 종목만 찾습니다. 선택 종목 차트는 <b>최근 20거래일</b>을 기본 표시하고, 그 당일 전환 막대를 <b>노란색</b>으로 표시합니다.</p>
-  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">120거래일 고정 조회</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">20거래일 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">가격차트</span><span class="tag">누적수급 막대그래프</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+  <h1>1~240일 누적분석 · 당일 노란막대 레이더</h1>
+  <p>누적 분석기간을 <b>1~240거래일</b> 사이에서 직접 숫자로 정합니다. 선택한 기간의 가장 오래된 날부터 외국인·기관 누적순매수를 계산하고, 누적값이 0 이하 구간을 지나 <b>최신 거래일에 +1 이상으로 전환</b>된 종목만 찾습니다. 선택 종목 차트는 기본 <b>최근 20거래일</b>을 표시하며 전환 당일 막대를 <b>노란색</b>으로 강조합니다.</p>
+  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">누적분석 1~240거래일</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">20거래일 기본 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
 </section>
 
 <section class="card">
   <h2>1. 시장 · 기준일 · 당일 전환 주체</h2>
   <div class="segrow" style="margin-top:10px">
-    <button class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
-    <button class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
-    <button class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
+    <button type="button" class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
+    <button type="button" class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
+    <button type="button" class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
   </div>
   <div class="rankrow" style="margin-top:10px">
-    <button class="modebtn active" data-mode="foreign" onclick="setMode(this)">외국인 당일 노란막대</button>
-    <button class="modebtn" data-mode="institution" onclick="setMode(this)">기관 당일 노란막대</button>
+    <button type="button" class="modebtn active" data-mode="foreign" onclick="setMode(this)">외국인 당일 노란막대</button>
+    <button type="button" class="modebtn" data-mode="institution" onclick="setMode(this)">기관 당일 노란막대</button>
   </div>
   <div class="grid">
     <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
-    <div class="field"><label>누적 분석기간</label><input id="analysisDays" type="number" value="120" readonly aria-readonly="true"></div>
+    <div class="field"><label>누적 분석기간 (1~240 거래일)</label><input id="analysisDays" type="number" min="1" max="240" step="1" value="120" inputmode="numeric" oninput="normalizeAnalysisDays()" onchange="normalizeAnalysisDays()"></div>
     <div class="field"><label>최대 스캔 종목 (0=전체)</label><input id="maxStocks" type="number" min="0" max="3000" value="0"></div>
     <div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
     <div class="field"><label>스팩 제외</label><select id="excludeSpac"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
@@ -144,10 +144,10 @@ const MODE_LABEL={combined:'외국인+기관',foreign:'외국인',institution:'�
 
 function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 $('asOf').value=kstDate();
-function getAnalysisDays(){const el=$('analysisDays');if(el)el.value=120;return 120}
-function updateRuleNote(){const el=$('ruleNote');if(!el)return;el.innerHTML='<b>판정 방식:</b> 항상 <b>120거래일</b>을 조회해 가장 오래된 날부터 누적합니다. 외국인 또는 기관 누적순매수가 0 이하 상태를 지나 <b>최신 거래일(0거래일 전)에 +1 이상으로 전환</b>된 종목만 결과에 남깁니다. 차트는 기본 <b>20거래일</b>이며 해당 당일 전환 막대를 <b style="color:#b45309">노란색</b>으로 표시합니다.'}
-function normalizeAnalysisDays(){ACTIVE_DAYS=120;updateRuleNote()}
-updateRuleNote();
+function getAnalysisDays(){const el=$('analysisDays');let d=Math.round(Number(el?.value)||120);d=Math.max(1,Math.min(240,d));if(el)el.value=d;return d}
+function updateRuleNote(days=getAnalysisDays()){const el=$('ruleNote');if(!el)return;el.innerHTML=`<b>판정 방식:</b> 선택한 <b>${days}거래일</b>을 가장 오래된 날부터 누적합니다. 외국인 또는 기관 누적순매수가 0 이하 상태를 지나 <b>최신 거래일(0거래일 전)에 +1 이상으로 전환</b>된 종목만 결과에 남깁니다. 차트는 기본 <b>20거래일</b>이며 해당 전환 당일 막대를 <b style="color:#b45309">노란색</b>으로 표시합니다.`}
+function normalizeAnalysisDays(){const d=getAnalysisDays();updateRuleNote(d);if(SUMMARIES.length&&d!==ACTIVE_DAYS)$('runMsg').textContent='누적 분석기간이 '+d+'거래일로 변경되었습니다. 적용하려면 다시 스캔하세요.'}
+updateRuleNote(120);
 
 function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
 async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
@@ -159,8 +159,8 @@ async function login(){
 function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').value='';$('login').classList.remove('hidden')}
 (async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(DETAIL_API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
 
-function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
-function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];render();if(SELECTED_FULL)drawSelected()}
+function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el));$('runMsg').textContent='시장 선택: '+(MARKET==='ALL'?'KOSPI+KOSDAQ':MARKET)}
+function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];$('runMsg').textContent='전환 주체 선택: '+MODE_LABEL[MODE];render();if(SELECTED_FULL)drawSelected()}
 function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
 function prepareUniverse(rows){let a=rows.slice();if($('excludePref').value==='1')a=a.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')a=a.filter(x=>!String(x.name).includes('스팩'));const m=Math.max(0,Number($('maxStocks').value)||0);if(m)a=a.slice(0,m);return a}
 function stopScan(){STOP=true;$('runMsg').textContent='중지 요청됨 · 현재 묶음 처리 후 멈춥니다.'}
@@ -207,7 +207,7 @@ function summarize(r,days=ACTIVE_DAYS){
 }
 function rankList(){
   const q=$('stockSearch').value.trim().toLowerCase(),mf=$('marketFilter').value;
-  const a=SUMMARIES.filter(r=>{const s=r.signals?.[MODE];return s&&s.tradingDaysAgo===0&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q))});
+  const a=SUMMARIES.filter(r=>{const s=r.signals?.[MODE];return !!s&&s.tradingDaysAgo===0&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q))});
   a.sort((x,y)=>{const a=x.signals[MODE],b=y.signals[MODE];return b.negativeRun-a.negativeRun||Number(y.cumPeriod[MODE]||0)-Number(x.cumPeriod[MODE]||0)});
   return a;
 }
@@ -218,7 +218,7 @@ function errorSummary(){const m={};ERRORS.forEach(e=>{const k=String(e.scanError
 async function scanStocks(stocks){
   for(let i=0;i<stocks.length;i+=10){
     if(STOP)break;const batch=stocks.slice(i,i+10),end=Math.min(i+10,stocks.length);
-    $('runMsg').textContent='120거래일 조회 · '+MODE_LABEL[MODE]+' 당일 전환 검사 '+end+' / '+stocks.length;
+    $('runMsg').textContent=ACTIVE_DAYS+'거래일 누적 분석 · '+MODE_LABEL[MODE]+' 당일 전환 검사 '+end+' / '+stocks.length;
     try{
       const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:batch,cfg:{asOf:$('asOf').value,minDays:1,maxDays:ACTIVE_DAYS}})});
       (j.results||[]).forEach(r=>SUMMARIES.push(summarize(r,ACTIVE_DAYS)));ERRORS=ERRORS.concat(j.errors||[]);
@@ -230,14 +230,14 @@ async function runAll(){
   if(!$('asOf').value)return alert('기준일을 선택해 주세요.');ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
   try{
     $('runMsg').textContent='전종목 목록 불러오는 중...';const u=await api(SCAN_API+'?op=universe&market='+MARKET),stocks=prepareUniverse(u.rows||[]);$('stUniverse').textContent=stocks.length;
-    await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · 120일 분석 '+SUMMARIES.length+'개 · '+MODE_LABEL[MODE]+' 당일 노란막대 '+rankList().length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
+    await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · 분석 '+SUMMARIES.length+'개 · 현재 '+MODE_LABEL[MODE]+' 전환 '+rankList().length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
   }catch(e){$('runMsg').textContent='실패: '+e.message;alert(e.message)}
   finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
 }
 async function runDirect(){
   const codes=($('directCodes').value.match(/\d{6}/g)||[]);if(!codes.length)return alert('종목코드를 입력해 주세요.');if(!$('asOf').value)return alert('기준일을 선택해 주세요.');
   ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;
-  try{await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent='입력 종목 검증 완료 · '+MODE_LABEL[MODE]+' 당일 노란막대 '+rankList().length+'개';}
+  try{await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent='입력 종목 검증 완료 · '+MODE_LABEL[MODE]+' 전환 '+rankList().length+'개';}
   catch(e){alert(e.message)}finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
 }
 function render(){
@@ -273,9 +273,9 @@ async function selectStock(code){
   }catch(e){$('chartPlaceholder').textContent='차트 불러오기 실패: '+e.message}
 }
 function setGraphDays(days,el){
-  const cap=120;GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||20));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
+  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
 }
-function applyCustomDays(){const cap=120,d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||20)));setGraphDays(d,null)}
+function applyCustomDays(){const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(60,cap))));setGraphDays(d,null)}
 async function drawSelected(){
   if(!SELECTED||!SELECTED_FULL)return;
   $('chartPlaceholder').classList.add('hidden');$('charts').classList.remove('hidden');
@@ -308,8 +308,8 @@ function clearChartsUI(){
 }
 function exportExcel(){
   const list=rankList();if(!list.length)return alert('현재 주체의 당일 노란막대 종목이 없습니다.');
-  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],분석기간_거래일:120,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
-  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:'120거래일',정렬주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,'120일조회_20일차트_'+MODE_LABEL[MODE]+'_당일노란막대_레이더_'+$('asOf').value+'.xlsx',{compression:true});
+  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
+  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',정렬주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일누적_'+MODE_LABEL[MODE]+'_당일노란막대_레이더_'+$('asOf').value+'.xlsx',{compression:true});
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function money(v){const x=Number(v);return Number.isFinite(x)&&x?x.toLocaleString():'-'}
