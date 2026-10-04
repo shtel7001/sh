@@ -231,17 +231,19 @@ function renderLib(){
   names.forEach(n=>{const b=document.createElement('button');b.className='btn ghost cat';b.dataset.cat=n;b.textContent=n;b.onclick=()=>show(n);cats.appendChild(b)});
   show(current);
 }
-async function sha256(s){
-  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
-  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
-async function login(){
-  const v=document.getElementById('code').value.trim();
-  if(await sha256(v)===AUTH_HASH){
-    localStorage.setItem(AUTH_KEY,'1');
-    document.cookie='stock_news_hub_auth=1; Max-Age=315360000; Path=/; SameSite=Lax; Secure';
+function login(){
+  const input=document.getElementById('code');
+  const msg=document.getElementById('authMsg');
+  const v=(input.value||'').replace(/\\s+/g,'');
+  if(v===AUTH_CODE){
+    try{ localStorage.setItem(AUTH_KEY,'1'); }catch(e){}
+    try{ document.cookie='stock_news_hub_auth=1; Max-Age=315360000; Path=/; SameSite=Lax; Secure'; }catch(e){}
     document.getElementById('auth').classList.add('hidden');
-  }else document.getElementById('authMsg').textContent='인증번호가 맞지 않습니다.';
+    msg.textContent='';
+  }else{
+    msg.textContent='인증번호가 맞지 않습니다. 12자리 번호를 다시 확인해 주세요.';
+    input.focus();
+  }
 }
 function isAuthed(){return localStorage.getItem(AUTH_KEY)==='1'||document.cookie.includes('stock_news_hub_auth=1')}
 
