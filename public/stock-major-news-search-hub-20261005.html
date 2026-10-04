@@ -110,7 +110,7 @@ AI 데이터센터 전력 투자
 <script>
 const AUTH_KEY='stockNewsSearchHubAuthV1';
 const STORE_KEY='stockNewsSearchHubSlotsV1';
-const AUTH_HASH='696db21cbff09ada1a61dce8499bd5de35f5f8a7f68a90ac294e091a131ca70f';
+const AUTH_CODE='835373900073';
 const DEFAULT_NAMES=['시장전체','반도체·HBM','AI·데이터센터','바이오·FDA','로봇','방산','원전·전력','2차전지','자동차·자율주행','수출·관세','정책·정부','실적·컨센서스','수주·계약','M&A·지분','공시·자금조달','수급·블록딜','주주환원','미국 빅테크','중국·일본','기타'];
 let active=0;
 let slots=loadSlots();
@@ -245,7 +245,7 @@ async function login(){
 }
 function isAuthed(){return localStorage.getItem(AUTH_KEY)==='1'||document.cookie.includes('stock_news_hub_auth=1')}
 
-document.getElementById('loginBtn').onclick=login;
+document.getElementById('loginBtn').addEventListener('click',login);
 document.getElementById('code').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 document.getElementById('saveName').onclick=()=>saveEditor();
 document.getElementById('saveQueries').onclick=()=>saveEditor();
@@ -279,7 +279,9 @@ document.getElementById('importFile').onchange=async e=>{
 };
 
 renderDests();renderLib();syncEditor();
-if(isAuthed())document.getElementById('auth').classList.add('hidden');
+try{
+  if(isAuthed())document.getElementById('auth').classList.add('hidden');
+}catch(e){}
 </script>
 </body>
 </html>
