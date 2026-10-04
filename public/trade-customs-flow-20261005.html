@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>K-Trade Customs Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#050914;--card:#0c1424;--card2:#101b2f;--line:#1d2a40;--text:#edf6ff;--muted:#8fa4be;--cyan:#45d7ff;--violet:#8c72ff;--pink:#ef65c7;--green:#54e3a6;--red:#ff667d;--blue:#6da8ff}
+*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(circle at 12% -8%,rgba(69,215,255,.15),transparent 26rem),radial-gradient(circle at 92% 0%,rgba(140,114,255,.18),transparent 30rem),linear-gradient(180deg,#07101e,#050914 45%,#04070e);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;min-height:100%}
+button,input,select{font:inherit}.wrap{max-width:1450px;margin:auto;padding:14px}.top{position:sticky;top:0;z-index:40;background:rgba(5,9,20,.86);backdrop-filter:blur(18px);border-bottom:1px solid rgba(141,176,220,.12)}.topin{max-width:1450px;margin:auto;padding:13px 14px 11px}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{display:flex;align-items:center;gap:11px}.logo{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cyan),var(--violet),var(--pink));color:#04101a;font-weight:1000;box-shadow:0 0 34px rgba(69,215,255,.22)}.brand h1{font-size:18px;margin:0;letter-spacing:-.04em}.brand p{font-size:11px;color:var(--muted);margin:2px 0 0}.live{font-size:11px;color:#b8c8da;border:1px solid rgba(130,173,225,.17);padding:7px 10px;border-radius:999px}.live:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 11px var(--green)}.nav{display:flex;gap:7px;overflow:auto;padding-top:11px;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}.nav button{border:1px solid rgba(130,173,225,.13);background:rgba(255,255,255,.025);color:#9db0c7;border-radius:10px;padding:8px 12px;white-space:nowrap;font-size:12px;font-weight:800}.nav button.active{color:white;border-color:rgba(69,215,255,.5);background:linear-gradient(135deg,rgba(69,215,255,.12),rgba(140,114,255,.15))}
+.hero{margin-top:16px;padding:23px;border:1px solid rgba(126,168,219,.13);border-radius:22px;background:linear-gradient(145deg,rgba(16,30,52,.94),rgba(8,16,30,.96));box-shadow:0 18px 60px rgba(0,0,0,.22);overflow:hidden;position:relative}.hero:after{content:"↗";position:absolute;right:22px;top:-36px;font-size:160px;font-weight:1000;color:rgba(255,255,255,.035)}.hero small{display:inline-flex;border:1px solid rgba(69,215,255,.25);color:var(--cyan);padding:5px 8px;border-radius:999px;font-weight:900;letter-spacing:.08em}.hero h2{font-size:30px;letter-spacing:-.055em;margin:11px 0 8px}.hero p{margin:0;color:#a7bad0;font-size:13px;line-height:1.7;max-width:900px}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.chip{font-size:10px;color:#a9bed6;border:1px solid rgba(133,176,226,.14);border-radius:999px;padding:6px 8px;background:rgba(255,255,255,.025)}
+.panel{margin-top:12px;border:1px solid rgba(126,168,219,.13);border-radius:18px;background:rgba(10,18,32,.88);box-shadow:0 12px 45px rgba(0,0,0,.16);overflow:hidden}.panelHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:16px 16px 10px}.panelHead h3{margin:0;font-size:16px}.panelHead p{margin:4px 0 0;font-size:11px;color:var(--muted)}.controls{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:8px;padding:0 16px 16px}.field label{display:block;font-size:10px;color:#7f94ae;font-weight:800;margin:0 0 5px}.field input,.field select{width:100%;height:41px;border:1px solid #20314c;background:#07101d;color:#eaf5ff;border-radius:10px;padding:0 10px;outline:none}.field input:focus,.field select:focus{border-color:var(--cyan)}.actionrow{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 16px}.btn{border:1px solid #23344f;background:#0a1423;color:#c7d8eb;border-radius:10px;padding:9px 12px;font-weight:850;cursor:pointer}.btn.primary{border:0;background:linear-gradient(90deg,var(--cyan),var(--violet));color:#06111c}.btn.secondary{border-color:rgba(69,215,255,.28);color:#bff2ff;background:rgba(69,215,255,.07)}.btn:disabled{opacity:.45;cursor:not-allowed}.status{padding:11px 13px;margin:0 16px 16px;border:1px solid #1b2a42;background:#07101d;border-radius:11px;color:#8fa5bf;font-size:11px;line-height:1.6}.status.ok{border-color:rgba(84,227,166,.23);color:#9ef0c7;background:rgba(84,227,166,.05)}.status.err{border-color:rgba(255,102,125,.25);color:#ffb6c2;background:rgba(255,102,125,.06)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:0 16px 16px}.kpi{border:1px solid #1c2b43;background:linear-gradient(180deg,#0f1b2f,#0a1322);border-radius:15px;padding:14px}.kpi span{font-size:10px;color:#7e93ad}.kpi b{display:block;font-size:23px;letter-spacing:-.04em;margin-top:5px}.kpi em{display:block;font-style:normal;font-size:10px;margin-top:4px;color:#6e849f}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;padding:0 16px 16px}.item{border:1px solid #1c2b43;background:linear-gradient(180deg,#0d182a,#09121f);border-radius:15px;padding:12px;min-height:145px}.item .name{font-size:12px;font-weight:900;min-height:34px}.item .amt{font-size:18px;font-weight:1000;margin-top:7px}.twins{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.metric{border:1px solid #1b2a42;background:#07101d;border-radius:10px;padding:7px}.metric span{display:block;font-size:9px;color:#7087a2}.metric b{font-size:13px}.pos{color:#ff8094!important}.neg{color:#7caeff!important}.neutral{color:#b8c8da!important}.bar{height:5px;background:#152238;border-radius:99px;margin-top:7px;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.tableWrap{overflow:auto;max-height:58vh;border-top:1px solid #17243a}.table{border-collapse:collapse;width:100%;min-width:900px}.table th,.table td{padding:9px 10px;border-bottom:1px solid #152238;font-size:11px;text-align:right;white-space:nowrap}.table th{position:sticky;top:0;background:#0b1525;color:#7890aa;z-index:2}.table th:first-child,.table td:first-child{text-align:left}.rank{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:8px;background:rgba(69,215,255,.08);color:var(--cyan);font-weight:900;margin-right:7px}.section{display:none}.section.active{display:block}.sourceNote{font-size:10px;color:#647b96;padding:0 16px 16px;line-height:1.65}.keyline{display:flex;gap:7px;flex-wrap:wrap}.pill{font-size:10px;border:1px solid #1d2b42;border-radius:999px;padding:5px 7px;color:#7188a2}.login,.modal{position:fixed;inset:0;z-index:100;background:rgba(2,6,14,.9);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px}.box{width:min(430px,100%);background:linear-gradient(180deg,#101c30,#07101e);border:1px solid rgba(85,183,255,.2);border-radius:22px;padding:23px;box-shadow:0 28px 80px rgba(0,0,0,.4)}.box h3{margin:0 0 7px;font-size:21px}.box p{margin:0 0 14px;color:#8ca2bc;font-size:11px;line-height:1.7}.box input{width:100%;height:46px;border:1px solid #24364f;background:#050b14;color:white;border-radius:11px;padding:0 12px;outline:none}.box .btn{width:100%;margin-top:8px}.hidden{display:none!important}.foot{padding:24px 10px 36px;text-align:center;color:#526983;font-size:10px}
+@media(max-width:1050px){.controls{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.wrap{padding:8px}.topin{padding:11px 9px 9px}.live{display:none}.hero{padding:18px 15px;border-radius:17px}.hero h2{font-size:24px}.controls{grid-template-columns:repeat(2,1fr);padding:0 10px 12px}.panelHead{padding:14px 10px 9px}.actionrow{padding:0 10px 12px}.status{margin:0 10px 12px}.kpis{grid-template-columns:repeat(2,1fr);padding:0 10px 12px}.grid{grid-template-columns:repeat(2,1fr);padding:0 10px 12px}.item{min-height:135px}.kpi b{font-size:20px}.hero:after{font-size:115px}.sourceNote{padding:0 10px 12px}}
+</style>
+</head>
+<body>
+<div id="login" class="login hidden">
+  <div class="box">
+    <div class="pill" style="display:inline-flex;margin-bottom:10px">PRIVATE ACCESS</div>
+    <h3>1회 영구 인증</h3>
+    <p>기존 개인 레이더와 같은 인증방식입니다. 같은 브라우저에서 이미 인증했다면 자동으로 통과합니다.</p>
+    <input id="authCode" inputmode="numeric" maxlength="20" placeholder="인증번호 입력">
+    <button class="btn primary" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" style="font-size:11px;color:#ff9eb0;margin-top:9px"></div>
+  </div>
+</div>
+
+<div id="keyModal" class="modal hidden" onclick="if(event.target===this)closeKey()">
+  <div class="box">
+    <h3>관세청 API 키</h3>
+    <p>기존 수출실적 레이더와 동일한 키 저장공간을 사용합니다. 이미 저장돼 있으면 다시 입력할 필요가 없습니다.</p>
+    <input id="serviceKey" autocomplete="off" placeholder="공공데이터포털 일반 인증키">
+    <button class="btn primary" onclick="saveKey()">저장</button>
+    <button class="btn" onclick="closeKey()">닫기</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="topin">
+    <div class="brandrow">
+      <div class="brand"><div class="logo">K</div><div><h1>K-Trade Customs Flow</h1><p>관세청 OpenAPI 직접 연결 · 개인용 수출 흐름 대시보드</p></div></div>
+      <div class="live">CUSTOMS API DIRECT</div>
+    </div>
+    <div class="nav">
+      <button class="active" data-tab="home" onclick="tab('home',this)">홈</button>
+      <button data-tab="flash" onclick="tab('flash',this)">순별 수출</button>
+      <button data-tab="items" onclick="tab('items',this)">HS 품목</button>
+      <button data-tab="detail" onclick="tab('detail',this)">상세표</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <small>KOREA CUSTOMS SERVICE</small>
+    <h2>수출 흐름으로 읽는 한국 무역</h2>
+    <p>원본 사이트 서버를 거치지 않습니다. 관세청의 ‘수출 주요품목별 10일 단위 잠정치’와 ‘품목별 수출입실적(GW)’ OpenAPI를 직접 호출해 최신 수치를 구성합니다.</p>
+    <div class="chips"><span class="chip">1·11·21일 발표</span><span class="chip">주요 10개 품목</span><span class="chip">HS 11~50위</span><span class="chip">화장품 세부 HS 합산</span><span class="chip">Y/Y + M/M</span><span class="chip">Excel .xlsx</span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panelHead"><div><h3>조회 조건</h3><p>기간을 정하면 관세청 API에서 직접 조회합니다.</p></div><div class="keyline"><span class="pill">10일 잠정치 API</span><span class="pill">품목별 GW API</span></div></div>
+    <div class="controls">
+      <div class="field"><label>시작일</label><input id="startDate" type="date"></div>
+      <div class="field"><label>종료일</label><input id="endDate" type="date"></div>
+      <div class="field"><label>발표 구간</label><select id="cadence" onchange="applyFilter()"><option value="ALL">전체</option><option value="1">월 전체 · 1일</option><option value="11">1~10일 · 11일</option><option value="21">1~20일 · 21일</option></select></div>
+      <div class="field"><label>발표 선택</label><select id="release" onchange="chooseRelease()"><option>조회 후 선택</option></select></div>
+      <div class="field"><label>관세청 연결</label><button class="btn secondary" style="width:100%;height:41px" onclick="openKey()">API 키 확인</button></div>
+    </div>
+    <div class="actionrow">
+      <button id="runBtn" class="btn primary" onclick="runQuery()">관세청 데이터 조회</button>
+      <button id="excelBtn" class="btn" onclick="exportExcel()" disabled>Excel 저장</button>
+      <button class="btn" onclick="recent(3)">최근 3개월</button>
+      <button class="btn" onclick="recent(12)">최근 1년</button>
+    </div>
+    <div id="status" class="status">기존 브라우저에 저장된 관세청 API 키를 자동으로 확인합니다.</div>
+  </section>
+
+  <section id="home" class="section active">
+    <div class="panel">
+      <div class="panelHead"><div><h3>가장 최근 발표</h3><p id="latestMeta">조회 후 표시됩니다.</p></div></div>
+      <div class="kpis">
+        <div class="kpi"><span>전체 수출</span><b id="kTotal">-</b><em>관세청 잠정치 · 억 달러</em></div>
+        <div class="kpi"><span>Y/Y 상승 품목</span><b id="kYoy">-</b><em>주요 10개 품목 중</em></div>
+        <div class="kpi"><span>M/M 상승 품목</span><b id="kMom">-</b><em>주요 10개 품목 중</em></div>
+        <div class="kpi"><span>HS 월간 기준</span><b id="kHsMonth">-</b><em>품목별 수출입실적(GW)</em></div>
+      </div>
+      <div id="homeGrid" class="grid"></div>
+    </div>
+  </section>
+
+  <section id="flash" class="section">
+    <div class="panel">
+      <div class="panelHead"><div><h3>관세청 주요 10개 품목</h3><p>파랑/빨강 구분 대신 현재 화면에서는 증가·감소를 숫자로 선명하게 표시합니다.</p></div></div>
+      <div id="flashGrid" class="grid"></div>
+      <div class="sourceNote">원천: 관세청 ‘수출 주요품목별 10일 단위 잠정치 통계’. 원자료 단위는 천 달러이며 화면은 억 달러로 환산합니다.</div>
+    </div>
+  </section>
+
+  <section id="items" class="section">
+    <div class="panel">
+      <div class="panelHead"><div><h3>HS 2단위 월간 수출액 11~50위</h3><p id="extraMeta">관세청 품목별 수출입실적(GW) 기준</p></div></div>
+      <div id="cosmetics"></div>
+      <div class="tableWrap">
+        <table class="table"><thead><tr><th>순위 · 품목</th><th>금액(억$)</th><th>Y/Y</th><th>M/M</th></tr></thead><tbody id="hsRows"><tr><td colspan="4">조회 후 표시됩니다.</td></tr></tbody></table>
+      </div>
+      <div class="sourceNote">HS 분류와 관세청 ‘주요품목’ 분류는 범위가 다를 수 있습니다. 화장품은 HS33 전체가 아니라 실제 화장품 세부 HS를 별도 합산합니다.</div>
+    </div>
+  </section>
+
+  <section id="detail" class="section">
+    <div class="panel">
+      <div class="panelHead"><div><h3>기간별 상세 데이터</h3><p>발표일·집계구간·품목·수출액·Y/Y·M/M</p></div></div>
+      <div class="tableWrap">
+        <table class="table"><thead><tr><th>발표일 · 품목</th><th>수출액(억$)</th><th>Y/Y</th><th>M/M</th></tr></thead><tbody id="detailRows"><tr><td colspan="4">조회 후 표시됩니다.</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="foot">관세청 OpenAPI 직접 조회 · 잠정치는 발표기관 정정에 따라 변경될 수 있습니다.</div>
+
+<script>
+const API='/api/export-flash-radar-20261003';
+const TOKEN_KEY='gcFlowRadarTokenV1';
+const DATA_KEY='kcsExport10dServiceKeyV1';
+const NAMES={item01:'반도체',item02:'철강제품',item03:'승용차',item04:'석유제품',item05:'무선통신기기',item06:'선박',item07:'자동차부품',item08:'컴퓨터 주변기기',item09:'정밀기기',item10:'가전제품'};
+let TOKEN='',ALL=[],FILTERED=[],CURRENT=null,EXTRA=[],EXTRA_MONTH='',COS=null,ITEM_NAMES={...NAMES};
+const $=id=>document.getElementById(id);
+function today(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
+function shiftMonths(s,n){const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1+n,Math.min(d,28))).toISOString().slice(0,10)}
+$('endDate').value=today();$('startDate').value=shiftMonths(today(),-3);
+function recent(n){$('endDate').value=today();$('startDate').value=shiftMonths(today(),-n)}
+function tab(id,btn){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok){const e=new Error(j.message||j.error||('HTTP '+r.status));e.code=j.error;throw e}return j}
+async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중…';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent='';setStatus('인증 완료. 관세청 API 키를 확인합니다.','ok')}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+function openKey(){$('serviceKey').value=localStorage.getItem(DATA_KEY)||'';$('keyModal').classList.remove('hidden')}
+function closeKey(){$('keyModal').classList.add('hidden')}
+function saveKey(){const v=$('serviceKey').value.trim();if(!v)return;localStorage.setItem(DATA_KEY,v);closeKey();setStatus('기존 관세청 서비스키 저장 완료.','ok')}
+function setStatus(t,type=''){$('status').textContent=t;$('status').className='status'+(type?' '+type:'')}
+function cadence(r){const e=Number(r.rangeEnd||0);if(e===10)return'11';if(e===20)return'21';if(e>=28)return'1';return''}
+function period(r){const ym=String(r.date||'').slice(0,7).replace('-','.');const e=Number(r.rangeEnd||0);if(e===10)return ym+' 1~10일';if(e===20)return ym+' 1~20일';if(e>=28)return ym+' 월 전체';return r.date||'-'}
+function moneyRaw(v){const n=Number(v);return Number.isFinite(n)?(n/100000).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억$':'-'}
+function moneyMillion(v){const n=Number(v);return Number.isFinite(n)?(n/100).toLocaleString('ko-KR',{maximumFractionDigits:1})+'억$':'-'}
+function pct(v){if(v===null||v===undefined||!Number.isFinite(Number(v)))return'<span class="neutral">-</span>';const n=Number(v),c=n>0?'pos':n<0?'neg':'neutral';return '<span class="'+c+'">'+(n>0?'+':'')+n.toFixed(1)+'%</span>'}
+function itemCard(k,m){const name=ITEM_NAMES[k]||k;const y=Number(m?.yoy||0);const width=Math.min(100,Math.abs(y));return '<div class="item"><div class="name">'+name+'</div><div class="amt">'+moneyRaw(m?.value)+'</div><div class="twins"><div class="metric"><span>Y/Y</span><b>'+pct(m?.yoy)+'</b></div><div class="metric"><span>M/M</span><b>'+pct(m?.mom)+'</b></div></div><div class="bar"><i style="width:'+width+'%"></i></div></div>'}
+function applyFilter(){const c=$('cadence').value;FILTERED=ALL.filter(r=>c==='ALL'||cadence(r)===c).sort((a,b)=>String(a.releaseDate||a.date).localeCompare(String(b.releaseDate||b.date)));const sel=$('release');sel.innerHTML='';FILTERED.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(r.releaseDate||r.date||'-')+' · '+period(r);sel.appendChild(o)});if(FILTERED.length){sel.value=FILTERED.length-1;chooseRelease()}else renderEmpty()}
+function chooseRelease(){const r=FILTERED[Number($('release').value)||0];CURRENT=r||null;renderCurrent();renderDetail()}
+function renderEmpty(){$('homeGrid').innerHTML='';$('flashGrid').innerHTML='';$('kTotal').textContent='-';$('kYoy').textContent='-';$('kMom').textContent='-';$('latestMeta').textContent='선택 기간에 발표 데이터가 없습니다.'}
+function renderCurrent(){if(!CURRENT)return renderEmpty();const keys=Object.keys(ITEM_NAMES);const cards=keys.map(k=>itemCard(k,CURRENT.metrics?.[k]||{})).join('');$('homeGrid').innerHTML=cards;$('flashGrid').innerHTML=cards;$('latestMeta').textContent=(CURRENT.releaseDate||CURRENT.date)+' 발표 · '+period(CURRENT);$('kTotal').textContent=moneyRaw(CURRENT.total);$('kYoy').textContent=keys.filter(k=>Number(CURRENT.metrics?.[k]?.yoy)>0).length+'개';$('kMom').textContent=keys.filter(k=>Number(CURRENT.metrics?.[k]?.mom)>0).length+'개';$('kHsMonth').textContent=EXTRA_MONTH||'-'}
+function renderExtra(){ $('extraMeta').textContent=(EXTRA_MONTH||'-')+' 기준 · 관세청 품목별 수출입실적(GW)';$('kHsMonth').textContent=EXTRA_MONTH||'-';$('hsRows').innerHTML=EXTRA.length?EXTRA.map(x=>'<tr><td><span class="rank">'+x.rank+'</span>'+x.name+' <span style="color:#607792">HS'+x.hs2+'</span></td><td>'+moneyMillion(x.value)+'</td><td>'+pct(x.yoy)+'</td><td>'+pct(x.mom)+'</td></tr>').join(''):'<tr><td colspan="4">HS 11~50위 데이터를 불러오지 못했습니다.</td></tr>';if(COS){$('cosmetics').innerHTML='<div style="padding:0 16px 12px"><div class="item" style="border-color:rgba(239,101,199,.28);max-width:360px"><div class="name">화장품 · 세부 HS 합산</div><div class="amt">'+moneyMillion(COS.value)+'</div><div class="twins"><div class="metric"><span>Y/Y</span><b>'+pct(COS.yoy)+'</b></div><div class="metric"><span>M/M</span><b>'+pct(COS.mom)+'</b></div></div></div></div>'}else $('cosmetics').innerHTML=''}
+function renderDetail(){const rows=[];for(const r of FILTERED){for(const k of Object.keys(ITEM_NAMES)){const m=r.metrics?.[k]||{};rows.push('<tr><td>'+(r.releaseDate||r.date)+' · '+ITEM_NAMES[k]+'</td><td>'+moneyRaw(m.value)+'</td><td>'+pct(m.yoy)+'</td><td>'+pct(m.mom)+'</td></tr>')}}$('detailRows').innerHTML=rows.join('')||'<tr><td colspan="4">데이터 없음</td></tr>'}
+async function runQuery(){const start=$('startDate').value,end=$('endDate').value,key=localStorage.getItem(DATA_KEY)||'';if(!start||!end||start>end)return alert('날짜를 확인해 주세요.');if(!key){openKey();setStatus('관세청 API 키가 없습니다. 기존에 사용하던 키를 한 번 저장해 주세요.','err');return}$('runBtn').disabled=true;$('excelBtn').disabled=true;setStatus('관세청 OpenAPI에서 직접 데이터를 불러오는 중…');try{const j=await api(API+'?op=query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startDate:start,endDate:end,serviceKey:key})});ALL=j.rows||[];ITEM_NAMES=Object.assign({},NAMES,j.itemNames||{});EXTRA=j.extraItems||[];EXTRA_MONTH=j.extraMonth||'';COS=j.cosmeticsItem||null;applyFilter();renderExtra();$('excelBtn').disabled=false;setStatus('조회 완료 · 원천: '+(j.source||'관세청·공공데이터포털')+' · '+ALL.length+'개 발표구간','ok')}catch(e){setStatus((e.code==='OFFICIAL_API_FAILED'?'관세청 API 연결 실패 · ':'')+(e.message||String(e)),'err')}finally{$('runBtn').disabled=false}}
+function exportExcel(){if(!ALL.length)return;const a=[];for(const r of FILTERED){for(const k of Object.keys(ITEM_NAMES)){const m=r.metrics?.[k]||{};a.push({발표일:r.releaseDate||r.date,집계구간:period(r),품목:ITEM_NAMES[k],'수출액(천달러)':m.value,'Y/Y(%)':m.yoy,'M/M(%)':m.mom})}}const h=EXTRA.map(x=>({순위:x.rank,HS:x.hs2,품목:x.name,'수출액(백만달러)':x.value,'Y/Y(%)':x.yoy,'M/M(%)':x.mom}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a),'순별수출');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(h),'HS11-50');XLSX.writeFile(wb,'K-Trade_Customs_'+today()+'.xlsx')}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden')}else{try{await api(API+'?op=ping')}catch{$('login').classList.remove('hidden')}}const key=localStorage.getItem(DATA_KEY)||'';if(key)setStatus('기존 관세청 API 키를 확인했습니다. 바로 조회할 수 있습니다.','ok');else setStatus('관세청 API 키가 저장돼 있지 않습니다. API 키 확인을 눌러 한 번 저장해 주세요.','err')})();
+</script>
+</body></html>
