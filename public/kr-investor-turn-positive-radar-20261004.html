@@ -155,7 +155,7 @@ function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').v
 (async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(DETAIL_API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
 
 function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
-function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];render()}
+function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];render();if(SELECTED_FULL)drawSelected()}
 function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
 function prepareUniverse(rows){let a=rows.slice();if($('excludePref').value==='1')a=a.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')a=a.filter(x=>!String(x.name).includes('스팩'));const m=Math.max(0,Number($('maxStocks').value)||0);if(m)a=a.slice(0,m);return a}
 function stopScan(){STOP=true;$('runMsg').textContent='중지 요청됨 · 현재 묶음 처리 후 멈춥니다.'}
