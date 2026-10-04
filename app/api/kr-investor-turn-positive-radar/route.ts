@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 const SCOPE = 'gc-flow-accumulation-radar-20261002-v1';
+const ACCESS_CODE_HASH = 'dcf62aebf5b5020c642a92711ca9b135eaaa5524dd31bd43a15d3abb68d46619';
 const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
 
 function secret(){ return process.env.SESSION_SECRET || ''; }
@@ -19,6 +20,11 @@ function validToken(token){
   const e=sign(p); if(s.length!==e.length) return false;
   try{return crypto.timingSafeEqual(Buffer.from(s),Buffer.from(e));}catch{return false;}
 }
+function validPassword(v){
+  const actual=crypto.createHash('sha256').update(String(v||'').trim()).digest();
+  try{return actual.length===32&&crypto.timingSafeEqual(actual,Buffer.from(ACCESS_CODE_HASH,'hex'));}catch{return false;}
+}
+function createToken(){const p=SCOPE+'.'+crypto.randomBytes(24).toString('base64url');return p+'.'+sign(p);}
 function unauthorized(){return NextResponse.json({error:'UNAUTHORIZED'},{status:401,headers:{'Cache-Control':'no-store'}});}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function ymd(v){return String(v??'').replace(/\D/g,'').slice(0,8);}
@@ -62,6 +68,17 @@ export async function GET(req){
     }catch(e){
       return NextResponse.json({error:'PRICE_FAILED',message:String(e?.message||e)},{status:502,headers:{'Cache-Control':'no-store'}});
     }
+  }
+  return NextResponse.json({error:'BAD_OP'},{status:400});
+}
+
+
+export async function POST(req){
+  const u=new URL(req.url),op=u.searchParams.get('op')||'',body=await req.json().catch(()=>({}));
+  if(op==='login'){
+    if(!process.env.SESSION_SECRET)return NextResponse.json({error:'AUTH_NOT_CONFIGURED'},{status:503});
+    if(!validPassword(String(body?.code||body?.password||'')))return NextResponse.json({error:'INVALID_CODE'},{status:401});
+    return NextResponse.json({ok:true,token:createToken()},{headers:{'Cache-Control':'no-store'}});
   }
   return NextResponse.json({error:'BAD_OP'},{status:400});
 }
