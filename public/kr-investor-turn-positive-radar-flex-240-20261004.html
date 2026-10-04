@@ -229,7 +229,7 @@ async function scanStocks(stocks){
   }
 }
 async function runAll(){
-  if(!$('asOf').value)return alert('기준일을 선택해 주세요.');ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)GRAPH_DAYS=ACTIVE_DAYS;reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
+  if(!$('asOf').value)return alert('기준일을 선택해 주세요.');ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
   try{
     $('runMsg').textContent='전종목 목록 불러오는 중...';const u=await api(SCAN_API+'?op=universe&market='+MARKET),stocks=prepareUniverse(u.rows||[]);$('stUniverse').textContent=stocks.length;
     await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · 분석 '+SUMMARIES.length+'개 · 현재 '+MODE_LABEL[MODE]+' 전환 '+rankList().length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
@@ -238,7 +238,7 @@ async function runAll(){
 }
 async function runDirect(){
   const codes=($('directCodes').value.match(/\d{6}/g)||[]);if(!codes.length)return alert('종목코드를 입력해 주세요.');if(!$('asOf').value)return alert('기준일을 선택해 주세요.');
-  ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)GRAPH_DAYS=ACTIVE_DAYS;reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;
+  ACTIVE_DAYS=getAnalysisDays();updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;
   try{await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent='입력 종목 검증 완료 · '+MODE_LABEL[MODE]+' 전환 '+rankList().length+'개';}
   catch(e){alert(e.message)}finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
 }
@@ -275,7 +275,7 @@ async function selectStock(code){
   }catch(e){$('chartPlaceholder').textContent='차트 불러오기 실패: '+e.message}
 }
 function setGraphDays(days,el){
-  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
+  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
 }
 function applyCustomDays(){const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(60,cap))));setGraphDays(d,null)}
 async function drawSelected(){
