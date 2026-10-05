@@ -91,9 +91,24 @@ function parseFchartDay(xml:string):DBar[]{
   }
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
+function parseMobileDay(rows:any[]):DBar[]{
+  const out:DBar[]=[];
+  for(const x of Array.isArray(rows)?rows:[]){
+    const date=String(x?.localTradedAt||x?.localDate||x?.date||'').slice(0,10);
+    const open=num(x?.openPrice??x?.open),high=num(x?.highPrice??x?.high),low=num(x?.lowPrice??x?.low),close=num(x?.closePrice??x?.close),volume=num(x?.accumulatedTradingVolume??x?.volume);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||[open,high,low,close,volume].some(v=>v===null))continue;
+    out.push({date,open,high,low,close,volume});
+  }
+  return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
 async function naverDaily(code:string,count=190){
+  const pageSize=Math.max(30,Math.min(300,count));
+  try{
+    const j=await fetchAny('https://m.stock.naver.com/api/stock/'+encodeURIComponent(code)+'/price?pageSize='+pageSize+'&page=1','json',10000);
+    const rows=parseMobileDay(j);if(rows.length>=Math.min(20,count))return rows.slice(-count);
+  }catch{}
   const xml=await fetchAny('https://fchart.stock.naver.com/sise.nhn?symbol='+encodeURIComponent(code)+'&timeframe=day&count='+count+'&requestType=0','text',10000);
-  const rows=parseFchartDay(xml);if(rows.length<25)throw new Error('NAVER_DAY_EMPTY');
+  const rows=parseFchartDay(xml);if(rows.length<20)throw new Error('NAVER_DAY_EMPTY');
   return rows;
 }
 function avg(a:number[]){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
