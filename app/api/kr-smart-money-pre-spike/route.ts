@@ -233,7 +233,8 @@ export async function GET(req:Request){
     let y:any={ok:false},n:any={ok:false};
     try{const r=await yahooBars('005930','KOSPI','5m','60d');y={ok:true,count:r.length,last:r.at(-1)?.date}}catch(e:any){y={ok:false,error:String(e?.message||e)}}
     try{const r=await naverDaily('005930',190);const bi=r.length-1;const sig=analyzeDaily(r,bi,{lookbackDays:20,min5x:1.2,maxPreMove:10,minScore:0,notSurgedPct:20},'candidate');n={ok:true,count:r.length,last:r.at(-1)?.date,lastChange:dayChange(r,bi),sampleSignals:sig.length,bestSignal:sig[0]?{date:sig[0].date,ratio:sig[0].ratio5,score:sig[0].score5m}:null}}catch(e:any){n={ok:false,error:String(e?.message||e)}}
-    return json({ok:true,yahoo:y,naver:n});
+    let nm:any={ok:false};try{const r=await minute1m('005930','KOSPI');nm={ok:true,count:r.length,first:r[0]?{date:r[0].date,time:r[0].time}:null,last:r.at(-1)?{date:r.at(-1).date,time:r.at(-1).time}:null}}catch(e:any){nm={ok:false,error:String(e?.message||e)}}
+    return json({ok:true,yahoo:y,naver:n,naverMinute:nm});
   }
   if(!validToken(reqToken(req)))return unauthorized();
   if(op==='ping')return json({ok:true});
