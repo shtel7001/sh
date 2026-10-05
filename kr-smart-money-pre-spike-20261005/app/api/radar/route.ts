@@ -174,7 +174,7 @@ async function analyzeOne(stock:any,cfg:any,mode:string){
 }
 async function mapLimit<T,R>(items:T[],limit:number,fn:(x:T)=>Promise<R>){
   const out:R[]=[]; let idx=0;
-  async function worker(){while(true){const i=idx++;if(i>=items.length)return;try{out[i]=await fn(items[i])}catch(e:any){out[i]=<any>{error:String(e?.message||e),stock:<any>items[i]}}}
+  async function worker(){while(true){const i=idx++;if(i>=items.length)return;try{out[i]=await fn(items[i])}catch(e:any){out[i]=<any>{error:String(e?.message||e),stock:<any>items[i]}}}}
   await Promise.all(Array.from({length:Math.min(limit,items.length)},()=>worker())); return out;
 }
 function parseNaverMinute(xml:string){
