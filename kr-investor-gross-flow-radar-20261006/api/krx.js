@@ -1,5 +1,5 @@
 import { calcInvestorMetrics, classifyRotation, INVESTORS, mapRowsByDate, normalizeDate, toNumber } from "../lib/calc.mjs";
-import { authMode, fetchInvestorRows, fetchPriceRows, resolveStock, searchStocks } from "../lib/krx.mjs";
+import { authMode, fetchInvestorRows, fetchPriceRows, postKrx, resolveStock, searchStocks } from "../lib/krx.mjs";
 
 function ymd(value) {
   const s = String(value || "").replaceAll("-", "");
@@ -42,6 +42,28 @@ export default async function handler(req, res) {
       const items = await searchStocks(q);
       res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
       res.status(200).json({ items: items.slice(0, 30) });
+      return;
+    }
+
+    if (req.query.action === "probe") {
+      const code = String(req.query.code || "136150").trim();
+      const date = ymd(req.query.date || "2026-10-02");
+      const stock = await resolveStock(code);
+      const cases = [
+        ["period", { bld: "dbms/MDC/STAT/standard/MDCSTAT02301", strtDd: date, endDd: date, isuCd: stock.isin, inqTpCd: 1, trdVolVal: 1, askBid: 1 }],
+        ["daily", { bld: "dbms/MDC/STAT/standard/MDCSTAT02302", strtDd: date, endDd: date, isuCd: stock.isin, inqTpCd: 2, trdVolVal: 1, askBid: 1 }],
+        ["price", { bld: "dbms/MDC/STAT/standard/MDCSTAT01701", strtDd: date, endDd: date, isuCd: stock.isin, adjStkPrc: 1 }]
+      ];
+      const result = {};
+      for (const [name, params] of cases) {
+        try {
+          const json = await postKrx(params);
+          result[name] = { ok: true, keys: Object.keys(json || {}), rows: (json?.output || []).length };
+        } catch (e) {
+          result[name] = { ok: false, error: e?.message || String(e) };
+        }
+      }
+      res.status(200).json({ stock, date, authMode: authMode(), result });
       return;
     }
 
