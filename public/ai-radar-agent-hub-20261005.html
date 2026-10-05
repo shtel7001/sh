@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>AI 통합 레이더 에이전트 지휘실</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#07111f;--card:#0e1b2d;--card2:#12243a;--line:#223b59;--ink:#edf6ff;--muted:#8ea6bf;--cyan:#35d0ff;--green:#4ade80;--amber:#fbbf24;--red:#fb7185;--violet:#a78bfa;--shadow:0 16px 40px rgba(0,0,0,.28)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% -10%,#15365b 0,#07111f 38%),var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1600px;margin:auto;padding:12px 12px 70px}
+.hero{border:1px solid #284665;background:linear-gradient(135deg,rgba(20,59,95,.95),rgba(24,24,65,.95));border-radius:22px;padding:22px;box-shadow:var(--shadow)}.hero h1{margin:0;font-size:28px}.hero p{margin:9px 0 0;color:#c9d9e8;line-height:1.65}.tags,.actions,.radargrid,.settings,.badges{display:flex;gap:8px;flex-wrap:wrap}.tags{margin-top:13px}.tag,.badge{font-size:11px;border:1px solid #365775;background:#0a1b2e;padding:6px 9px;border-radius:999px;color:#cfe8fa}.badge{padding:4px 7px}
+.card{margin-top:12px;border:1px solid var(--line);background:linear-gradient(180deg,var(--card),#0b1727);border-radius:18px;padding:14px;box-shadow:var(--shadow)}.card h2{font-size:18px;margin:0}.small{font-size:12px;color:var(--muted);line-height:1.55}.actions{margin-top:11px}.btn{border:1px solid #365574;background:#10243a;color:#dceeff;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer}.btn:hover{border-color:#5f88ad}.btn.primary{background:linear-gradient(135deg,#0877a9,#6d4bd4);border:0;color:#fff}.btn.green{background:#123923;border-color:#1f6c3a;color:#a9f7c2}.btn.warn{background:#382910;border-color:#765619;color:#ffe09b}.btn.danger{background:#3a1620;border-color:#742c3e;color:#ffc1cb}.btn:disabled{opacity:.45;cursor:not-allowed}
+.radargrid{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));margin-top:11px}.radar{border:1px solid #263e58;border-radius:14px;padding:12px;background:#0b1828}.radar .top{display:flex;align-items:flex-start;gap:8px}.radar input[type=checkbox]{width:18px;height:18px}.radar strong{display:block;font-size:13px}.status{display:inline-flex;margin-top:8px;padding:4px 7px;border-radius:999px;font-size:11px;font-weight:800;background:#152941;color:#a9c1d7}.status.run{background:#2d2410;color:#ffd36c}.status.ok{background:#10331e;color:#8af2ab}.status.err{background:#3b1721;color:#ff9bab}.status.auth{background:#372b14;color:#fbd38d}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.stat{border:1px solid #243b55;background:#0a1727;border-radius:13px;padding:10px}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:21px;margin-top:3px}.progress{height:12px;background:#122338;border-radius:999px;overflow:hidden;margin-top:11px}.bar{height:100%;width:0;background:linear-gradient(90deg,#28c8ff,#8b5cf6,#4ade80);transition:.25s}
+.tableWrap{overflow:auto;border:1px solid #223a54;border-radius:13px;margin-top:10px;max-height:65vh}table{border-collapse:collapse;width:100%;min-width:1150px;background:#0a1727}th,td{padding:9px;border-bottom:1px solid #1c3046;font-size:12px;text-align:center;white-space:nowrap}th{position:sticky;top:0;background:#102238;color:#9eb4ca;z-index:2}td.name{text-align:left;font-weight:900}.score{font-weight:900;color:#7dd3fc}.count{font-weight:900;color:#86efac}.reason{text-align:left;max-width:430px;white-space:normal;line-height:1.45}.links a{color:#75ccff;text-decoration:none;margin-right:8px}.toprow{background:rgba(74,222,128,.06)}
+.settings{margin-top:10px;align-items:end}.field{min-width:160px;flex:1}.field label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin-bottom:5px}.field input,.field select{width:100%;height:42px;border:1px solid #31506f;border-radius:10px;background:#091827;color:#eaf5ff;padding:0 10px}.note{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #384f67;background:#0b1d30;color:#aac4dc;font-size:12px;line-height:1.55}.note.warn{border-color:#70551e;background:#2a220e;color:#f2d487}
+.log{max-height:150px;overflow:auto;margin-top:10px;padding:10px;border:1px solid #21384f;border-radius:12px;background:#06111e;color:#9ab2c9;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
+details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{cursor:pointer;font-weight:800;color:#bdd9ee}
+.login{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#071a2d,#271742);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(440px,100%);background:#0c1c2e;border:1px solid #365a78;border-radius:22px;padding:24px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.loginbox h2{margin:0}.loginbox input{width:100%;height:52px;margin:14px 0;border:1px solid #395d7b;background:#071523;color:#fff;border-radius:12px;padding:0 14px;font-size:18px}.hidden{display:none!important}.ghostFrame{position:fixed;width:2px;height:2px;left:-10000px;top:-10000px;opacity:0;pointer-events:none;border:0}
+@media(max-width:1100px){.radargrid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:680px){.wrap{padding:8px 8px 55px}.hero{padding:17px}.hero h1{font-size:21px}.radargrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:11px}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="loginbox">
+    <h2>AI 통합 레이더 · 1회 영구인증</h2>
+    <div class="small" style="margin-top:8px">기존 골든크로스·1저점 레이더와 같은 개인 인증번호를 한 번 입력하면 이 브라우저에 인증값을 저장합니다.</div>
+    <input id="authCode" inputmode="numeric" maxlength="16" placeholder="인증번호 입력">
+    <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
+    <div id="loginMsg" class="small" style="margin-top:9px"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<section class="hero">
+  <h1>AI RADAR AGENT · 통합 지휘실</h1>
+  <p>5개의 기존 레이더를 순차 실행하고 종목코드 기준으로 합쳐, 여러 레이더에 동시에 포착된 종목을 우선순위로 정리합니다. 원본 알고리즘은 그대로 사용하며 새 레이더는 어댑터 방식으로 추가할 수 있습니다.</p>
+  <div class="tags">
+    <span class="tag">5개 레이더 통합</span><span class="tag">중복 종목 자동 합산</span><span class="tag">컨센서스 점수</span><span class="tag">TOP 20</span><span class="tag">Excel .xlsx</span><span class="tag">모듈형 추가</span><span class="tag">1회 영구인증</span>
+  </div>
+</section>
+
+<section class="card">
+  <h2>1. 연결 레이더</h2>
+  <div class="small" style="margin-top:5px">체크된 레이더만 실행합니다. 네이버 요청 과부하를 줄이기 위해 기본은 순차 실행입니다.</div>
+  <div id="radarGrid" class="radargrid"></div>
+  <div class="actions">
+    <button id="runBtn" class="btn primary" onclick="runAllAgents()">선택 레이더 통합 실행</button>
+    <button id="stopBtn" class="btn danger" onclick="requestStop()" disabled>중지</button>
+    <button class="btn" onclick="refreshStatuses()">인증·연결 상태 확인</button>
+    <button id="excelBtn" class="btn green" onclick="exportExcel()" disabled>Excel 최신형 저장</button>
+  </div>
+  <div class="progress"><div id="bar" class="bar"></div></div>
+  <div class="stats">
+    <div class="stat"><span>선택 레이더</span><b id="stRadars">5</b></div>
+    <div class="stat"><span>완료 레이더</span><b id="stDone">0</b></div>
+    <div class="stat"><span>원본 후보 합계</span><b id="stRaw">0</b></div>
+    <div class="stat"><span>고유 종목</span><b id="stUnique">0</b></div>
+    <div class="stat"><span>2개+ 중복 포착</span><b id="stConsensus">0</b></div>
+  </div>
+  <div id="runMsg" class="note">준비됨 · 먼저 ‘인증·연결 상태 확인’을 눌러 각 원본 레이더의 인증 상태를 확인할 수 있습니다.</div>
+  <div id="log" class="log">AI Radar Agent ready.</div>
+</section>
+
+<section class="card">
+  <h2>2. 통합 결과 · 중복 포착 우선</h2>
+  <div class="settings">
+    <div class="field"><label>표시 개수</label><select id="limit" onchange="renderMerged()"><option value="20" selected>TOP 20</option><option value="50">TOP 50</option><option value="100">TOP 100</option><option value="9999">전체</option></select></div>
+    <div class="field"><label>최소 포착 레이더 수</label><select id="minHits" onchange="renderMerged()"><option value="1">1개 이상</option><option value="2" selected>2개 이상</option><option value="3">3개 이상</option><option value="4">4개 이상</option><option value="5">5개</option></select></div>
+    <div class="field"><label>종목 검색</label><input id="q" placeholder="종목명 / 코드" oninput="renderMerged()"></div>
+  </div>
+  <div class="note">종합점수는 <b>여러 레이더 동시 포착 비중 70%</b> + <b>각 원본 레이더 점수 평균 30%</b>으로 계산합니다. 예측 확률이 아니라 신호 겹침의 강도를 비교하는 점수입니다.</div>
+  <div class="tableWrap">
+    <table><thead><tr><th>순위</th><th>종합점수</th><th>포착수</th><th>종목</th><th>시장</th><th>검출 레이더</th><th>핵심 근거</th><th>링크</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="8" style="padding:35px;color:#8ea6bf">아직 통합 실행하지 않았습니다.</td></tr></tbody></table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>3. 일정 실행 설정</h2>
+  <div class="settings">
+    <div class="field"><label>매일 실행 시간 (KST)</label><input id="scheduleTime" type="time" value="08:30"></div>
+    <div class="field"><label>페이지가 열려 있을 때 자동 실행</label><select id="scheduleEnabled"><option value="0" selected>OFF</option><option value="1">ON</option></select></div>
+    <button class="btn" onclick="saveSchedule()">설정 저장</button>
+  </div>
+  <div class="note warn">현재 이 페이지의 자동 실행은 <b>브라우저가 열려 있을 때</b> 동작합니다. 5개 중 일부 레이더가 브라우저 자체에서 전종목을 스캔하는 구조라서, 브라우저가 완전히 닫힌 상태의 서버 Cron은 별도의 서버형 어댑터로 전환해야 합니다.</div>
+</section>
+
+<section class="card">
+  <h2>4. 레이더 추가 구조</h2>
+  <div class="small" style="margin-top:5px">나중에 같은 Vercel 도메인의 레이더를 더 붙일 수 있도록 레지스트리 방식으로 만들었습니다.</div>
+  <details>
+    <summary>고급 · 새 레이더 어댑터 직접 추가</summary>
+    <div class="settings">
+      <div class="field"><label>이름</label><input id="newName" placeholder="예: 거래량 레이더"></div>
+      <div class="field"><label>상대 경로</label><input id="newPath" placeholder="/my-radar.html"></div>
+      <div class="field"><label>실행식</label><input id="newRun" placeholder="runAll()"></div>
+      <div class="field"><label>결과식</label><input id="newResult" placeholder="results"></div>
+      <button class="btn" onclick="addCustomRadar()">추가</button>
+    </div>
+    <div class="small" style="margin-top:7px">새 사이트의 실행 함수와 결과 배열 이름을 아는 경우 즉시 연결할 수 있습니다. 구조가 다른 사이트는 전용 normalize 어댑터만 추가하면 됩니다.</div>
+  </details>
+</section>
+</div>
+
+<div id="frames"></div>
+
+<script>
+const HUB_HASH='19e5afe03ed07447185162e747fcabc8128d5d6c0caa2ece63ec3f0382d109fc';
+const HUB_KEY='ai_radar_agent_hub_device_v1';
+const GC_DEVICE_KEY='gc_retrace_ma5_first_bottom_device_v1';
+const CUSTOM_KEY='ai_radar_custom_registry_v1';
+const RESULT_KEY='ai_radar_agent_latest_v1';
+const SCHED_KEY='ai_radar_agent_schedule_v1';
+
+const BASE_RADARS=[
+ {id:'yellow',label:'당일 노란막대',path:'/kr-investor-today-yellow-bar-radar-120d-20d-20261004.html',runExpr:'runAll()',resultExpr:'rankList()',auth:'flow',color:'#fbbf24'},
+ {id:'turn',label:'누적 매도→매수 전환',path:'/kr-investor-turn-positive-radar-20261004.html',runExpr:'runAll()',resultExpr:'rankList()',auth:'flow',color:'#35d0ff'},
+ {id:'gc',label:'GC 조정→MA5 1저점',path:'/gc-retrace-ma5-first-bottom-radar-20260930.html',runExpr:'scanAll()',resultExpr:'results',auth:'gc',color:'#a78bfa'},
+ {id:'news',label:'뉴스 급등 재점화',path:'/kr-news-surge-radar-20261001.html',runExpr:'runAnalysis()',resultExpr:'RESULTS.filter(function(r){return r.candidate})',auth:'news',color:'#fb7185'},
+ {id:'theme',label:'D-1 테마 급등 준비',path:'/d1-theme-spike-radar-20260930.html',runExpr:'runScan()',resultExpr:'finalRows.filter(function(r){return r.finalPass})',auth:'theme',color:'#4ade80'}
+];
+let RADARS=[], STOP=false, RAW=[], MERGED=[], running=false;
+const state={};
+
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function n(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function nowKst(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).replace(' ','T')}
+function log(s){const el=$('log');el.textContent='['+new Date().toLocaleTimeString('ko-KR')+'] '+s+'\n'+el.textContent.slice(0,7000)}
+async function sha256(text){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+
+async function login(){
+ const c=$('authCode').value.trim(),m=$('loginMsg'); if(!c)return;
+ m.textContent='확인 중...';
+ const h=await sha256(c);
+ if(h===HUB_HASH){localStorage.setItem(HUB_KEY,HUB_HASH);$('login').classList.add('hidden');m.textContent='';init();}
+ else m.textContent='인증번호가 맞지 않습니다.';
+}
+function checkHubAuth(){
+ if(localStorage.getItem(HUB_KEY)===HUB_HASH || localStorage.getItem(GC_DEVICE_KEY)===HUB_HASH){localStorage.setItem(HUB_KEY,HUB_HASH);$('login').classList.add('hidden');return true}
+ $('login').classList.remove('hidden');return false;
+}
+
+function loadRadars(){
+ let custom=[];try{custom=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{}
+ RADARS=BASE_RADARS.concat(custom.map(function(x,i){return {...x,id:x.id||('custom_'+i),auth:'generic',color:'#94a3b8',custom:true}}));
+ RADARS.forEach(function(r){if(state[r.id]===undefined)state[r.id]={selected:true,status:'대기',kind:''}});
+ renderRadarCards();
+}
+function renderRadarCards(){
+ $('radarGrid').innerHTML=RADARS.map(function(r){
+   const s=state[r.id]||{};
+   return '<div class="radar"><div class="top"><input type="checkbox" '+(s.selected!==false?'checked':'')+' onchange="toggleRadar(\''+esc(r.id)+'\',this.checked)"><div><strong>'+esc(r.label)+'</strong><div class="small">'+esc(r.path)+'</div></div></div><span id="status_'+esc(r.id)+'" class="status '+esc(s.kind||'')+'">'+esc(s.status||'대기')+'</span><div class="actions"><a class="btn" style="padding:6px 8px;font-size:11px;text-decoration:none" href="'+esc(r.path)+'" target="_blank">원본 열기</a></div></div>';
+ }).join('');
+ updateSelectedCount();
+}
+function toggleRadar(id,v){state[id].selected=v;updateSelectedCount()}
+function updateSelectedCount(){$('stRadars').textContent=RADARS.filter(r=>state[r.id]?.selected!==false).length}
+function setStatus(r,text,kind){state[r.id]={...(state[r.id]||{}),status:text,kind:kind||''};const el=$('status_'+r.id);if(el){el.textContent=text;el.className='status '+(kind||'')}}
+function authHint(r){
+ if(r.auth==='flow')return !!localStorage.getItem('gcFlowRadarTokenV1');
+ if(r.auth==='gc')return localStorage.getItem(GC_DEVICE_KEY)===HUB_HASH;
+ if(r.auth==='theme')return !!localStorage.getItem('d1_theme_spike_radar_token_v1');
+ return null;
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+async function ensureFrame(r){
+ let f=document.getElementById('frame_'+r.id);
+ if(f&&f.contentWindow)return f;
+ f=document.createElement('iframe');f.id='frame_'+r.id;f.className='ghostFrame';f.src=r.path+(r.path.includes('?')?'&':'?')+'_agent='+Date.now();
+ $('frames').appendChild(f);
+ await new Promise(function(resolve,reject){let done=false;const t=setTimeout(function(){if(!done){done=true;reject(new Error('페이지 로딩 시간 초과'))}},25000);f.onload=function(){if(done)return;done=true;clearTimeout(t);setTimeout(resolve,500)}}); 
+ try{f.contentWindow.alert=function(){};f.contentWindow.confirm=function(){return true}}catch{}
+ return f;
+}
+function frameLoginVisible(f){
+ try{
+   const d=f.contentDocument,el=d&&d.getElementById('login');
+   if(!el)return false;
+   const cs=f.contentWindow.getComputedStyle(el);
+   return cs.display!=='none'&&!el.classList.contains('hidden')&&cs.visibility!=='hidden';
+ }catch{return false}
+}
+async function refreshStatuses(){
+ log('원본 레이더 연결·인증 상태 확인');
+ for(const r of RADARS){
+   if(state[r.id]?.selected===false)continue;
+   try{
+     setStatus(r,'확인 중','run');
+     const f=await ensureFrame(r);
+     const hint=authHint(r);
+     if(hint===false || frameLoginVisible(f)){setStatus(r,'원본 인증 필요','auth')}
+     else setStatus(r,'연결 준비','ok');
+   }catch(e){setStatus(r,'연결 오류','err');log(r.label+' · '+e.message)}
+ }
+}
+function removeFrame(r){
+ const f=document.getElementById('frame_'+r.id);if(f)f.remove();
+}
+
+function normalizeRows(r,rows){
+ rows=Array.isArray(rows)?rows:[];
+ return rows.map(function(x){
+   let score=70,reason='',link=x.naver||x.naverNews||('https://stock.naver.com/domestic/stock/'+String(x.code||'')+'/price');
+   if(r.id==='yellow'){
+     const sig=x.signals&&x.signals.foreign;score=clamp(68+n(sig&&sig.negativeRun,0)*1.2,0,100);
+     reason='외국인 누적순매수 최신 거래일 양수 전환'+(sig?(' · 전환 전 '+n(sig.negativeRun)+'일 0이하'):'');
+   }else if(r.id==='turn'){
+     const sig=x.signals&&x.signals.combined;const ago=n(sig&&sig.tradingDaysAgo,30);score=clamp(90-ago*3+n(sig&&sig.negativeRun,0)*.5,0,100);
+     reason='외국인+기관 누적 순매수 전환'+(sig?(' · '+ago+'거래일 전'):'');
+   }else if(r.id==='gc'){
+     score=clamp(n(x.score,70),0,100);reason='골든크로스 후 조정 · MA5 1저점 '+String(x.stage||'')+' · 점수 '+Math.round(score);
+   }else if(r.id==='news'){
+     score=clamp(n(x.finalScore,n(x.technicalScore,70)),0,100);reason=(x.reasons||[]).join(' · ')||('뉴스 재점화 · 급등이력 '+n(x.spikePct).toFixed(1)+'%');
+   }else if(r.id==='theme'){
+     score=clamp(n(x.totalScore,n(x.techScore,70)),0,100);reason='D-1 테마 집단신호'+(x.bestTheme?(' · '+x.bestTheme):'')+' · 점수 '+Math.round(score);
+   }else{
+     score=clamp(n(x.totalScore,n(x.finalScore,n(x.score,70))),0,100);reason=String(x.reason||x.reasons||r.label);
+   }
+   const code=String(x.code||x.stockCode||'').match(/\d{6}/)?.[0]||'';
+   if(!code)return null;
+   return {radarId:r.id,radarLabel:r.label,code:code,name:String(x.name||x.stockName||code),market:String(x.market||''),sourceScore:Math.round(score),reason:reason,link:link,raw:x};
+ }).filter(Boolean);
+}
+
+async function runRadar(r){
+ if(STOP)return [];
+ setStatus(r,'실행 중','run');log(r.label+' 실행 시작');
+ const f=await ensureFrame(r);
+ if(frameLoginVisible(f)){setStatus(r,'원본 인증 필요','auth');throw new Error('원본 레이더 인증이 필요합니다. 원본 열기에서 1회 인증해 주세요.')}
+ const w=f.contentWindow;
+ try{
+   const p=w.eval(r.runExpr);
+   if(p&&typeof p.then==='function')await p;
+   await wait(350);
+   let data=w.eval(r.resultExpr);
+   data=JSON.parse(JSON.stringify(data||[]));
+   const rows=normalizeRows(r,data);
+   setStatus(r,'완료 '+rows.length+'개','ok');log(r.label+' 완료 · '+rows.length+'개 후보');
+   return rows;
+ }catch(e){
+   setStatus(r,'실행 오류','err');log(r.label+' 오류 · '+String(e&&e.message||e));
+   throw e;
+ }finally{
+   setTimeout(function(){removeFrame(r)},1200);
+ }
+}
+
+function buildMerged(){
+ const map=new Map();
+ RAW.forEach(function(x){
+   const g=map.get(x.code)||{code:x.code,name:x.name,market:x.market,hits:[],scores:[],reasons:[],links:new Set()};
+   if(!g.hits.includes(x.radarLabel)){g.hits.push(x.radarLabel);g.scores.push(x.sourceScore);g.reasons.push(x.radarLabel+': '+x.reason)}
+   if(x.name&&g.name===g.code)g.name=x.name;if(x.market&&!g.market)g.market=x.market;if(x.link)g.links.add(x.link);map.set(x.code,g);
+ });
+ MERGED=[...map.values()].map(function(g){
+   const count=g.hits.length,quality=g.scores.length?g.scores.reduce((a,b)=>a+b,0)/g.scores.length:70;
+   const consensus=Math.min(100,count/Math.max(1,RADARS.filter(r=>state[r.id]?.selected!==false).length)*100);
+   const final=Math.round(consensus*.70+quality*.30);
+   return {...g,count:count,quality:Math.round(quality),finalScore:final,links:[...g.links]};
+ }).sort(function(a,b){return b.count-a.count||b.finalScore-a.finalScore||b.quality-a.quality});
+ $('stRaw').textContent=RAW.length;$('stUnique').textContent=MERGED.length;$('stConsensus').textContent=MERGED.filter(x=>x.count>=2).length;
+ try{localStorage.setItem(RESULT_KEY,JSON.stringify({time:new Date().toISOString(),rows:MERGED}))}catch{}
+ renderMerged();$('excelBtn').disabled=!MERGED.length;
+}
+
+function renderMerged(){
+ const min=n($('minHits').value,2),limit=n($('limit').value,20),q=$('q').value.trim().toLowerCase();
+ const list=MERGED.filter(x=>x.count>=min&&(!q||x.name.toLowerCase().includes(q)||x.code.includes(q))).slice(0,limit);
+ const tb=$('rows');if(!list.length){tb.innerHTML='<tr><td colspan="8" style="padding:35px;color:#8ea6bf">현재 조건에 맞는 통합 후보가 없습니다.</td></tr>';return}
+ tb.innerHTML=list.map(function(x,i){
+   const badges=x.hits.map(h=>'<span class="badge">'+esc(h)+'</span>').join(' ');
+   const links=(x.links||[]).slice(0,3).map((u,j)=>'<a href="'+esc(u)+'" target="_blank">'+(j===0?'증권':'링크'+(j+1))+'</a>').join('');
+   return '<tr class="'+(i<10?'toprow':'')+'"><td>'+(i+1)+'</td><td class="score">'+x.finalScore+'</td><td class="count">'+x.count+'</td><td class="name">'+esc(x.name)+'<div class="small">'+esc(x.code)+'</div></td><td>'+esc(x.market||'-')+'</td><td>'+badges+'</td><td class="reason">'+esc(x.reasons.join(' / '))+'</td><td class="links">'+links+'</td></tr>';
+ }).join('');
+}
+
+async function runAllAgents(auto){
+ if(running)return;const selected=RADARS.filter(r=>state[r.id]?.selected!==false);if(!selected.length)return;
+ running=true;STOP=false;RAW=[];MERGED=[];$('runBtn').disabled=true;$('stopBtn').disabled=false;$('excelBtn').disabled=true;$('stDone').textContent='0';$('stRaw').textContent='0';$('stUnique').textContent='0';$('stConsensus').textContent='0';$('bar').style.width='0%';
+ $('runMsg').className='note';$('runMsg').textContent=(auto?'자동 ':'')+'통합 분석 시작 · '+selected.length+'개 레이더를 순차 실행합니다.';log('통합 실행 시작');
+ let done=0,errors=0;
+ for(const r of selected){
+   if(STOP)break;
+   try{const rows=await runRadar(r);RAW=RAW.concat(rows)}catch(e){errors++}
+   done++;$('stDone').textContent=done;$('stRaw').textContent=RAW.length;$('bar').style.width=(done/selected.length*100)+'%';buildMerged();
+ }
+ buildMerged();
+ $('runMsg').textContent=STOP?'사용자가 중지했습니다. 현재까지 결과를 표시합니다.':'완료 · '+done+'개 레이더 실행 · 오류 '+errors+'개 · 고유종목 '+MERGED.length+'개';
+ $('runBtn').disabled=false;$('stopBtn').disabled=true;running=false;
+ if(!STOP)markScheduleRunToday();
+}
+function requestStop(){STOP=true;$('runMsg').textContent='중지 요청됨 · 현재 실행 중인 레이더 완료 후 멈춥니다.';log('중지 요청')}
+
+function exportExcel(){
+ if(!MERGED.length)return;
+ const rows=MERGED.map(function(x,i){return {순위:i+1,종합점수:x.finalScore,포착레이더수:x.count,종목:x.name,코드:x.code,시장:x.market,원본점수평균:x.quality,검출레이더:x.hits.join(' | '),핵심근거:x.reasons.join(' | '),링크:(x.links||[]).join(' | ') }});
+ const raw=RAW.map(function(x){return {레이더:x.radarLabel,종목:x.name,코드:x.code,시장:x.market,원본점수:x.sourceScore,근거:x.reason,링크:x.link}});
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'통합순위');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(raw),'원본포착');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{생성시각:nowKst(),선택레이더:RADARS.filter(r=>state[r.id]?.selected!==false).map(r=>r.label).join(' | '),집계방식:'동시포착 70% + 원본점수평균 30%'}]),'설정');
+ XLSX.writeFile(wb,'AI_통합레이더_'+nowKst().slice(0,10)+'.xlsx');
+}
+
+function saveSchedule(){
+ const v={enabled:$('scheduleEnabled').value==='1',time:$('scheduleTime').value||'08:30',lastRun:''};let old={};try{old=JSON.parse(localStorage.getItem(SCHED_KEY)||'{}')}catch{};v.lastRun=old.lastRun||'';localStorage.setItem(SCHED_KEY,JSON.stringify(v));$('runMsg').textContent='일정 저장 · '+v.time+' KST · '+(v.enabled?'자동 실행 ON':'OFF');log('일정 저장 '+JSON.stringify(v));
+}
+function loadSchedule(){try{const v=JSON.parse(localStorage.getItem(SCHED_KEY)||'{}');if(v.time)$('scheduleTime').value=v.time;$('scheduleEnabled').value=v.enabled?'1':'0'}catch{}}
+function markScheduleRunToday(){try{const v=JSON.parse(localStorage.getItem(SCHED_KEY)||'{}');v.lastRun=nowKst().slice(0,10);localStorage.setItem(SCHED_KEY,JSON.stringify(v))}catch{}}
+async function scheduleTick(){
+ if(running)return;let v={};try{v=JSON.parse(localStorage.getItem(SCHED_KEY)||'{}')}catch{};if(!v.enabled||!v.time)return;
+ const t=nowKst(),day=t.slice(0,10),hm=t.slice(11,16);if(v.lastRun!==day&&hm>=v.time){await runAllAgents(true)}
+}
+
+function addCustomRadar(){
+ const label=$('newName').value.trim(),path=$('newPath').value.trim(),runExpr=$('newRun').value.trim(),resultExpr=$('newResult').value.trim();
+ if(!label||!path||!runExpr||!resultExpr)return alert('이름·경로·실행식·결과식을 모두 입력해 주세요.');
+ if(!path.startsWith('/'))return alert('같은 Vercel 도메인의 상대 경로(/...)를 입력해 주세요.');
+ let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{};a.push({id:'custom_'+Date.now(),label:label,path:path,runExpr:runExpr,resultExpr:resultExpr});localStorage.setItem(CUSTOM_KEY,JSON.stringify(a));loadRadars();log('새 레이더 어댑터 추가 · '+label);
+}
+
+function restoreLatest(){
+ try{
+   const x=JSON.parse(localStorage.getItem(RESULT_KEY)||'null');if(x&&Array.isArray(x.rows)&&x.rows.length){MERGED=x.rows.map(function(r){return {...r,links:Array.isArray(r.links)?r.links:[]}});$('stUnique').textContent=MERGED.length;$('stConsensus').textContent=MERGED.filter(r=>r.count>=2).length;renderMerged();$('excelBtn').disabled=false;$('runMsg').textContent='이 브라우저의 최근 통합 결과를 불러왔습니다 · '+String(x.time||'')}
+ }catch{}
+}
+function init(){loadRadars();loadSchedule();restoreLatest();setInterval(scheduleTick,30000);log('지휘실 초기화 완료')}
+if(checkHubAuth())init();
+</script>
+</body>
+</html>
