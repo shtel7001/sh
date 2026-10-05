@@ -39,9 +39,24 @@ function parseNaverDay(xml:string){
   while((m=re.exec(xml))){const p=m[1].split('|'),date=dash(p[0]),open=num(p[1]),high=num(p[2]),low=num(p[3]),close=num(p[4]),volume=num(p[5]);if([open,high,low,close,volume].some(x=>x===null))continue;out.push({date,open,high,low,close,volume})}
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
+function parseMobileDay(rows:any[]){
+  const out:any[]=[];
+  for(const x of Array.isArray(rows)?rows:[]){
+    const date=String(x?.localTradedAt||x?.localDate||x?.date||'').slice(0,10);
+    const open=num(x?.openPrice??x?.open),high=num(x?.highPrice??x?.high),low=num(x?.lowPrice??x?.low),close=num(x?.closePrice??x?.close),volume=num(x?.accumulatedTradingVolume??x?.volume);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||[open,high,low,close,volume].some(v=>v===null))continue;
+    out.push({date,open,high,low,close,volume});
+  }
+  return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
 async function daily(code:string,count=220){
+  const pageSize=Math.max(60,Math.min(300,count));
+  try{
+    const r=await fetch('https://m.stock.naver.com/api/stock/'+encodeURIComponent(code)+'/price?pageSize='+pageSize+'&page=1',{cache:'no-store',headers:{'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Referer':'https://m.stock.naver.com/'}});
+    if(r.ok){const j=await r.json();const rows=parseMobileDay(j);if(rows.length>=Math.min(45,count))return rows.slice(-count)}
+  }catch{}
   const x=await fetchText('https://fchart.stock.naver.com/sise.nhn?symbol='+encodeURIComponent(code)+'&timeframe=day&count='+count+'&requestType=0');
-  const r=parseNaverDay(x);if(r.length<45)throw new Error('DAILY_HISTORY_SHORT');return r;
+  const rows=parseNaverDay(x);if(rows.length<45)throw new Error('DAILY_HISTORY_SHORT');return rows;
 }
 function asOfIndex(rows:any[],asOf:string){let idx=-1;for(let i=0;i<rows.length;i++){if(rows[i].date<=asOf)idx=i;else break}return idx}
 
