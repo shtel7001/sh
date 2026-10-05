@@ -18,7 +18,7 @@
 .stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}.stat{border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:9px}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:19px;margin-top:2px}
 .progress{height:11px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#2848c7,#8b5cf6);transition:.15s}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px;max-height:64vh}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:8px;border-bottom:1px solid #edf1f6;font-size:11px;text-align:center;white-space:nowrap}th{position:sticky;top:0;background:#f7f9fc;z-index:2;color:#455269}td.name{text-align:left;font-weight:900}.rank{font-weight:900;color:#5133a5}.top{background:#fffbea}.pos{color:var(--red);font-weight:800}.neg{color:var(--blue);font-weight:800}.score{font-size:15px;font-weight:900}.signal{display:inline-flex;padding:4px 7px;border-radius:999px;background:#ecfdf3;color:#087f5b;font-weight:800}.source{display:inline-flex;padding:4px 7px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:800}.empty{padding:30px!important;color:var(--muted)}a{color:#245bd4;text-decoration:none}
 .login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0d225c,#542078);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px}.loginbox input{width:100%;height:50px;border:1px solid #cad5e3;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.hidden{display:none!important}.detailGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}.detailStat{border:1px solid var(--line);border-radius:12px;padding:9px;background:#f8fafc}.detailStat span{display:block;font-size:11px;color:var(--muted)}.detailStat b{display:block;margin-top:3px;font-size:14px}.chartBox{height:280px;border:1px solid var(--line);border-radius:14px;margin-top:10px;padding:8px}.chartTitle{font-size:13px;font-weight:900;margin-top:14px}.searchrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.searchrow input{flex:1;min-width:230px;height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px}.errorbox{margin-top:9px;padding:9px 11px;border:1px solid #fecaca;background:#fff7f7;border-radius:12px;color:#991b1b;font-size:12px;white-space:pre-wrap}
-@media(max-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}.stats,.detailGrid{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.wrap{padding:7px}.hero{padding:17px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats,.detailGrid{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:10px}.chartBox{height:230px}}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}.stats,.detailGrid{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.wrap{padding:7px}.hero{padding:17px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats,.detailGrid{grid-template-columns:repeat(2,1fr)}.actions .btn{flex:1 1 calc(50% - 8px);min-width:145px;white-space:normal;line-height:1.35}.actions .btn:nth-child(1),.actions .btn:nth-child(2){flex-basis:100%}.card{padding:10px}.chartBox{height:230px}}
 </style>
 </head>
 <body>
@@ -78,6 +78,7 @@
 <div class="stat"><span>조회 완료</span><b id="stScanned">0</b></div>
 <div class="stat"><span>기준일 급등주</span><b id="stEligible">0</b></div>
 <div class="stat"><span>패턴 검출</span><b id="stMatch">0</b></div>
+<div class="stat"><span>네이버 대체</span><b id="stFallback">0</b></div>
 <div class="stat"><span>실제 오류</span><b id="stErr">0</b></div>
 <div class="stat"><span>실행 모드</span><b id="stMode" style="font-size:13px">-</b></div>
 </div>
@@ -103,7 +104,7 @@
 
 <script>
 const API='https://sh-shtel-9338.vercel.app/api/kr-smart-money-pre-spike',TOKEN_KEY='krSmartMoneyPermanentTokenV1';
-let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],ELIGIBLE=0,CHARTS={};
+let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],ELIGIBLE=0,FALLBACK=0,CHARTS={};
 const $=id=>document.getElementById(id);
 function kstToday(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 $('asOf').value=kstToday();$('asOf').max=kstToday();
@@ -122,7 +123,7 @@ function pct(v){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '
 function cls(v){return Number(v)>0?'pos':Number(v)<0?'neg':''}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function srcLabel(s){return s==='YAHOO_5M'?'5분봉':'네이버 일봉 대체'}
-function reset(mode){MODE=mode;STOP=false;RESULTS=[];ERRORS=[];ELIGIBLE=0;$('bar').style.width='0%';['stUniverse','stTarget','stScanned','stEligible','stMatch','stErr'].forEach(id=>$(id).textContent='0');$('stMode').textContent=mode==='reverse'?'급등주 역검증':'미급등 후보';$('rows').innerHTML='<tr><td colspan="16" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden')}
+function reset(mode){MODE=mode;STOP=false;RESULTS=[];ERRORS=[];ELIGIBLE=0;FALLBACK=0;$('bar').style.width='0%';['stUniverse','stTarget','stScanned','stEligible','stMatch','stFallback','stErr'].forEach(id=>$(id).textContent='0');$('stMode').textContent=mode==='reverse'?'급등주 역검증':'미급등 후보';$('rows').innerHTML='<tr><td colspan="16" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden')}
 function showErrors(){if(!ERRORS.length){$('errorBox').classList.add('hidden');return}const m={};ERRORS.forEach(e=>{const k=String(e.error||'UNKNOWN').split(':')[0];m[k]=(m[k]||0)+1});$('errorBox').textContent='실제 데이터 오류 요약\n'+Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+' : '+x[1]+'건').join('\n');$('errorBox').classList.remove('hidden')}
 async function runScan(mode){
   if(!$('asOf').value)return alert('기준일을 선택해 주세요.');reset(mode);$('reverseBtn').disabled=true;$('candidateBtn').disabled=true;$('stopBtn').disabled=false;
@@ -137,15 +138,16 @@ async function runScan(mode){
         const j=await api(API+'?op=analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,stocks:batch,cfg:c})});
         (j.results||[]).forEach(r=>{
           if(r&&r.error){ERRORS.push(r);return}
+          if(r&&r.dataSource==='NAVER_DAY_FALLBACK')FALLBACK++;
           if(mode==='reverse'&&r&&r.reason!=='NOT_SPIKE_ON_BASE_DATE'&&r.reason!=='OUTSIDE_120_TRADING_DAYS'&&r.reason!=='NOT_ENOUGH_HISTORY')ELIGIBLE++;
           if(r&&r.match)RESULTS.push(r);
         });
       }catch(e){ERRORS.push({error:e.message})}
-      const done=Math.min(i+batch.length,target.length);$('stScanned').textContent=done;$('stEligible').textContent=mode==='reverse'?ELIGIBLE:'-';$('stMatch').textContent=RESULTS.length;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*done/Math.max(1,target.length))+'%';render();showErrors();
+      const done=Math.min(i+batch.length,target.length);$('stScanned').textContent=done;$('stEligible').textContent=mode==='reverse'?ELIGIBLE:'-';$('stMatch').textContent=RESULTS.length;$('stFallback').textContent=FALLBACK;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*done/Math.max(1,target.length))+'%';render();showErrors();
     }
     RESULTS.sort((a,b)=>Number(b.best?.score||0)-Number(a.best?.score||0)||Number(b.best?.ratio5||0)-Number(a.best?.ratio5||0));render();showErrors();$('excelBtn').disabled=!RESULTS.length;
     const actual=[...new Set(RESULTS.map(r=>r.baseDate).filter(Boolean))].sort().pop()||'';
-    $('runMsg').textContent=(STOP?'중지됨':'완료')+' · 요청 기준일 '+c.asOf+(actual?' · 실제 거래일 '+actual:'')+' · 조회 '+target.length+'개 · '+(mode==='reverse'?'급등주 '+ELIGIBLE+'개 · ':'')+'패턴 '+RESULTS.length+'개 · 실제 오류 '+ERRORS.length+'개';
+    $('runMsg').textContent=(STOP?'중지됨':'완료')+' · 요청 기준일 '+c.asOf+(actual?' · 실제 거래일 '+actual:'')+' · 조회 '+target.length+'개 · '+(mode==='reverse'?'급등주 '+ELIGIBLE+'개 · ':'')+'패턴 '+RESULTS.length+'개 · 네이버 대체 '+FALLBACK+'개 · 실제 오류 '+ERRORS.length+'개';
     if(!STOP)$('bar').style.width='100%';
   }catch(e){$('runMsg').textContent='실패: '+e.message}
   finally{$('reverseBtn').disabled=false;$('candidateBtn').disabled=false;$('stopBtn').disabled=true}
