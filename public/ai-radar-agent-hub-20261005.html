@@ -26,7 +26,7 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
 <div id="login" class="login">
   <div class="loginbox">
     <h2>AI 통합 레이더 · 1회 영구인증</h2>
-    <div class="small" style="margin-top:8px">통합 개인 인증번호를 한 번 입력하면 이 브라우저에 영구 저장하고, 연결된 5개 레이더의 인증도 동시에 준비합니다.</div>
+    <div class="small" style="margin-top:8px">통합 개인 인증번호를 한 번 입력하면 이 브라우저에 영구 저장하고, 연결된 기본 레이더의 인증도 함께 준비합니다.</div>
     <input id="authCode" inputmode="numeric" maxlength="16" placeholder="인증번호 입력">
     <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
     <div id="loginMsg" class="small" style="margin-top:9px"></div>
@@ -36,9 +36,9 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
 <div class="wrap">
 <section class="hero">
   <h1>AI RADAR AGENT · 통합 지휘실</h1>
-  <p>5개의 기존 레이더를 순차 실행하고 종목코드 기준으로 합쳐, 여러 레이더에 동시에 포착된 종목을 우선순위로 정리합니다. 원본 알고리즘은 그대로 사용하며 새 레이더는 어댑터 방식으로 추가할 수 있습니다.</p>
+  <p>기본 6개 레이더를 순차 실행하고 종목코드 기준으로 합쳐, 여러 레이더에 동시에 포착된 종목을 우선순위로 정리합니다. 원본 알고리즘은 그대로 사용하며 새 레이더는 어댑터 방식으로 추가할 수 있습니다.</p>
   <div class="tags">
-    <span class="tag">5개 레이더 통합</span><span class="tag">중복 종목 자동 합산</span><span class="tag">컨센서스 점수</span><span class="tag">TOP 20</span><span class="tag">Excel .xlsx</span><span class="tag">모듈형 추가</span><span class="tag">1회 영구인증</span>
+    <span class="tag">6개 기본 레이더</span><span class="tag">중복 종목 자동 합산</span><span class="tag">컨센서스 점수</span><span class="tag">TOP 20</span><span class="tag">Excel .xlsx</span><span class="tag">모듈형 추가</span><span class="tag">1회 영구인증</span>
   </div>
 </section>
 
@@ -54,7 +54,7 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
   </div>
   <div class="progress"><div id="bar" class="bar"></div></div>
   <div class="stats">
-    <div class="stat"><span>선택 레이더</span><b id="stRadars">5</b></div>
+    <div class="stat"><span>선택 레이더</span><b id="stRadars">6</b></div>
     <div class="stat"><span>완료 레이더</span><b id="stDone">0</b></div>
     <div class="stat"><span>원본 후보 합계</span><b id="stRaw">0</b></div>
     <div class="stat"><span>고유 종목</span><b id="stUnique">0</b></div>
@@ -89,19 +89,15 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
 </section>
 
 <section class="card">
-  <h2>4. 레이더 추가 구조</h2>
-  <div class="small" style="margin-top:5px">나중에 같은 Vercel 도메인의 레이더를 더 붙일 수 있도록 레지스트리 방식으로 만들었습니다.</div>
-  <details>
-    <summary>고급 · 새 레이더 어댑터 직접 추가</summary>
-    <div class="settings">
-      <div class="field"><label>이름</label><input id="newName" placeholder="예: 거래량 레이더"></div>
-      <div class="field"><label>상대 경로</label><input id="newPath" placeholder="/my-radar.html"></div>
-      <div class="field"><label>실행식</label><input id="newRun" placeholder="runAll()"></div>
-      <div class="field"><label>결과식</label><input id="newResult" placeholder="results"></div>
-      <button class="btn" onclick="addCustomRadar()">추가</button>
-    </div>
-    <div class="small" style="margin-top:7px">새 사이트의 실행 함수와 결과 배열 이름을 아는 경우 즉시 연결할 수 있습니다. 구조가 다른 사이트는 전용 normalize 어댑터만 추가하면 됩니다.</div>
-  </details>
+  <h2>4. 레이더 추가 · 삭제</h2>
+  <div class="small" style="margin-top:5px">앞으로는 <b>레이더 이름 + 사이트 주소</b>만 입력하면 됩니다. 같은 도메인의 기존 레이더는 실행 함수와 결과 배열을 자동 탐지하고, 다른 Vercel 주소는 표준 AI 에이전트 브리지로 자동 연결합니다.</div>
+  <div class="settings">
+    <div class="field"><label>레이더 이름</label><input id="newName" placeholder="예: 거래량 급증 레이더"></div>
+    <div class="field" style="flex:2"><label>사이트 주소</label><input id="newUrl" placeholder="https://...vercel.app/... 또는 /my-radar.html"></div>
+    <button class="btn primary" onclick="addCustomRadarAuto()">주소만으로 자동 추가</button>
+    <button class="btn" onclick="restoreBaseRadars()">기본 레이더 복원</button>
+  </div>
+  <div class="note">추가한 레이더는 카드의 <b>삭제</b> 버튼으로 언제든 뺄 수 있습니다. 기본 레이더도 삭제 가능하며, 잘못 지웠다면 ‘기본 레이더 복원’을 누르면 됩니다. 외부 도메인 레이더는 표준 브리지 어댑터가 있으면 실행식·결과식을 입력하지 않아도 자동으로 연결됩니다.</div>
 </section>
 </div>
 
@@ -111,7 +107,9 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
 const HUB_HASH='19e5afe03ed07447185162e747fcabc8128d5d6c0caa2ece63ec3f0382d109fc';
 const HUB_KEY='ai_radar_agent_hub_device_v1';
 const GC_DEVICE_KEY='gc_retrace_ma5_first_bottom_device_v1';
-const CUSTOM_KEY='ai_radar_custom_registry_v1';
+const CUSTOM_KEY='ai_radar_custom_registry_v2';
+const REMOVED_KEY='ai_radar_removed_registry_v1';
+const BRIDGE_KEY='ai_radar_bridge_token_v1';
 const RESULT_KEY='ai_radar_agent_latest_v1';
 const SCHED_KEY='ai_radar_agent_schedule_v1';
 
@@ -120,7 +118,8 @@ const BASE_RADARS=[
  {id:'turn',label:'누적 매도→매수 전환',path:'/kr-investor-turn-positive-radar-20261004.html',runExpr:'runAll()',resultExpr:'rankList()',auth:'flow',color:'#35d0ff'},
  {id:'gc',label:'GC 조정→MA5 1저점',path:'/gc-retrace-ma5-first-bottom-radar-20260930.html',runExpr:'scanAll()',resultExpr:'results',auth:'gc',color:'#a78bfa'},
  {id:'news',label:'뉴스 급등 재점화',path:'/kr-news-surge-radar-20261001.html',runExpr:'runAnalysis()',resultExpr:'RESULTS.filter(function(r){return r.candidate})',auth:'news',color:'#fb7185'},
- {id:'theme',label:'D-1 테마 급등 준비',path:'/d1-theme-spike-radar-20260930.html',runExpr:'runScan()',resultExpr:'finalRows.filter(function(r){return r.finalPass})',auth:'theme',color:'#4ade80'}
+ {id:'theme',label:'D-1 테마 급등 준비',path:'/d1-theme-spike-radar-20260930.html',runExpr:'runScan()',resultExpr:'finalRows.filter(function(r){return r.finalPass})',auth:'theme',color:'#4ade80'},
+ {id:'lateTheme',label:'유행 테마 후발주',path:'https://sh-git-late-theme-stream-radar-20260922-shtel-9338.vercel.app/',auth:'bridge',auto:true,color:'#22d3ee'}
 ];
 let RADARS=[], STOP=false, RAW=[], MERGED=[], running=false;
 const state={};
@@ -144,6 +143,7 @@ async function login(){
    localStorage.setItem(GC_DEVICE_KEY,j.deviceLock||HUB_HASH);
    if(j.flowToken)localStorage.setItem('gcFlowRadarTokenV1',j.flowToken);
    if(j.d1Token)localStorage.setItem('d1_theme_spike_radar_token_v1',j.d1Token);
+   if(j.bridgeToken)localStorage.setItem(BRIDGE_KEY,j.bridgeToken);
    $('login').classList.add('hidden');m.textContent='';init();log('통합 1회 인증 완료 · 5개 레이더 인증 준비');
  }catch(e){m.textContent='인증 실패: '+String(e&&e.message||e)}
 }
@@ -153,15 +153,15 @@ function checkHubAuth(){
 }
 
 function loadRadars(){
- let custom=[];try{custom=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{}
- RADARS=BASE_RADARS.concat(custom.map(function(x,i){return {...x,id:x.id||('custom_'+i),auth:'generic',color:'#94a3b8',custom:true}}));
+ let custom=[],removed=[];try{custom=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{};try{removed=JSON.parse(localStorage.getItem(REMOVED_KEY)||'[]')}catch{}
+ RADARS=BASE_RADARS.filter(r=>!removed.includes(r.id)).concat(custom.map(function(x,i){return {...x,id:x.id||('custom_'+i),auth:x.auth||'generic',color:x.color||'#94a3b8',custom:true,auto:x.auto!==false}}));
  RADARS.forEach(function(r){if(state[r.id]===undefined)state[r.id]={selected:true,status:'대기',kind:''}});
  renderRadarCards();
 }
 function renderRadarCards(){
  $('radarGrid').innerHTML=RADARS.map(function(r){
-   const s=state[r.id]||{};
-   return '<div class="radar"><div class="top"><input type="checkbox" '+(s.selected!==false?'checked':'')+' onchange="toggleRadar(\''+esc(r.id)+'\',this.checked)"><div><strong>'+esc(r.label)+'</strong><div class="small">'+esc(r.path)+'</div></div></div><span id="status_'+esc(r.id)+'" class="status '+esc(s.kind||'')+'">'+esc(s.status||'대기')+'</span><div class="actions"><a class="btn" style="padding:6px 8px;font-size:11px;text-decoration:none" href="'+esc(r.path)+'" target="_blank">원본 열기</a></div></div>';
+   const st=state[r.id]||{};
+   return '<div class="radar"><div class="top"><input type="checkbox" '+(st.selected!==false?'checked':'')+' onchange="toggleRadar(\''+esc(r.id)+'\',this.checked)"><div><strong>'+esc(r.label)+'</strong><div class="small">'+esc(r.path)+'</div></div></div><span id="status_'+esc(r.id)+'" class="status '+esc(st.kind||'')+'">'+esc(st.status||'대기')+'</span><div class="actions"><a class="btn" style="padding:6px 8px;font-size:11px;text-decoration:none" href="'+esc(r.path)+'" target="_blank">원본 열기</a><button class="btn danger" style="padding:6px 8px;font-size:11px" onclick="deleteRadar(\''+esc(r.id)+'\')">삭제</button></div></div>';
  }).join('');
  updateSelectedCount();
 }
@@ -172,7 +172,13 @@ function authHint(r){
  if(r.auth==='flow')return !!localStorage.getItem('gcFlowRadarTokenV1');
  if(r.auth==='gc')return localStorage.getItem(GC_DEVICE_KEY)===HUB_HASH;
  if(r.auth==='theme')return !!localStorage.getItem('d1_theme_spike_radar_token_v1');
+ if(r.auth==='bridge')return !!localStorage.getItem(BRIDGE_KEY);
  return null;
+}
+async function ensureBridgeToken(){
+ if(localStorage.getItem(BRIDGE_KEY))return localStorage.getItem(BRIDGE_KEY);
+ try{const r=await fetch('/api/ai-radar-agent/login',{method:'GET',cache:'no-store'});const j=await r.json();if(r.ok&&j.bridgeToken){localStorage.setItem(BRIDGE_KEY,j.bridgeToken);return j.bridgeToken}}catch{}
+ return '';
 }
 function wait(ms){return new Promise(r=>setTimeout(r,ms))}
 async function ensureFrame(r){
@@ -183,6 +189,49 @@ async function ensureFrame(r){
  await new Promise(function(resolve,reject){let done=false;const t=setTimeout(function(){if(!done){done=true;reject(new Error('페이지 로딩 시간 초과'))}},25000);f.onload=function(){if(done)return;done=true;clearTimeout(t);setTimeout(resolve,500)}}); 
  try{f.contentWindow.alert=function(){};f.contentWindow.confirm=function(){return true}}catch{}
  return f;
+}
+function canAccessFrame(f){try{void f.contentDocument.body;return true}catch{return false}}
+function sameProjectHost(host){return ['shtel-ai-radar-agent.vercel.app','sh-shtel-9338.vercel.app','sh-six-orcin.vercel.app','sh-git-main-shtel-9338.vercel.app'].includes(String(host||'').toLowerCase())}
+function normalizeRadarAddress(input){
+ const raw=String(input||'').trim();if(!raw)return null;
+ if(raw.startsWith('/'))return {path:raw,external:false};
+ try{const u=new URL(raw,location.href);if(u.origin===location.origin||sameProjectHost(u.hostname))return {path:u.pathname+u.search,external:false};return {path:u.href,external:true}}catch{return null}
+}
+function detectRunExpr(w){
+ const names=['agentRun','runAll','scanAll','runAnalysis','runScan','scan','startScan','run'];
+ for(const name of names){try{if(typeof w[name]==='function')return name+'()'}catch{}}
+ return '';
+}
+function detectResultExpr(w){
+ const funcs=['agentResults','rankList','getResults','getRows'];for(const name of funcs){try{if(typeof w[name]==='function')return name+'()'}catch{}}
+ const vars=['results','RESULTS','finalRows','rows','rankedRows','candidates'];for(const name of vars){try{if(Array.isArray(w[name]))return name}catch{}}
+ return '';
+}
+function saveDetectedAdapter(r,runExpr,resultExpr){
+ if(!r.custom)return;r.runExpr=runExpr;r.resultExpr=resultExpr;
+ let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{}
+ const i=a.findIndex(x=>x.id===r.id);if(i>=0){a[i]={...a[i],runExpr,resultExpr};localStorage.setItem(CUSTOM_KEY,JSON.stringify(a))}
+}
+function bridgePost(f,msg){try{f.contentWindow.postMessage(msg,'*')}catch{}}
+async function waitBridgeReady(f,timeout=12000){
+ const token=await ensureBridgeToken();const rid='ping_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+ return await new Promise(function(resolve){
+   let done=false;const finish=v=>{if(done)return;done=true;clearInterval(iv);clearTimeout(to);window.removeEventListener('message',onmsg);resolve(v)};
+   const onmsg=e=>{if(e.source!==f.contentWindow)return;const d=e.data||{};if(d.type==='AI_RADAR_AGENT_PONG'&&d.requestId===rid)finish(true)};
+   window.addEventListener('message',onmsg);
+   const send=()=>{if(token)bridgePost(f,{type:'AI_RADAR_AGENT_AUTH',token:token,requestId:rid});bridgePost(f,{type:'AI_RADAR_AGENT_PING',requestId:rid,source:'ai-radar-hub'})};
+   const iv=setInterval(send,900),to=setTimeout(()=>finish(false),timeout);send();
+ });
+}
+async function runViaBridge(f,r){
+ const ready=await waitBridgeReady(f,18000);if(!ready)throw new Error('자동 연결 어댑터를 찾지 못했습니다. 이 사이트에 표준 AI 에이전트 어댑터가 필요합니다.');
+ const rid='run_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+ return await new Promise(function(resolve,reject){
+   let done=false;const finish=(err,rows)=>{if(done)return;done=true;clearTimeout(to);window.removeEventListener('message',onmsg);err?reject(err):resolve(rows||[])};
+   const onmsg=e=>{if(e.source!==f.contentWindow)return;const d=e.data||{};if(d.requestId!==rid)return;if(d.type==='AI_RADAR_AGENT_RESULT')finish(null,d.rows||[]);if(d.type==='AI_RADAR_AGENT_ERROR')finish(new Error(d.error||'외부 레이더 실행 실패'))};
+   window.addEventListener('message',onmsg);const to=setTimeout(()=>finish(new Error('외부 레이더 실행 시간 초과')),240000);
+   bridgePost(f,{type:'AI_RADAR_AGENT_RUN',requestId:rid,source:'ai-radar-hub'});
+ });
 }
 function frameLoginVisible(f){
  try{
@@ -197,11 +246,14 @@ async function refreshStatuses(){
  for(const r of RADARS){
    if(state[r.id]?.selected===false)continue;
    try{
-     setStatus(r,'확인 중','run');
-     const f=await ensureFrame(r);
-     const hint=authHint(r);
-     if(hint===false || frameLoginVisible(f)){setStatus(r,'원본 인증 필요','auth')}
-     else setStatus(r,'연결 준비','ok');
+     setStatus(r,'확인 중','run');const f=await ensureFrame(r);
+     if(canAccessFrame(f)){
+       const hint=authHint(r);if(hint===false||frameLoginVisible(f))setStatus(r,'원본 인증 필요','auth');
+       else if(r.auto&&!r.runExpr){const runExpr=detectRunExpr(f.contentWindow);setStatus(r,runExpr?'자동 감지 완료':'어댑터 확인 필요',runExpr?'ok':'auth')}
+       else setStatus(r,'연결 준비','ok');
+     }else{
+       const ok=await waitBridgeReady(f,7000);setStatus(r,ok?'외부 자동 연결 완료':'외부 어댑터 대기',ok?'ok':'auth');
+     }
    }catch(e){setStatus(r,'연결 오류','err');log(r.label+' · '+e.message)}
  }
 }
@@ -225,8 +277,10 @@ function normalizeRows(r,rows){
      score=clamp(n(x.finalScore,n(x.technicalScore,70)),0,100);reason=(x.reasons||[]).join(' · ')||('뉴스 재점화 · 급등이력 '+n(x.spikePct).toFixed(1)+'%');
    }else if(r.id==='theme'){
      score=clamp(n(x.totalScore,n(x.techScore,70)),0,100);reason='D-1 테마 집단신호'+(x.bestTheme?(' · '+x.bestTheme):'')+' · 점수 '+Math.round(score);
+   }else if(r.id==='lateTheme'){
+     score=clamp(n(x.finalScore,n(x.score,70)),0,100);reason='유행 테마 후발주'+(x.theme?(' · '+x.theme):'')+(x.metrics&&x.metrics.maxSpike240Pct?(' · 과거최대 '+n(x.metrics.maxSpike240Pct).toFixed(1)+'%'):'');
    }else{
-     score=clamp(n(x.totalScore,n(x.finalScore,n(x.score,70))),0,100);reason=String(x.reason||x.reasons||r.label);
+     score=clamp(n(x.totalScore,n(x.finalScore,n(x.score,70))),0,100);reason=Array.isArray(x.reasons)?x.reasons.join(' · '):String(x.reason||x.reasons||r.label);
    }
    const code=String(x.code||x.stockCode||'').match(/\d{6}/)?.[0]||'';
    if(!code)return null;
@@ -238,23 +292,28 @@ async function runRadar(r){
  if(STOP)return [];
  setStatus(r,'실행 중','run');log(r.label+' 실행 시작');
  const f=await ensureFrame(r);
- if(frameLoginVisible(f)){setStatus(r,'원본 인증 필요','auth');throw new Error('원본 레이더 인증이 필요합니다. 원본 열기에서 1회 인증해 주세요.')}
- const w=f.contentWindow;
  try{
-   const p=w.eval(r.runExpr);
-   if(p&&typeof p.then==='function')await p;
-   await wait(350);
-   let data=w.eval(r.resultExpr);
-   data=JSON.parse(JSON.stringify(data||[]));
+   let data=[];
+   if(canAccessFrame(f)){
+     if(frameLoginVisible(f)){setStatus(r,'원본 인증 필요','auth');throw new Error('원본 레이더 인증이 필요합니다. 원본 열기에서 1회 인증해 주세요.')}
+     const w=f.contentWindow;let runExpr=r.runExpr||'',resultExpr=r.resultExpr||'';
+     if(!runExpr)runExpr=detectRunExpr(w);
+     if(!runExpr){
+       data=await runViaBridge(f,r);
+     }else{
+       const p=w.eval(runExpr);if(p&&typeof p.then==='function')await p;await wait(350);
+       if(!resultExpr)resultExpr=detectResultExpr(w);
+       if(!resultExpr)throw new Error('실행 함수는 찾았지만 결과 배열을 자동으로 찾지 못했습니다.');
+       data=w.eval(resultExpr);data=JSON.parse(JSON.stringify(data||[]));saveDetectedAdapter(r,runExpr,resultExpr);
+     }
+   }else{
+     data=await runViaBridge(f,r);data=JSON.parse(JSON.stringify(data||[]));
+   }
    const rows=normalizeRows(r,data);
-   setStatus(r,'완료 '+rows.length+'개','ok');log(r.label+' 완료 · '+rows.length+'개 후보');
-   return rows;
+   setStatus(r,'완료 '+rows.length+'개','ok');log(r.label+' 완료 · '+rows.length+'개 후보');return rows;
  }catch(e){
-   setStatus(r,'실행 오류','err');log(r.label+' 오류 · '+String(e&&e.message||e));
-   throw e;
- }finally{
-   setTimeout(function(){removeFrame(r)},1200);
- }
+   setStatus(r,'실행 오류','err');log(r.label+' 오류 · '+String(e&&e.message||e));throw e;
+ }finally{setTimeout(function(){removeFrame(r)},1200)}
 }
 
 function buildMerged(){
@@ -321,19 +380,28 @@ async function scheduleTick(){
  const t=nowKst(),day=t.slice(0,10),hm=t.slice(11,16);if(v.lastRun!==day&&hm>=v.time){await runAllAgents(true)}
 }
 
-function addCustomRadar(){
- const label=$('newName').value.trim(),path=$('newPath').value.trim(),runExpr=$('newRun').value.trim(),resultExpr=$('newResult').value.trim();
- if(!label||!path||!runExpr||!resultExpr)return alert('이름·경로·실행식·결과식을 모두 입력해 주세요.');
- if(!path.startsWith('/'))return alert('같은 Vercel 도메인의 상대 경로(/...)를 입력해 주세요.');
- let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{};a.push({id:'custom_'+Date.now(),label:label,path:path,runExpr:runExpr,resultExpr:resultExpr});localStorage.setItem(CUSTOM_KEY,JSON.stringify(a));loadRadars();log('새 레이더 어댑터 추가 · '+label);
+async function addCustomRadarAuto(){
+ const label=$('newName').value.trim(),addr=$('newUrl').value.trim();if(!label||!addr)return alert('레이더 이름과 사이트 주소를 입력해 주세요.');
+ const z=normalizeRadarAddress(addr);if(!z)return alert('사이트 주소 형식을 확인해 주세요.');
+ let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{}
+ if(RADARS.some(r=>String(r.path)===String(z.path)))return alert('이미 등록된 사이트입니다.');
+ const item={id:'custom_'+Date.now(),label:label,path:z.path,auto:true,auth:z.external?'bridge':'generic',color:'#94a3b8'};a.push(item);localStorage.setItem(CUSTOM_KEY,JSON.stringify(a));loadRadars();$('newName').value='';$('newUrl').value='';
+ const r=RADARS.find(x=>x.id===item.id);if(r){setStatus(r,'자동 연결 확인 중','run');try{const f=await ensureFrame(r);if(canAccessFrame(f)){const runExpr=detectRunExpr(f.contentWindow);const resultExpr=detectResultExpr(f.contentWindow);if(runExpr){saveDetectedAdapter(r,runExpr,resultExpr);setStatus(r,resultExpr?'자동 연결 완료':'실행 감지 · 결과는 실행 후 탐지',resultExpr?'ok':'run')}else{const ok=await waitBridgeReady(f,7000);setStatus(r,ok?'자동 연결 완료':'추가됨 · 실행 시 재확인',ok?'ok':'auth')}}else{const ok=await waitBridgeReady(f,9000);setStatus(r,ok?'외부 자동 연결 완료':'추가됨 · 외부 어댑터 확인 필요',ok?'ok':'auth')}setTimeout(()=>removeFrame(r),1000)}catch(e){setStatus(r,'추가됨 · 실행 시 재확인','auth')}}
+ log('새 레이더 자동 추가 · '+label+' · '+z.path);
 }
-
+function deleteRadar(id){
+ const r=RADARS.find(x=>x.id===id);if(!r)return;if(!confirm('“'+r.label+'” 레이더를 목록에서 삭제할까요?'))return;
+ if(r.custom){let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{};a=a.filter(x=>x.id!==id);localStorage.setItem(CUSTOM_KEY,JSON.stringify(a))}
+ else{let a=[];try{a=JSON.parse(localStorage.getItem(REMOVED_KEY)||'[]')}catch{};if(!a.includes(id))a.push(id);localStorage.setItem(REMOVED_KEY,JSON.stringify(a))}
+ removeFrame(r);delete state[id];loadRadars();log('레이더 삭제 · '+r.label);
+}
+function restoreBaseRadars(){localStorage.removeItem(REMOVED_KEY);loadRadars();log('기본 레이더 복원 완료')}
 function restoreLatest(){
  try{
    const x=JSON.parse(localStorage.getItem(RESULT_KEY)||'null');if(x&&Array.isArray(x.rows)&&x.rows.length){MERGED=x.rows.map(function(r){return {...r,links:Array.isArray(r.links)?r.links:[]}});$('stUnique').textContent=MERGED.length;$('stConsensus').textContent=MERGED.filter(r=>r.count>=2).length;renderMerged();$('excelBtn').disabled=false;$('runMsg').textContent='이 브라우저의 최근 통합 결과를 불러왔습니다 · '+String(x.time||'')}
  }catch{}
 }
-function init(){loadRadars();loadSchedule();restoreLatest();setInterval(scheduleTick,30000);log('지휘실 초기화 완료')}
+function init(){loadRadars();loadSchedule();restoreLatest();ensureBridgeToken();setInterval(scheduleTick,30000);log('지휘실 초기화 완료')}
 if(checkHubAuth())init();
 </script>
 </body>
