@@ -99,7 +99,7 @@
 </div>
 
 <script>
-const API='/api/radar',TOKEN_KEY='krSmartMoneyPermanentTokenV1';
+const API='https://sh-shtel-9338.vercel.app/api/kr-smart-money-pre-spike',TOKEN_KEY='krSmartMoneyPermanentTokenV1';
 let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],CHARTS={};
 const $=id=>document.getElementById(id);
 function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
