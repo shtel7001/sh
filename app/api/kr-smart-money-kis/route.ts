@@ -162,6 +162,20 @@ export async function POST(req:Request){
       return json({ok:true,date,count1m:rows.length,count5m:aggregate(rows,5).length,count15m:aggregate(rows,15).length,first:rows[0]||null,last:rows.at(-1)||null});
     }catch(e:any){return json({error:'KIS_TEST_FAILED',message:String(e?.message||e)},{status:502})}
   }
+  if(op==='screen'){
+    const stocks=Array.isArray(body?.stocks)?body.stocks.slice(0,50):[],cfg=body?.cfg||{},mode=body?.mode==='reverse'?'reverse':'candidate';
+    const spikePct=clamp(cfg.spikePct||5,1,30),maxCurrent=clamp(cfg.maxCurrentChange??3,-20,20);
+    const out:any[]=[];let idx=0;
+    async function worker(){while(true){const i=idx++;if(i>=stocks.length)return;const stock=stocks[i];try{
+      const days=await daily(stock.code,220),baseIdx=asOfIndex(days,String(cfg.asOf||days.at(-1)?.date));
+      if(baseIdx<1){out[i]={stock,error:'HISTORY_SHORT'};continue}
+      const baseDate=days[baseIdx].date,prev=days[baseIdx-1],cur=days[baseIdx],baseChange=(cur.close/prev.close-1)*100;
+      const eligible=mode==='reverse'?baseChange>=spikePct:baseChange<=maxCurrent;
+      out[i]={stock:{...stock,baseDate,changePct:baseChange,currentPrice:cur.close},baseDate,baseChange,eligible};
+    }catch(e:any){out[i]={stock,error:String(e?.message||e)}}}}
+    await Promise.all(Array.from({length:Math.min(8,stocks.length)},()=>worker()));
+    return json({ok:true,mode,results:out});
+  }
   if(op==='analyze'){
     const stock=body?.stock||{},cfg=body?.cfg||{};
     if(!appKey||!appSecret||!accessToken)return json({error:'KIS_TOKEN_REQUIRED'},{status:400});
