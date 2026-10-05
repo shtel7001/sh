@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#081522" />
+  <title>KR 투자자 총매수·총매도 레이더</title>
+  <style>
+    :root{
+      --bg:#07131f;--panel:#0d2030;--panel2:#102a3d;--line:#1b4058;--text:#eff8ff;--muted:#92afc2;
+      --cyan:#35d3ff;--green:#45e3a1;--red:#ff6c78;--yellow:#ffd466;--blue:#75a7ff;--shadow:0 16px 50px rgba(0,0,0,.28)
+    }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#07131f 0,#0a1724 100%);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+    button,input,select{font:inherit}.wrap{max-width:1480px;margin:auto;padding:18px}.hero{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;margin:8px 0 18px}
+    h1{font-size:clamp(24px,4vw,38px);margin:0;letter-spacing:-1px}.sub{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.6}
+    .badge{display:inline-flex;align-items:center;border:1px solid #23516d;background:#0b2638;color:#9fe6ff;border-radius:999px;padding:7px 11px;font-size:12px}
+    .panel{background:rgba(13,32,48,.94);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+    .filters{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(2,minmax(150px,.7fr)) auto;gap:10px;align-items:end}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.input{width:100%;height:46px;border-radius:12px;border:1px solid #26506a;background:#071a28;color:white;padding:0 13px;outline:none}
+    .input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(53,211,255,.12)}.btn{height:46px;border:0;border-radius:12px;padding:0 18px;font-weight:800;cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,#24c7f4,#4de4b6);color:#04131c}.btn.secondary{background:#15354a;color:#d9f5ff;border:1px solid #2a5d78}
+    .btn:disabled{opacity:.45;cursor:not-allowed}.searchbox{position:relative}.suggest{position:absolute;left:0;right:0;top:72px;background:#0a1c2a;border:1px solid #285674;border-radius:13px;overflow:hidden;z-index:20;max-height:320px;overflow-y:auto;display:none;box-shadow:var(--shadow)}
+    .suggest.open{display:block}.suggest button{display:flex;width:100%;justify-content:space-between;gap:10px;padding:11px 13px;background:transparent;border:0;border-bottom:1px solid #17374d;color:#eaf8ff;text-align:left;cursor:pointer}
+    .suggest button:hover{background:#123247}.suggest small{color:var(--muted)}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{border:1px solid #28546d;background:#0c2637;color:#bfeaff;border-radius:999px;padding:7px 12px;cursor:pointer}
+    .toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:space-between}.tabs{display:flex;gap:7px;flex-wrap:wrap}.tab{border:1px solid #28546d;background:#0b2434;color:#a9c7d7;border-radius:10px;padding:8px 13px;cursor:pointer;font-weight:700}
+    .tab.active{background:#174a61;color:white;border-color:#42c5ec}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:13px}.card{background:#0a1c2a;border:1px solid #173b51;border-radius:14px;padding:13px}
+    .card .k{color:var(--muted);font-size:12px}.card .v{font-size:21px;font-weight:900;margin-top:5px}.card .s{font-size:12px;color:#a6c4d6;margin-top:3px}
+    .notice{font-size:13px;color:#b9d2df;line-height:1.65;background:#0a1c2a;border-left:3px solid var(--yellow);padding:11px 13px;border-radius:8px;margin-top:12px}
+    .error{display:none;background:#3a1720;border:1px solid #7d3340;color:#ffd4d8;padding:12px;border-radius:12px;margin-top:12px}.error.open{display:block}
+    .loading{display:none;color:#9fe6ff;margin-top:12px}.loading.open{display:block}
+    .tableWrap{overflow:auto;border:1px solid #1b4058;border-radius:14px;margin-top:12px;background:#071a28}table{border-collapse:collapse;width:100%;min-width:1550px;font-size:12px}
+    th,td{padding:10px 9px;border-bottom:1px solid #17374b;white-space:nowrap;text-align:right}th{position:sticky;top:0;z-index:2;background:#102c3f;color:#ccecff;font-weight:800}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+    tr:hover td{background:#0d2637}.pos{color:var(--red);font-weight:800}.neg{color:var(--blue);font-weight:800}.buy{color:var(--green)}.sell{color:#ff9a92}.hot{color:var(--yellow);font-weight:900}
+    .pattern{display:inline-block;border-radius:999px;padding:4px 8px;background:#17344a;border:1px solid #2d5f7b;color:#c9ecff}.pattern.high{background:#423717;border-color:#88702a;color:#ffe18b}
+    .mobileList{display:none}.mobileRow{background:#091c2a;border:1px solid #1a4057;border-radius:14px;padding:13px;margin-top:10px}.mobileHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.mobileGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:11px}
+    .metric{background:#0e2839;border-radius:10px;padding:9px}.metric b{display:block;font-size:15px;margin-top:3px}.metric span{color:var(--muted);font-size:11px}
+    footer{color:#7896aa;font-size:12px;line-height:1.7;padding:18px 4px 40px}.link{color:#72ddff;text-decoration:none}.empty{text-align:center;color:#7899ad;padding:32px}
+    @media(max-width:900px){.wrap{padding:12px}.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.searchbox{grid-column:1/-1}.filters .run{grid-column:1/-1}.summary{grid-template-columns:1fr 1fr}.tableWrap{display:none}.mobileList{display:block}.toolbar{align-items:stretch}.toolbar>div:last-child{display:flex;gap:8px;flex-wrap:wrap}.btn{flex:1}}
+    @media(max-width:520px){.filters{grid-template-columns:1fr}.filters .searchbox,.filters .run{grid-column:auto}.summary{grid-template-columns:1fr 1fr}.card .v{font-size:17px}.mobileGrid{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <h1>KR 투자자 총매수·총매도 레이더</h1>
+        <div class="sub">순매수만 보지 않고 <b>외국인·기관·개인의 매수 총량, 매도 총량, 총회전량, 상계율, 평균 체결가</b>를 날짜별로 확인합니다.</div>
+      </div>
+      <span class="badge">KRX 개별종목 투자자별 거래실적</span>
+    </section>
+
+    <section class="panel">
+      <div class="filters">
+        <div class="searchbox">
+          <label>종목코드 또는 종목명</label>
+          <input id="stockInput" class="input" value="136150" placeholder="예: 136150 또는 원일티엔아이" autocomplete="off" />
+          <div id="suggest" class="suggest"></div>
+        </div>
+        <div>
+          <label>시작일</label>
+          <input id="startDate" type="date" class="input" />
+        </div>
+        <div>
+          <label>종료일</label>
+          <input id="endDate" type="date" class="input" />
+        </div>
+        <button id="runBtn" class="btn primary run">조회하기</button>
+      </div>
+      <div class="quick">
+        <button class="chip" data-days="10">최근 10일</button>
+        <button class="chip" data-days="30">최근 30일</button>
+        <button class="chip" data-days="90">최근 90일</button>
+        <button class="chip" data-days="240">최근 240일</button>
+      </div>
+      <div id="loading" class="loading">KRX 투자자 매수·매도 데이터를 조회 중입니다…</div>
+      <div id="error" class="error"></div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="tabs">
+          <button class="tab active" data-investor="all">전체</button>
+          <button class="tab" data-investor="foreign">외국인</button>
+          <button class="tab" data-investor="institution">기관</button>
+          <button class="tab" data-investor="individual">개인</button>
+        </div>
+        <div>
+          <select id="sortSelect" class="input" style="width:auto;height:40px">
+            <option value="date">날짜 최신순</option>
+            <option value="gross">총회전량 큰순</option>
+            <option value="offset">상계율 높은순</option>
+            <option value="share">양방향참여율 높은순</option>
+          </select>
+          <button id="excelBtn" class="btn secondary" disabled>Excel .xlsx 저장</button>
+        </div>
+      </div>
+
+      <div id="summary" class="summary">
+        <div class="card"><div class="k">종목</div><div class="v">-</div><div class="s">조회 전</div></div>
+        <div class="card"><div class="k">최대 총회전량</div><div class="v">-</div><div class="s">투자자군 기준</div></div>
+        <div class="card"><div class="k">최고 상계율</div><div class="v">-</div><div class="s">매수·매도 동시 발생 정도</div></div>
+        <div class="card"><div class="k">조회 거래일</div><div class="v">-</div><div class="s">KRX 기준</div></div>
+      </div>
+
+      <div id="metaNotice" class="notice">
+        <b>핵심:</b> 총회전량 = 매수수량 + 매도수량입니다. 상계율이 100%에 가까우면 순매수는 작더라도 같은 투자자군 안에서 매수와 매도가 모두 컸다는 뜻입니다. 다만 집단 합산 통계이므로 동일 외국인 계좌가 저점에서 사고 고점에서 팔았다는 사실까지 증명하지는 않습니다.
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th><th>투자자</th><th>종가</th><th>시장거래량</th><th>매수수량</th><th>매도수량</th><th>순매수</th>
+              <th>총회전량</th><th>양방향 매칭가능량</th><th>매수비중</th><th>매도비중</th><th>양방향참여율</th><th>상계율</th>
+              <th>평균매수가</th><th>평균매도가</th><th>평균가 차이</th><th>패턴</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="17" class="empty">종목과 기간을 선택해 조회하세요.</td></tr></tbody>
+        </table>
+      </div>
+      <div id="mobileList" class="mobileList"><div class="empty">종목과 기간을 선택해 조회하세요.</div></div>
+    </section>
+
+    <footer>
+      데이터 기준: KRX Data Marketplace의 개별종목 투자자별 거래실적 및 개별종목 시세. 증권사 앱의 <b>통합(KRX+NXT)</b> 거래량과 차이가 날 수 있습니다.
+      평균매수가·평균매도가는 각 투자자군의 거래대금÷거래량으로 계산한 가중평균 참고값이며 실제 특정 계좌의 원가·수익률이 아닙니다.
+    </footer>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = new Intl.NumberFormat("ko-KR");
+const fmt1 = new Intl.NumberFormat("ko-KR",{maximumFractionDigits:1});
+const INVESTOR_LABEL = {foreign:"외국인",institution:"기관",individual:"개인"};
+let state = {data:null, investor:"all", selected:null};
+let searchTimer;
+
+function localDate(offset=0){
+  const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+offset);
+  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+}
+function setPeriod(days){
+  const end=localDate(-1); const d=new Date(end+"T12:00:00"); d.setDate(d.getDate()-days+1);
+  $("endDate").value=end; $("startDate").value=[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+}
+setPeriod(30);
+
+document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>setPeriod(Number(b.dataset.days))));
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+  state.investor=b.dataset.investor; render();
+}));
+$("sortSelect").addEventListener("change",render);
+$("runBtn").addEventListener("click",runQuery);
+$("excelBtn").addEventListener("click",downloadExcel);
+$("stockInput").addEventListener("keydown",e=>{if(e.key==="Enter"){closeSuggest();runQuery();}});
+$("stockInput").addEventListener("input",()=>{
+  state.selected=null;
+  clearTimeout(searchTimer);
+  const q=$("stockInput").value.trim();
+  if(!q){closeSuggest();return;}
+  searchTimer=setTimeout(()=>searchStocks(q),280);
+});
+document.addEventListener("click",e=>{if(!e.target.closest(".searchbox")) closeSuggest();});
+
+async function searchStocks(q){
+  try{
+    const r=await fetch("/api/krx?action=search&q="+encodeURIComponent(q));
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||"검색 실패");
+    const box=$("suggest"); box.innerHTML="";
+    for(const item of j.items||[]){
+      const b=document.createElement("button");
+      b.innerHTML=`<span><b>${escapeHtml(item.name)}</b> <small>${escapeHtml(item.code)}</small></span><small>${escapeHtml(item.market||"")}</small>`;
+      b.onclick=()=>{state.selected=item;$("stockInput").value=item.code+" "+item.name;closeSuggest();};
+      box.appendChild(b);
+    }
+    box.classList.toggle("open",(j.items||[]).length>0);
+  }catch{closeSuggest();}
+}
+function closeSuggest(){$("suggest").classList.remove("open");}
+function codeFromInput(){
+  if(state.selected?.code) return state.selected.code;
+  const v=$("stockInput").value.trim();
+  const m=v.match(/\b\d{6}\b/); return m?m[0]:v;
+}
+function showError(msg){$("error").textContent=msg;$("error").classList.add("open");}
+function hideError(){$("error").classList.remove("open");}
+function setLoading(on){$("loading").classList.toggle("open",on);$("runBtn").disabled=on;}
+
+async function runQuery(){
+  hideError(); closeSuggest();
+  const code=codeFromInput(), start=$("startDate").value, end=$("endDate").value;
+  if(!code||!start||!end){showError("종목과 시작일·종료일을 모두 입력하세요.");return;}
+  setLoading(true);
+  try{
+    const url=`/api/krx?code=${encodeURIComponent(code)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+    const r=await fetch(url); const j=await r.json();
+    if(!r.ok) throw new Error([j.error,j.hint].filter(Boolean).join(" / "));
+    state.data=j; state.selected=j.stock; $("stockInput").value=j.stock.code+" "+j.stock.name;
+    $("excelBtn").disabled=!j.rows?.length; renderSummary(); renderMeta(); render();
+  }catch(e){state.data=null;$("excelBtn").disabled=true;showError(e.message||"조회 실패");render();}
+  finally{setLoading(false);}
+}
+
+function flatten(){
+  if(!state.data?.rows) return [];
+  const ids=state.investor==="all"?["foreign","institution","individual"]:[state.investor];
+  const out=[];
+  for(const row of state.data.rows) for(const id of ids){
+    const m=row.investors[id]; if(m) out.push({...m,id,label:INVESTOR_LABEL[id],date:row.date,close:row.close,marketVolume:row.marketVolume});
+  }
+  const sort=$("sortSelect").value;
+  if(sort==="gross") out.sort((a,b)=>b.grossVolume-a.grossVolume);
+  else if(sort==="offset") out.sort((a,b)=>b.offsetPct-a.offsetPct);
+  else if(sort==="share") out.sort((a,b)=>b.twoSideSharePct-a.twoSideSharePct);
+  else out.sort((a,b)=>b.date.localeCompare(a.date)||a.label.localeCompare(b.label));
+  return out;
+}
+function clsNum(n){return n>0?"pos":n<0?"neg":""}
+function pct(n){return fmt1.format(n||0)+"%"}
+function won(n){return fmt.format(Math.round(n||0))}
+function patternClass(p){return p==="고회전·상계형"||p==="양방향 대량"?"pattern high":"pattern"}
+
+function render(){
+  const rows=flatten(), tb=$("tbody"), ml=$("mobileList"); tb.innerHTML=""; ml.innerHTML="";
+  if(!rows.length){
+    tb.innerHTML='<tr><td colspan="17" class="empty">조회 결과가 없습니다.</td></tr>';
+    ml.innerHTML='<div class="empty">조회 결과가 없습니다.</div>'; return;
+  }
+  for(const r of rows){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${r.date}</td><td><b>${r.label}</b></td><td>${fmt.format(r.close)}</td><td>${fmt.format(r.marketVolume)}</td>
+      <td class="buy">${fmt.format(r.buyVol)}</td><td class="sell">${fmt.format(r.sellVol)}</td><td class="${clsNum(r.netVol)}">${fmt.format(r.netVol)}</td>
+      <td class="hot">${fmt.format(r.grossVolume)}</td><td>${fmt.format(r.matchedVolume)}</td><td>${pct(r.buySharePct)}</td><td>${pct(r.sellSharePct)}</td>
+      <td>${pct(r.twoSideSharePct)}</td><td class="${r.offsetPct>=90?"hot":""}">${pct(r.offsetPct)}</td><td>${won(r.avgBuyPrice)}</td><td>${won(r.avgSellPrice)}</td>
+      <td class="${clsNum(r.avgPriceDiffPct)}">${pct(r.avgPriceDiffPct)}</td><td><span class="${patternClass(r.pattern)}">${r.pattern}</span></td>`;
+    tb.appendChild(tr);
+
+    const c=document.createElement("div"); c.className="mobileRow";
+    c.innerHTML=`<div class="mobileHead"><div><b>${r.date}</b> · ${r.label}</div><span class="${patternClass(r.pattern)}">${r.pattern}</span></div>
+      <div class="mobileGrid">
+       <div class="metric"><span>매수수량</span><b class="buy">${fmt.format(r.buyVol)}</b></div>
+       <div class="metric"><span>매도수량</span><b class="sell">${fmt.format(r.sellVol)}</b></div>
+       <div class="metric"><span>순매수</span><b class="${clsNum(r.netVol)}">${fmt.format(r.netVol)}</b></div>
+       <div class="metric"><span>총회전량</span><b class="hot">${fmt.format(r.grossVolume)}</b></div>
+       <div class="metric"><span>양방향참여율</span><b>${pct(r.twoSideSharePct)}</b></div>
+       <div class="metric"><span>상계율</span><b class="${r.offsetPct>=90?"hot":""}">${pct(r.offsetPct)}</b></div>
+       <div class="metric"><span>평균매수가</span><b>${won(r.avgBuyPrice)}원</b></div>
+       <div class="metric"><span>평균매도가</span><b>${won(r.avgSellPrice)}원</b></div>
+      </div>`;
+    ml.appendChild(c);
+  }
+}
+function renderSummary(){
+  const data=state.data; if(!data) return;
+  const all=[];
+  for(const row of data.rows||[]) for(const id of ["foreign","institution","individual"]) all.push({...row.investors[id],date:row.date,label:INVESTOR_LABEL[id]});
+  const maxGross=[...all].sort((a,b)=>b.grossVolume-a.grossVolume)[0];
+  const maxOffset=[...all].filter(x=>x.grossVolume>0).sort((a,b)=>b.offsetPct-a.offsetPct)[0];
+  $("summary").innerHTML=`
+    <div class="card"><div class="k">종목</div><div class="v">${escapeHtml(data.stock.name)}</div><div class="s">${escapeHtml(data.stock.code)} · ${escapeHtml(data.stock.market||"")}</div></div>
+    <div class="card"><div class="k">최대 총회전량</div><div class="v">${maxGross?fmt.format(maxGross.grossVolume):"-"}</div><div class="s">${maxGross?maxGross.date+" · "+maxGross.label:"-"}</div></div>
+    <div class="card"><div class="k">최고 상계율</div><div class="v">${maxOffset?pct(maxOffset.offsetPct):"-"}</div><div class="s">${maxOffset?maxOffset.date+" · "+maxOffset.label:"-"}</div></div>
+    <div class="card"><div class="k">조회 거래일</div><div class="v">${fmt.format(data.rows.length)}일</div><div class="s">${$("startDate").value} ~ ${$("endDate").value}</div></div>`;
+}
+function renderMeta(){
+  const m=state.data?.meta; if(!m)return;
+  $("metaNotice").innerHTML=`<b>해석 주의:</b> ${escapeHtml(m.interpretation)}<br><b>시장 범위:</b> ${escapeHtml(m.nxtNote)}<br><b>접속 방식:</b> ${escapeHtml(m.authMode)}`;
+}
+async function downloadExcel(){
+  if(!state.data) return;
+  $("excelBtn").disabled=true; const old=$("excelBtn").textContent;$("excelBtn").textContent="Excel 생성 중…";
+  try{
+    const r=await fetch("/api/excel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(state.data)});
+    if(!r.ok){let j={};try{j=await r.json()}catch{};throw new Error(j.error||"엑셀 생성 실패");}
+    const blob=await r.blob(); const cd=r.headers.get("content-disposition")||""; const m=cd.match(/filename\*=UTF-8''([^;]+)/);
+    const name=m?decodeURIComponent(m[1]):"투자자_총매수매도.xlsx";
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){showError(e.message)}finally{$("excelBtn").disabled=false;$("excelBtn").textContent=old}
+}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+
+runQuery();
+</script>
+</body>
+</html>
