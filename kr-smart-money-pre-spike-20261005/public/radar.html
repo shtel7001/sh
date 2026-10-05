@@ -32,8 +32,8 @@
 <div class="wrap">
 <section class="hero">
 <h1>KR Smart Money Pre-Spike Radar</h1>
-<p><b>기준일의 급등주를 정답지로 역검증</b>하고, 최근 20거래일의 선행 거래량·가격 억제·수급 패턴을 찾아 비슷한 미급등 후보를 추출합니다.</p>
-<div class="tags"><span class="tag">최근 실제 거래일 자동판정</span><span class="tag">과거 120거래일 기준일</span><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">5분봉 우선</span><span class="tag">네이버 일봉 자동대체</span><span class="tag">기관·외국인 가점</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+<p><b>KIS 원본 1분봉을 직접 수집</b>해 5분봉·15분봉으로 재구성하고, 기준일 급등주 역검증과 미급등 선행후보를 찾습니다.</p>
+<div class="tags"><span class="tag">최근 실제 거래일 자동판정</span><span class="tag">과거 120거래일 기준일</span><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">KIS 1분 원본</span><span class="tag">5분·15분 재구성</span><span class="tag">기관·외국인 가점</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
 </section>
 
 <section class="card">
@@ -58,7 +58,7 @@
 <div class="field"><label>화면 표시</label><select id="displayLimit" onchange="render()"><option value="100">100개</option><option value="300" selected>300개</option><option value="9999">전체</option></select></div>
 </div>
 <div class="note"><b>기준일 처리:</b> 오늘이나 휴장일을 넣어도 종목별 데이터에서 그 날짜 이하의 <b>가장 최근 실제 거래일</b>을 자동으로 사용합니다. 과거 날짜는 최신 거래일 기준 <b>120거래일 이내</b>까지만 허용합니다.</div>
-<div class="warnbox"><b>데이터 이중화:</b> 5분봉을 정상 수집할 수 있으면 5분봉을 우선 사용합니다. Yahoo 분봉이 차단·누락되면 종목을 오류 처리하지 않고 <b>네이버 일봉 기반 20거래일 역검증으로 자동 대체</b>합니다. 결과표의 ‘데이터’ 열에서 어떤 방식으로 판정했는지 확인할 수 있습니다.</div>
+<div class="warnbox"><b>KIS 정밀모드:</b> 1분 원본을 한국투자증권 Open API에서 받아 5분·15분봉을 서버에서 다시 만듭니다. 상대거래량 비교를 위해 신호기간 20일에 앞선 기준기간 20일도 함께 읽으므로 한 종목당 최대 약 40거래일의 분봉을 사용합니다.</div>
 </section>
 
 <section class="card">
@@ -78,7 +78,7 @@
 <div class="stat"><span>조회 완료</span><b id="stScanned">0</b></div>
 <div class="stat"><span>기준일 급등주</span><b id="stEligible">0</b></div>
 <div class="stat"><span>패턴 검출</span><b id="stMatch">0</b></div>
-<div class="stat"><span>네이버 대체</span><b id="stFallback">0</b></div>
+<div class="stat"><span>KIS 정밀완료</span><b id="stFallback">0</b></div>
 <div class="stat"><span>실제 오류</span><b id="stErr">0</b></div>
 <div class="stat"><span>실행 모드</span><b id="stMode" style="font-size:13px">-</b></div>
 </div>
@@ -91,7 +91,7 @@
 </section>
 
 <section class="card" id="detailCard">
-<h2>3. 선택 종목 상세</h2>
+<h2>4. 선택 종목 상세</h2>
 <div id="detailTitle" class="small" style="margin-top:8px">결과표에서 상세를 누르세요.</div>
 <div id="detailStats" class="detailGrid"></div>
 <div id="charts" class="hidden">
@@ -103,8 +103,8 @@
 </div>
 
 <script>
-const API='https://sh-shtel-9338.vercel.app/api/kr-smart-money-pre-spike',TOKEN_KEY='krSmartMoneyPermanentTokenV1';
-let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],ELIGIBLE=0,FALLBACK=0,CHARTS={};
+const API='https://sh-shtel-9338.vercel.app/api/kr-smart-money-pre-spike',KISAPI='https://sh-shtel-9338.vercel.app/api/kr-smart-money-kis',TOKEN_KEY='krSmartMoneyPermanentTokenV1',KIS_KEY='krSmartMoneyKisV1',KIS_RESUME='krSmartMoneyKisResumeV1';
+let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],ELIGIBLE=0,FALLBACK=0,CHARTS={},KIS={appKey:'',appSecret:'',accessToken:'',expires:''};
 const $=id=>document.getElementById(id);
 function kstToday(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 $('asOf').value=kstToday();$('asOf').max=kstToday();
@@ -113,7 +113,7 @@ function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
 async function api(url,opt){opt=opt||{};opt.headers=Object.assign({},opt.headers||{},headers());const r=await fetch(url,opt);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
 async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent=''}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
 function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').value='';$('login').classList.remove('hidden')}
-(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
+(async()=>{loadKis();TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
 function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
 function cfg(){return{asOf:$('asOf').value,lookbackDays:+$('lookbackDays').value||20,spikePct:+$('spikePct').value||5,min5x:+$('min5x').value||3,maxPreMove:+$('maxPreMove').value||3,minScore:+$('minScore').value||60,notSurgedPct:+$('notSurgedPct').value||5,maxCurrentChange:+$('maxCurrentChange').value||3}}
 function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
@@ -122,10 +122,92 @@ function fmt(v,d){if(v===null||v===undefined||!Number.isFinite(Number(v)))return
 function pct(v){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '-';const x=Number(v);return (x>0?'+':'')+x.toFixed(2)+'%'}
 function cls(v){return Number(v)>0?'pos':Number(v)<0?'neg':''}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function srcLabel(s){return s==='YAHOO_5M'?'5분봉':'네이버 일봉 대체'}
+function srcLabel(s){return s==='KIS_1M_5M_15M'?'KIS 1m→5m→15m':s==='YAHOO_5M'?'Yahoo 5분봉':'보조모드'}
 function reset(mode){MODE=mode;STOP=false;RESULTS=[];ERRORS=[];ELIGIBLE=0;FALLBACK=0;$('bar').style.width='0%';['stUniverse','stTarget','stScanned','stEligible','stMatch','stFallback','stErr'].forEach(id=>$(id).textContent='0');$('stMode').textContent=mode==='reverse'?'급등주 역검증':'미급등 후보';$('rows').innerHTML='<tr><td colspan="16" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden')}
 function showErrors(){if(!ERRORS.length){$('errorBox').classList.add('hidden');return}const m={};ERRORS.forEach(e=>{const k=String(e.error||'UNKNOWN').split(':')[0];m[k]=(m[k]||0)+1});$('errorBox').textContent='실제 데이터 오류 요약\n'+Object.entries(m).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+' : '+x[1]+'건').join('\n');$('errorBox').classList.remove('hidden')}
-async function runScan(mode){
+function loadKis(){
+  try{const x=JSON.parse(localStorage.getItem(KIS_KEY)||'{}');if(x.appKey)KIS.appKey=x.appKey;if(x.appSecret)KIS.appSecret=x.appSecret;if(x.accessToken)KIS.accessToken=x.accessToken;if(x.expires)KIS.expires=x.expires}catch{}
+  if($('kisAppKey'))$('kisAppKey').value=KIS.appKey||'';if($('kisAppSecret'))$('kisAppSecret').value=KIS.appSecret||'';
+  if(KIS.accessToken&&$('kisStatus'))$('kisStatus').innerHTML='<b>상태:</b> 저장된 KIS 토큰이 있습니다. 연결 테스트로 유효성을 확인할 수 있습니다.';
+}
+function kisBody(){KIS.appKey=$('kisAppKey').value.trim();KIS.appSecret=$('kisAppSecret').value.trim();return {appKey:KIS.appKey,appSecret:KIS.appSecret,accessToken:KIS.accessToken}}
+function persistKis(){
+  if($('kisRemember').value==='1')localStorage.setItem(KIS_KEY,JSON.stringify(KIS));else localStorage.removeItem(KIS_KEY);
+}
+function saveKisKeys(){kisBody();if(!KIS.appKey||!KIS.appSecret)return alert('KIS App Key와 App Secret을 입력해 주세요.');persistKis();$('kisStatus').innerHTML='<b>상태:</b> KIS 키를 이 브라우저에 저장했습니다. 아직 연결 테스트는 하지 않았습니다.'}
+function clearKis(){KIS={appKey:'',appSecret:'',accessToken:'',expires:''};localStorage.removeItem(KIS_KEY);localStorage.removeItem(KIS_RESUME);$('kisAppKey').value='';$('kisAppSecret').value='';$('kisStatus').innerHTML='<b>상태:</b> KIS 키와 토큰을 삭제했습니다.'}
+async function connectKis(){
+  kisBody();if(!KIS.appKey||!KIS.appSecret)return alert('KIS App Key와 App Secret을 입력해 주세요.');
+  $('kisStatus').innerHTML='<b>상태:</b> 접근토큰 발급 중...';
+  try{
+    const t=await api(KISAPI+'?op=token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kis:{appKey:KIS.appKey,appSecret:KIS.appSecret}})});
+    KIS.accessToken=t.accessToken;KIS.expires=t.expires||'';persistKis();
+    $('kisStatus').innerHTML='<b>상태:</b> 토큰 발급 성공. 삼성전자 최근 실제 거래일 1분봉 테스트 중...';
+    const z=await api(KISAPI+'?op=test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kis:kisBody()})});
+    $('kisStatus').innerHTML='<b>연결 정상:</b> '+z.date+' · 1분 '+z.count1m+'개 · 5분 '+z.count5m+'개 · 15분 '+z.count15m+'개'+(KIS.expires?' · 토큰만료 '+esc(KIS.expires):'');
+  }catch(e){$('kisStatus').innerHTML='<b>연결 실패:</b> '+esc(e.message)}
+}
+async function ensureKis(){
+  kisBody();if(!KIS.appKey||!KIS.appSecret)throw new Error('KIS App Key/Secret을 먼저 입력하세요.');
+  if(!KIS.accessToken){const t=await api(KISAPI+'?op=token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kis:{appKey:KIS.appKey,appSecret:KIS.appSecret}})});KIS.accessToken=t.accessToken;KIS.expires=t.expires||'';persistKis()}
+}
+function saveResume(mode,target,index){try{localStorage.setItem(KIS_RESUME,JSON.stringify({mode,asOf:$('asOf').value,index,target,results:RESULTS,errors:ERRORS,savedAt:new Date().toISOString()}))}catch{}}
+async function resumeKis(){
+  try{
+    const s=JSON.parse(localStorage.getItem(KIS_RESUME)||'null');if(!s||!Array.isArray(s.target))return alert('이어갈 KIS 스캔 기록이 없습니다.');
+    if(s.asOf)$('asOf').value=s.asOf;RESULTS=Array.isArray(s.results)?s.results:[];ERRORS=Array.isArray(s.errors)?s.errors:[];
+    await runKisPrecise(s.mode,s.target,s.index||0,true);
+  }catch(e){alert('이어가기 실패: '+e.message)}
+}
+async function screenKisTargets(mode,all,c){
+  const target=[];const batchSize=40;
+  $('runMsg').textContent='기준일 등락률 1차 선별 중...';
+  for(let i=0;i<all.length;i+=batchSize){
+    if(STOP)break;const batch=all.slice(i,i+batchSize);
+    try{
+      const j=await api(KISAPI+'?op=screen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,stocks:batch,cfg:c})});
+      (j.results||[]).forEach(r=>{if(r&&r.error){ERRORS.push(r);return}if(r&&r.eligible)target.push(r.stock)});
+    }catch(e){ERRORS.push({error:e.message})}
+    $('runMsg').textContent='기준일 등락률 선별 '+Math.min(i+batch.length,all.length)+' / '+all.length+' · 정밀대상 '+target.length;
+    $('bar').style.width=(30*Math.min(i+batch.length,all.length)/Math.max(1,all.length))+'%';
+  }
+  return target;
+}
+async function runKisPrecise(mode,target,startIndex=0,resuming=false){
+  await ensureKis();const c=cfg();
+  if(!resuming){RESULTS=[];ERRORS=[];ELIGIBLE=target.length;FALLBACK=0}
+  $('stTarget').textContent=target.length;$('stEligible').textContent=mode==='reverse'?target.length:'-';$('stMode').textContent=(mode==='reverse'?'급등주 KIS':'미급등 KIS');
+  for(let i=startIndex;i<target.length;i++){
+    if(STOP){saveResume(mode,target,i);break}
+    const s=target[i];$('runMsg').textContent='KIS 정밀분봉 '+(i+1)+' / '+target.length+' · '+s.name+' ('+s.code+')';
+    try{
+      const j=await api(KISAPI+'?op=analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,stock:s,cfg:c,kis:kisBody()})});
+      FALLBACK++;
+      if(j.match)RESULTS.push(j);
+    }catch(e){
+      if(/TOKEN|401|만료/i.test(e.message)){KIS.accessToken='';await ensureKis();i--;continue}
+      ERRORS.push({stock:s,error:e.message});
+    }
+    const done=i+1;$('stScanned').textContent=done;$('stMatch').textContent=RESULTS.length;$('stFallback').textContent=FALLBACK;$('stErr').textContent=ERRORS.length;$('bar').style.width=(30+70*done/Math.max(1,target.length))+'%';
+    RESULTS.sort((a,b)=>Number(b.best?.score||0)-Number(a.best?.score||0));render();showErrors();saveResume(mode,target,done);
+  }
+  if(!STOP){localStorage.removeItem(KIS_RESUME);$('bar').style.width='100%';$('runMsg').textContent='KIS 정밀 완료 · 대상 '+target.length+'개 · 패턴 '+RESULTS.length+'개 · 오류 '+ERRORS.length+'개';$('excelBtn').disabled=!RESULTS.length}
+}
+async function runKisScan(mode){
+  if(!$('asOf').value)return alert('기준일을 선택해 주세요.');reset(mode);$('reverseBtn').disabled=true;$('candidateBtn').disabled=true;$('stopBtn').disabled=false;
+  try{
+    await ensureKis();
+    $('runMsg').textContent='KOSPI·KOSDAQ 전종목 목록 불러오는 중...';
+    const u=await api(API+'?op=universe&market='+MARKET),all=cleanUniverse(u.rows||[]);$('stUniverse').textContent=all.length;const c=cfg();
+    let target=await screenKisTargets(mode,all,c);
+    const scope=$('kisScope').value;if(mode==='candidate'&&scope==='top200')target=target.slice(0,200);if(mode==='candidate'&&scope==='top500')target=target.slice(0,500);
+    const max=Math.max(0,+$('maxStocks').value||0);if(max)target=target.slice(0,max);
+    $('stTarget').textContent=target.length;await runKisPrecise(mode,target,0,false);
+  }catch(e){$('runMsg').textContent='KIS 정밀 실패: '+e.message}
+  finally{$('reverseBtn').disabled=false;$('candidateBtn').disabled=false;$('stopBtn').disabled=true}
+}
+async function runScan(mode){if($('engine').value==='kis')return runKisScan(mode);return runLegacyScan(mode)}
+async function runLegacyScan(mode){
   if(!$('asOf').value)return alert('기준일을 선택해 주세요.');reset(mode);$('reverseBtn').disabled=true;$('candidateBtn').disabled=true;$('stopBtn').disabled=false;
   try{
     $('runMsg').textContent='종목 목록과 최근 실제 거래일을 불러오는 중...';const u=await api(API+'?op=universe&market='+MARKET),all=cleanUniverse(u.rows||[]);$('stUniverse').textContent=all.length;
@@ -170,7 +252,8 @@ function render(){
 }
 async function detail(code,market,name){
   $('detailTitle').textContent=name+' ('+code+') · 상세 불러오는 중...';$('charts').classList.add('hidden');$('detailStats').innerHTML='';
-  try{const j=await api(API+'?op=detail&code='+code+'&market='+market+'&asOf='+encodeURIComponent($('asOf').value));const m5=j.m5||[],daily=j.daily||[],use=m5.length?m5:daily,kind=m5.length?'5분봉':'일봉';
+  try{if($('engine').value==='kis'){await ensureKis();const j=await api(KISAPI+'?op=detail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:{code,market,name},cfg:cfg(),kis:kisBody()})});const m5=j.five||[],m1=j.one||[];$('detailTitle').innerHTML='<b>'+esc(name)+' ('+esc(code)+')</b> · KIS 정밀 · 기준거래일 '+esc(j.baseDate||'-');$('detailStats').innerHTML=stat('기준거래일',j.baseDate||'-')+stat('1분봉',fmt(m1.length,0))+stat('5분봉',fmt(m5.length,0))+stat('15분봉',fmt((j.fifteen||[]).length,0))+stat('신호',fmt((j.signals||[]).length,0))+stat('데이터','KIS 원본');drawCharts(m5,m1,'KIS 5분봉');$('charts').classList.remove('hidden');$('detailCard').scrollIntoView({behavior:'smooth'});return}
+    const j=await api(API+'?op=detail&code='+code+'&market='+market+'&asOf='+encodeURIComponent($('asOf').value));const m5=j.m5||[],daily=j.daily||[],use=m5.length?m5:daily,kind=m5.length?'5분봉':'일봉';
     $('detailTitle').innerHTML='<b>'+esc(name)+' ('+esc(code)+')</b> · '+esc(market)+' · 기준거래일 '+esc(j.baseDate||'-')+' · '+kind;
     $('detailStats').innerHTML=stat('기준거래일',j.baseDate||'-')+stat('가격 데이터',kind)+stat('5분봉 개수',fmt(m5.length,0))+stat('일봉 개수',fmt(daily.length,0))+stat('1분봉 개수',fmt((j.m1||[]).length,0))+stat('요청 기준일',$('asOf').value);
     drawCharts(use,j.m1||[],kind);$('charts').classList.remove('hidden');$('detailCard').scrollIntoView({behavior:'smooth'});
@@ -185,7 +268,7 @@ function drawCharts(rows,m1,kind){
   const b=m1.slice(-360),l1=b.map(x=>String(x.date||'').slice(5)+' '+String(x.time||''));CHARTS.vol1=new Chart($('vol1Chart'),{type:'bar',data:{labels:l1,datasets:[{label:'1분 거래량',data:b.map(x=>x.volume)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8}},y:{beginAtZero:true}}}});
 }
 function exportExcel(){
-  if(!RESULTS.length)return;const rows=RESULTS.map((r,i)=>{const s=r.stock||{},b=r.best||{};return{'순위':i+1,'종목명':s.name,'코드':s.code,'시장':s.market,'요청기준일':$('asOf').value,'실제기준거래일':r.baseDate,'기준일등락률%':r.baseChange,'스마트머니점수':b.score,'선행신호일':b.date,'신호시간':b.time,'거래량배수':b.ratio5,'지속성':b.persist,'신호당시등락률%':b.priceMove,'신호후최대상승률%':b.runupAfter,'기관최근5일순매수':b.institution5d,'외국인최근5일순매수':b.foreign5d,'데이터방식':srcLabel(r.dataSource||b.dataSource)}});
+  if(!RESULTS.length)return;const rows=RESULTS.map((r,i)=>{const s=r.stock||{},b=r.best||{};return{'순위':i+1,'종목명':s.name,'코드':s.code,'시장':s.market,'요청기준일':$('asOf').value,'실제기준거래일':r.baseDate,'기준일등락률%':r.baseChange,'스마트머니점수':b.score,'선행신호일':b.date,'신호시간':b.time,'1분거래량배수':b.ratio1,'5분거래량배수':b.ratio5,'15분거래량배수':b.ratio15,'지속성':b.persist,'신호당시등락률%':b.priceMove,'신호후최대상승률%':b.runupAfter,'기관최근5일순매수':b.institution5d,'외국인최근5일순매수':b.foreign5d,'데이터방식':srcLabel(r.dataSource||b.dataSource)}});
   const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,MODE==='reverse'?'급등주역검증':'미급등후보');XLSX.writeFile(wb,'KR_Smart_Money_PreSpike_'+$('asOf').value+'.xlsx');
 }
 </script>
