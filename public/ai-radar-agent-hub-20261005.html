@@ -15,7 +15,7 @@
 .radargrid{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));margin-top:11px}.radar{border:1px solid #263e58;border-radius:14px;padding:12px;background:#0b1828}.radar .top{display:flex;align-items:flex-start;gap:8px}.radar input[type=checkbox]{width:18px;height:18px}.radar strong{display:block;font-size:13px}.status{display:inline-flex;margin-top:8px;padding:4px 7px;border-radius:999px;font-size:11px;font-weight:800;background:#152941;color:#a9c1d7}.status.run{background:#2d2410;color:#ffd36c}.status.ok{background:#10331e;color:#8af2ab}.status.err{background:#3b1721;color:#ff9bab}.status.auth{background:#372b14;color:#fbd38d}
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.stat{border:1px solid #243b55;background:#0a1727;border-radius:13px;padding:10px}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:21px;margin-top:3px}.progress{height:12px;background:#122338;border-radius:999px;overflow:hidden;margin-top:11px}.bar{height:100%;width:0;background:linear-gradient(90deg,#28c8ff,#8b5cf6,#4ade80);transition:.25s}
 .tableWrap{overflow:auto;border:1px solid #223a54;border-radius:13px;margin-top:10px;max-height:65vh}table{border-collapse:collapse;width:100%;min-width:1150px;background:#0a1727}th,td{padding:9px;border-bottom:1px solid #1c3046;font-size:12px;text-align:center;white-space:nowrap}th{position:sticky;top:0;background:#102238;color:#9eb4ca;z-index:2}td.name{text-align:left;font-weight:900}.score{font-weight:900;color:#7dd3fc}.count{font-weight:900;color:#86efac}.reason{text-align:left;max-width:430px;white-space:normal;line-height:1.45}.links a{color:#75ccff;text-decoration:none;margin-right:8px}.toprow{background:rgba(74,222,128,.06)}
-.settings{margin-top:10px;align-items:end}.field{min-width:160px;flex:1}.field label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin-bottom:5px}.field input,.field select{width:100%;height:42px;border:1px solid #31506f;border-radius:10px;background:#091827;color:#eaf5ff;padding:0 10px}.note{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #384f67;background:#0b1d30;color:#aac4dc;font-size:12px;line-height:1.55}.note.warn{border-color:#70551e;background:#2a220e;color:#f2d487}
+.settings{margin-top:10px;align-items:end}.field{min-width:160px;flex:1}.field label{display:block;font-size:11px;color:var(--muted);font-weight:800;margin-bottom:5px}.field input,.field select{width:100%;height:42px;border:1px solid #31506f;border-radius:10px;background:#091827;color:#eaf5ff;padding:0 10px}.radarAuth{display:flex;gap:7px;margin-top:10px}.radarAuth input{min-width:0;flex:1;height:38px;border:1px solid #31506f;border-radius:10px;background:#071827;color:#fff;padding:0 10px;font-size:13px}.radarAuth input:focus{outline:none;border-color:#fbbf24}.radarAuth .btn{padding:8px 11px;font-size:11px;flex:0 0 auto}.note{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #384f67;background:#0b1d30;color:#aac4dc;font-size:12px;line-height:1.55}.note.warn{border-color:#70551e;background:#2a220e;color:#f2d487}
 .log{max-height:150px;overflow:auto;margin-top:10px;padding:10px;border:1px solid #21384f;border-radius:12px;background:#06111e;color:#9ab2c9;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
 details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{cursor:pointer;font-weight:800;color:#bdd9ee}
 .login{position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#071a2d,#271742);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(440px,100%);background:#0c1c2e;border:1px solid #365a78;border-radius:22px;padding:24px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.loginbox h2{margin:0}.loginbox input{width:100%;height:52px;margin:14px 0;border:1px solid #395d7b;background:#071523;color:#fff;border-radius:12px;padding:0 14px;font-size:18px}.hidden{display:none!important}.ghostFrame{position:fixed;width:2px;height:2px;left:-10000px;top:-10000px;opacity:0;pointer-events:none;border:0}
@@ -94,10 +94,11 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
   <div class="settings">
     <div class="field"><label>레이더 이름</label><input id="newName" placeholder="예: 거래량 급증 레이더"></div>
     <div class="field" style="flex:2"><label>사이트 주소</label><input id="newUrl" placeholder="https://...vercel.app/... 또는 /my-radar.html"></div>
+    <div class="field"><label>1회용 인증번호 (선택)</label><input id="newAuthCode" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••••••"></div>
     <button class="btn primary" onclick="addCustomRadarAuto()">주소만으로 자동 추가</button>
     <button class="btn" onclick="restoreBaseRadars()">기본 레이더 복원</button>
   </div>
-  <div class="note">추가한 레이더는 카드의 <b>삭제</b> 버튼으로 언제든 뺄 수 있습니다. 기본 레이더도 삭제 가능하며, 잘못 지웠다면 ‘기본 레이더 복원’을 누르면 됩니다. 외부 도메인 레이더는 표준 브리지 어댑터가 있으면 실행식·결과식을 입력하지 않아도 자동으로 연결됩니다.</div>
+  <div class="note">추가한 레이더는 카드의 <b>삭제</b> 버튼으로 언제든 뺄 수 있습니다. 인증번호 입력란은 <b>별표(••••)로 표시</b>되며 인증에 사용한 뒤 즉시 비웁니다. 원문 인증번호는 localStorage에 저장하지 않습니다. 기본 레이더도 삭제 가능하며, 잘못 지웠다면 ‘기본 레이더 복원’을 누르면 됩니다.</div>
 </section>
 </div>
 
@@ -117,7 +118,7 @@ const BASE_RADARS=[
  {id:'yellow',label:'당일 노란막대',path:'/kr-investor-today-yellow-bar-radar-120d-20d-20261004.html',runExpr:'runAll()',resultExpr:'rankList()',auth:'flow',color:'#fbbf24'},
  {id:'turn',label:'누적 매도→매수 전환',path:'/kr-investor-turn-positive-radar-20261004.html',runExpr:'runAll()',resultExpr:'rankList()',auth:'flow',color:'#35d0ff'},
  {id:'gc',label:'GC 조정→MA5 1저점',path:'/gc-retrace-ma5-first-bottom-radar-20260930.html',runExpr:'scanAll()',resultExpr:'results',auth:'gc',color:'#a78bfa'},
- {id:'news',label:'뉴스 급등 재점화',path:'/kr-news-surge-radar-20261001.html',runExpr:'runAnalysis()',resultExpr:'RESULTS.filter(function(r){return r.candidate})',auth:'news',color:'#fb7185'},
+ {id:'news',label:'뉴스 급등 재점화',path:'/kr-news-surge-radar-20261001.html',runExpr:'runAnalysis()',resultExpr:'RESULTS.filter(function(r){return r.candidate})',auth:'news',authEndpoint:'/api/historical-spike/auth',authField:'code',color:'#fb7185'},
  {id:'theme',label:'D-1 테마 급등 준비',path:'/d1-theme-spike-radar-20260930.html',runExpr:'runScan()',resultExpr:'finalRows.filter(function(r){return r.finalPass})',auth:'theme',color:'#4ade80'},
  {id:'lateTheme',label:'유행 테마 후발주',path:'https://sh-git-late-theme-stream-radar-20260922-shtel-9338.vercel.app/agent',auth:'bridge',auto:true,color:'#22d3ee'}
 ];
@@ -144,7 +145,7 @@ async function login(){
    if(j.flowToken)localStorage.setItem('gcFlowRadarTokenV1',j.flowToken);
    if(j.d1Token)localStorage.setItem('d1_theme_spike_radar_token_v1',j.d1Token);
    if(j.bridgeToken)localStorage.setItem(BRIDGE_KEY,j.bridgeToken);
-   $('login').classList.add('hidden');m.textContent='';init();log('통합 1회 인증 완료 · 5개 레이더 인증 준비');
+   $('login').classList.add('hidden');m.textContent='';init();log('통합 1회 인증 완료 · 기본 레이더 인증 준비');
  }catch(e){m.textContent='인증 실패: '+String(e&&e.message||e)}
 }
 function checkHubAuth(){
@@ -161,7 +162,9 @@ function loadRadars(){
 function renderRadarCards(){
  $('radarGrid').innerHTML=RADARS.map(function(r){
    const st=state[r.id]||{};
-   return '<div class="radar"><div class="top"><input type="checkbox" '+(st.selected!==false?'checked':'')+' onchange="toggleRadar(\''+esc(r.id)+'\',this.checked)"><div><strong>'+esc(r.label)+'</strong><div class="small">'+esc(r.path)+'</div></div></div><span id="status_'+esc(r.id)+'" class="status '+esc(st.kind||'')+'">'+esc(st.status||'대기')+'</span><div class="actions"><a class="btn" style="padding:6px 8px;font-size:11px;text-decoration:none" href="'+esc(r.path)+'" target="_blank">원본 열기</a><button class="btn danger" style="padding:6px 8px;font-size:11px" onclick="deleteRadar(\''+esc(r.id)+'\')">삭제</button></div></div>';
+   const canCode=(r.auth==='news'||r.custom);
+   const authBox=canCode?'<div class="radarAuth"><input id="radarAuth_'+esc(r.id)+'" type="password" inputmode="numeric" autocomplete="new-password" placeholder="1회용 인증번호 ••••" onkeydown="if(event.key===\'Enter\')authenticateRadarFromCard(\''+esc(r.id)+'\')"><button class="btn warn" onclick="authenticateRadarFromCard(\''+esc(r.id)+'\')">인증</button></div>':'';
+   return '<div class="radar"><div class="top"><input type="checkbox" '+(st.selected!==false?'checked':'')+' onchange="toggleRadar(\''+esc(r.id)+'\',this.checked)"><div><strong>'+esc(r.label)+'</strong><div class="small">'+esc(r.path)+'</div></div></div><span id="status_'+esc(r.id)+'" class="status '+esc(st.kind||'')+'">'+esc(st.status||'대기')+'</span>'+authBox+'<div class="actions"><a class="btn" style="padding:6px 8px;font-size:11px;text-decoration:none" href="'+esc(r.path)+'" target="_blank">원본 열기</a><button class="btn danger" style="padding:6px 8px;font-size:11px" onclick="deleteRadar(\''+esc(r.id)+'\')">삭제</button></div></div>';
  }).join('');
  updateSelectedCount();
 }
@@ -174,6 +177,40 @@ function authHint(r){
  if(r.auth==='theme')return !!localStorage.getItem('d1_theme_spike_radar_token_v1');
  if(r.auth==='bridge')return !!localStorage.getItem(BRIDGE_KEY);
  return null;
+}
+function radarAuthCandidates(r){
+ if(r.authEndpoint)return [{url:r.authEndpoint,field:r.authField||'code'}];
+ const p=String(r.path||'');
+ if(/kr-news-surge|historical-spike/i.test(p))return [{url:'/api/historical-spike/auth',field:'code'}];
+ if(!/^https?:\/\//i.test(p)||sameProjectHost((()=>{try{return new URL(p,location.href).hostname}catch{return ''}})())){
+   return [
+     {url:'/api/historical-spike/auth',field:'code'},
+     {url:'/api/auth/login',field:'password'}
+   ];
+ }
+ return [];
+}
+async function authenticateRadar(r,code){
+ code=String(code||'').trim();if(!code)throw new Error('인증번호를 입력해 주세요.');
+ setStatus(r,'인증 중','run');
+ const candidates=radarAuthCandidates(r);let last='';
+ for(const c of candidates){
+   try{
+     const body={};body[c.field]=code;
+     const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body)});
+     const j=await res.json().catch(()=>({}));
+     if(res.ok&&(j.ok!==false)){removeFrame(r);setStatus(r,'인증 완료','ok');log(r.label+' · 1회용 인증 완료');return true}
+     last=String(j.error||j.message||('HTTP '+res.status));
+   }catch(e){last=String(e&&e.message||e)}
+ }
+ if(r.auth==='bridge'){const ok=await ensureBridgeToken();if(ok){setStatus(r,'브리지 인증 준비','ok');return true}}
+ setStatus(r,'인증 실패','err');throw new Error(last||'이 레이더의 자동 인증 방식을 찾지 못했습니다.');
+}
+async function authenticateRadarFromCard(id){
+ const r=RADARS.find(x=>x.id===id);if(!r)return;
+ const el=$('radarAuth_'+id),code=el?el.value:'';
+ try{await authenticateRadar(r,code);if(el)el.value='';await wait(250);const f=await ensureFrame(r);if(frameLoginVisible(f))setStatus(r,'원본 인증 필요','auth');else setStatus(r,'연결 준비','ok');setTimeout(()=>removeFrame(r),800)}
+ catch(e){if(el)el.value='';alert('인증 실패: '+String(e&&e.message||e))}
 }
 async function ensureBridgeToken(){
  if(localStorage.getItem(BRIDGE_KEY))return localStorage.getItem(BRIDGE_KEY);
@@ -381,12 +418,16 @@ async function scheduleTick(){
 }
 
 async function addCustomRadarAuto(){
- const label=$('newName').value.trim(),addr=$('newUrl').value.trim();if(!label||!addr)return alert('레이더 이름과 사이트 주소를 입력해 주세요.');
+ const label=$('newName').value.trim(),addr=$('newUrl').value.trim(),authCode=($('newAuthCode')?.value||'').trim();if(!label||!addr)return alert('레이더 이름과 사이트 주소를 입력해 주세요.');
  const z=normalizeRadarAddress(addr);if(!z)return alert('사이트 주소 형식을 확인해 주세요.');
  let a=[];try{a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch{}
  if(RADARS.some(r=>String(r.path)===String(z.path)))return alert('이미 등록된 사이트입니다.');
- const item={id:'custom_'+Date.now(),label:label,path:z.path,auto:true,auth:z.external?'bridge':'generic',color:'#94a3b8'};a.push(item);localStorage.setItem(CUSTOM_KEY,JSON.stringify(a));loadRadars();$('newName').value='';$('newUrl').value='';
- const r=RADARS.find(x=>x.id===item.id);if(r){setStatus(r,'자동 연결 확인 중','run');try{const f=await ensureFrame(r);if(canAccessFrame(f)){const runExpr=detectRunExpr(f.contentWindow);const resultExpr=detectResultExpr(f.contentWindow);if(runExpr){saveDetectedAdapter(r,runExpr,resultExpr);setStatus(r,resultExpr?'자동 연결 완료':'실행 감지 · 결과는 실행 후 탐지',resultExpr?'ok':'run')}else{const ok=await waitBridgeReady(f,7000);setStatus(r,ok?'자동 연결 완료':'추가됨 · 실행 시 재확인',ok?'ok':'auth')}}else{const ok=await waitBridgeReady(f,9000);setStatus(r,ok?'외부 자동 연결 완료':'추가됨 · 외부 어댑터 확인 필요',ok?'ok':'auth')}setTimeout(()=>removeFrame(r),1000)}catch(e){setStatus(r,'추가됨 · 실행 시 재확인','auth')}}
+ const item={id:'custom_'+Date.now(),label:label,path:z.path,auto:true,auth:z.external?'bridge':'generic',color:'#94a3b8'};a.push(item);localStorage.setItem(CUSTOM_KEY,JSON.stringify(a));loadRadars();$('newName').value='';$('newUrl').value='';if($('newAuthCode'))$('newAuthCode').value='';
+ const r=RADARS.find(x=>x.id===item.id);if(r){
+   if(authCode){try{await authenticateRadar(r,authCode)}catch(e){setStatus(r,'인증 확인 필요','auth');alert('레이더는 추가됐지만 인증은 실패했습니다: '+String(e&&e.message||e))}}
+   setStatus(r,'자동 연결 확인 중','run');
+   try{const f=await ensureFrame(r);if(canAccessFrame(f)){const runExpr=detectRunExpr(f.contentWindow);const resultExpr=detectResultExpr(f.contentWindow);if(runExpr){saveDetectedAdapter(r,runExpr,resultExpr);setStatus(r,resultExpr?'자동 연결 완료':'실행 감지 · 결과는 실행 후 탐지',resultExpr?'ok':'run')}else{const ok=await waitBridgeReady(f,7000);setStatus(r,ok?'자동 연결 완료':'추가됨 · 실행 시 재확인',ok?'ok':'auth')}}else{const ok=await waitBridgeReady(f,9000);setStatus(r,ok?'외부 자동 연결 완료':'추가됨 · 외부 어댑터 확인 필요',ok?'ok':'auth')}setTimeout(()=>removeFrame(r),1000)}catch(e){setStatus(r,'추가됨 · 실행 시 재확인','auth')}
+ }
  log('새 레이더 자동 추가 · '+label+' · '+z.path);
 }
 function deleteRadar(id){
