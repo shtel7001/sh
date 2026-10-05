@@ -192,7 +192,9 @@ async function minute1m(code:string,market:string){
   try{return (await yahooBars(code,market,'1m','7d')).slice(-1200)}catch{return []}
 }
 
-export async function OPTIONS(){return new NextResponse(null,{status:204,headers:CORS})}\n\nexport async function GET(req:Request){
+export async function OPTIONS(){return new NextResponse(null,{status:204,headers:CORS})}
+
+export async function GET(req:Request){
   if(!validToken(reqToken(req)))return unauthorized();
   const u=new URL(req.url),op=u.searchParams.get('op')||'';
   if(op==='ping')return json({ok:true});
