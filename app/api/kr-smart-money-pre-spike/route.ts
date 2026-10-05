@@ -182,7 +182,8 @@ async function flow5d(code:string,asOf:string){
   try{
     const b=await fetchAny('https://finance.naver.com/item/frgn.naver?code='+code,'buffer',9000),html=iconv.decode(b,'EUC-KR'),$=cheerio.load(html),rows:any[]=[];
     $('table.type2 tr').each((_,tr)=>{const tds=$(tr).find('td').map((_,td)=>$(td).text().replace(/\s+/g,' ').trim()).get();if(tds.length<7||!/^\d{4}\.\d{2}\.\d{2}/.test(tds[0]||''))return;const date=tds[0].replace(/\./g,'-'),inst=num(tds[5]),foreign=num(tds[6]);if(date<=asOf&&inst!==null&&foreign!==null)rows.push({date,inst,foreign})});
-    const x=rows.slice(0,5),inst=x.reduce((s,r)=>s+r.inst,0),foreign=x.reduce((s,r)=>s+r.foreign,0),bonus=inst>0&&foreign>0?10:(inst>0||foreign>0?6:0);
+    const x=rows.slice(0,5);if(!x.length)return {institution5d:null,foreign5d:null,flowBonus:0};
+    const inst=x.reduce((s,r)=>s+r.inst,0),foreign=x.reduce((s,r)=>s+r.foreign,0),bonus=inst>0&&foreign>0?10:(inst>0||foreign>0?6:0);
     return {institution5d:inst,foreign5d:foreign,flowBonus:bonus};
   }catch{return {institution5d:null,foreign5d:null,flowBonus:0}}
 }
@@ -231,7 +232,7 @@ export async function GET(req:Request){
   if(op==='health'){
     let y:any={ok:false},n:any={ok:false};
     try{const r=await yahooBars('005930','KOSPI','5m','60d');y={ok:true,count:r.length,last:r.at(-1)?.date}}catch(e:any){y={ok:false,error:String(e?.message||e)}}
-    try{const r=await naverDaily('005930',190);n={ok:true,count:r.length,last:r.at(-1)?.date}}catch(e:any){n={ok:false,error:String(e?.message||e)}}
+    try{const r=await naverDaily('005930',190);const bi=r.length-1;const sig=analyzeDaily(r,bi,{lookbackDays:20,min5x:1.2,maxPreMove:10,minScore:0,notSurgedPct:20},'candidate');n={ok:true,count:r.length,last:r.at(-1)?.date,lastChange:dayChange(r,bi),sampleSignals:sig.length,bestSignal:sig[0]?{date:sig[0].date,ratio:sig[0].ratio5,score:sig[0].score5m}:null}}catch(e:any){n={ok:false,error:String(e?.message||e)}}
     return json({ok:true,yahoo:y,naver:n});
   }
   if(!validToken(reqToken(req)))return unauthorized();
