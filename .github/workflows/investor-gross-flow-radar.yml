@@ -5,6 +5,12 @@ on:
     paths:
       - "kr-investor-gross-flow-radar-20261006/**"
       - ".github/workflows/investor-gross-flow-radar.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "kr-investor-gross-flow-radar-20261006/**"
+      - ".github/workflows/investor-gross-flow-radar.yml"
   workflow_dispatch:
 
 jobs:
