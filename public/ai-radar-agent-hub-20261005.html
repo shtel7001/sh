@@ -26,7 +26,7 @@ details{margin-top:10px;border-top:1px dashed #2d4b68;padding-top:10px}summary{c
 <div id="login" class="login">
   <div class="loginbox">
     <h2>AI 통합 레이더 · 1회 영구인증</h2>
-    <div class="small" style="margin-top:8px">기존 골든크로스·1저점 레이더와 같은 개인 인증번호를 한 번 입력하면 이 브라우저에 인증값을 저장합니다.</div>
+    <div class="small" style="margin-top:8px">통합 개인 인증번호를 한 번 입력하면 이 브라우저에 영구 저장하고, 연결된 5개 레이더의 인증도 동시에 준비합니다.</div>
     <input id="authCode" inputmode="numeric" maxlength="16" placeholder="인증번호 입력">
     <button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button>
     <div id="loginMsg" class="small" style="margin-top:9px"></div>
@@ -135,13 +135,20 @@ async function sha256(text){const b=await crypto.subtle.digest('SHA-256',new Tex
 
 async function login(){
  const c=$('authCode').value.trim(),m=$('loginMsg'); if(!c)return;
- m.textContent='확인 중...';
- const h=await sha256(c);
- if(h===HUB_HASH){localStorage.setItem(HUB_KEY,HUB_HASH);$('login').classList.add('hidden');m.textContent='';init();}
- else m.textContent='인증번호가 맞지 않습니다.';
+ m.textContent='통합 인증 준비 중...';
+ try{
+   const r=await fetch('/api/ai-radar-agent/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok||!j.ok)throw new Error(j.error||'인증 실패');
+   localStorage.setItem(HUB_KEY,HUB_HASH);
+   localStorage.setItem(GC_DEVICE_KEY,j.deviceLock||HUB_HASH);
+   if(j.flowToken)localStorage.setItem('gcFlowRadarTokenV1',j.flowToken);
+   if(j.d1Token)localStorage.setItem('d1_theme_spike_radar_token_v1',j.d1Token);
+   $('login').classList.add('hidden');m.textContent='';init();log('통합 1회 인증 완료 · 5개 레이더 인증 준비');
+ }catch(e){m.textContent='인증 실패: '+String(e&&e.message||e)}
 }
 function checkHubAuth(){
- if(localStorage.getItem(HUB_KEY)===HUB_HASH || localStorage.getItem(GC_DEVICE_KEY)===HUB_HASH){localStorage.setItem(HUB_KEY,HUB_HASH);$('login').classList.add('hidden');return true}
+ if(localStorage.getItem(HUB_KEY)===HUB_HASH){$('login').classList.add('hidden');return true}
  $('login').classList.remove('hidden');return false;
 }
 
