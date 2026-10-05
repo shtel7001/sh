@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "verify": "node --check api/krx.js && node --check api/excel.js && node --check lib/krx.mjs && node --check lib/calc.mjs && node scripts/verify.mjs && npm test"
+    "verify": "node --check api/krx.js && node --check api/excel.js && node --check lib/krx.mjs && node --check lib/calc.mjs && node scripts/verify.mjs && npm test",
+    "postinstall": "npm run verify"
   },
   "dependencies": {
     "exceljs": "4.4.0"
