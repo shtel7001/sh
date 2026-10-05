@@ -62,7 +62,26 @@
 </section>
 
 <section class="card">
-<h2>2. 실행</h2>
+<h2>2. 한국투자증권 KIS 정밀분봉 연결</h2>
+<div class="grid">
+<div class="field"><label>KIS App Key</label><input id="kisAppKey" type="password" autocomplete="off" placeholder="App Key"></div>
+<div class="field"><label>KIS App Secret</label><input id="kisAppSecret" type="password" autocomplete="off" placeholder="App Secret"></div>
+<div class="field"><label>분석 엔진</label><select id="engine"><option value="kis" selected>KIS 1분·5분·15분 정밀</option><option value="legacy">기존 보조모드</option></select></div>
+<div class="field"><label>미급등 후보 정밀 범위</label><select id="kisScope"><option value="all" selected>전종목 정밀</option><option value="top200">1차 후보 200개 정밀</option><option value="top500">1차 후보 500개 정밀</option></select></div>
+<div class="field"><label>키 저장</label><select id="kisRemember"><option value="0" selected>저장 안 함</option><option value="1">이 브라우저에 저장</option></select></div>
+</div>
+<div class="actions" style="margin-top:10px">
+<button class="btn primary" onclick="connectKis()">KIS 연결·테스트</button>
+<button class="btn" onclick="saveKisKeys()">키 저장</button>
+<button class="btn warn" onclick="clearKis()">KIS 키 삭제</button>
+<button class="btn" onclick="resumeKis()">중단 지점 이어서</button>
+</div>
+<div id="kisStatus" class="note"><b>상태:</b> KIS App Key/Secret을 입력한 뒤 ‘KIS 연결·테스트’를 누르세요. 키는 GitHub나 사이트 소스에 저장되지 않습니다.</div>
+<div class="warnbox"><b>전종목 정밀 스캔:</b> KIS는 한 호출에 최대 120개 분봉을 반환합니다. 20거래일 신호 + 앞선 20거래일 기준구간까지 읽기 때문에 전종목 정밀은 시간이 오래 걸릴 수 있습니다. 진행상황은 브라우저에 저장되어 중단 후 이어서 실행할 수 있습니다. 급등주 역검증은 기준일 급등주만 먼저 추려 KIS 정밀분봉을 적용합니다.</div>
+</section>
+
+<section class="card">
+<h2>3. 실행</h2>
 <div class="actions" style="margin-top:10px">
 <button id="reverseBtn" class="btn primary" onclick="runScan('reverse')">기준일 급등주 20일 역검증</button>
 <button id="candidateBtn" class="btn dark" onclick="runScan('candidate')">기준일 미급등 후보 전종목 스캔</button>
