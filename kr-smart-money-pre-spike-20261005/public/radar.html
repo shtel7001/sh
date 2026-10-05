@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>KR Smart Money Pre-Spike Radar</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#142033;--muted:#66748c;--line:#dbe4ef;--navy:#142a63;--purple:#6d28d9;--red:#d92d20;--blue:#2563eb;--green:#087f5b;--orange:#b45309;--shadow:0 12px 30px rgba(25,40,80,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1840px;margin:auto;padding:10px}
+.hero{padding:22px;border-radius:22px;background:linear-gradient(135deg,#0d225c,#4b1e76);color:#fff;box-shadow:var(--shadow)}.hero h1{margin:0 0 8px;font-size:27px}.hero p{margin:0;line-height:1.7}.tags,.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.tags{margin-top:12px}.tag{font-size:12px;background:rgba(255,255,255,.15);border-radius:999px;padding:7px 10px}
+.card{margin-top:11px;padding:14px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}h2{margin:0;font-size:18px}.small{font-size:12px;color:var(--muted);line-height:1.55}.grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:8px;margin-top:10px}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px}.field input,.field select{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:0 9px;background:#fff}
+.btn,.seg{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer}.seg.active,.btn.primary{background:#253fb7;color:#fff;border-color:#253fb7}.btn.dark{background:#172033;color:#fff;border-color:#172033}.btn.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.btn:disabled{opacity:.5;cursor:not-allowed}
+.note{margin-top:10px;padding:11px 12px;border-radius:12px;background:#eef5ff;border:1px solid #cbdcf4;font-size:12px;line-height:1.65}.warnbox{margin-top:10px;padding:11px 12px;border-radius:12px;background:#fff8e6;border:1px solid #efd99e;color:#72500c;font-size:12px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}.stat{border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:9px}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:19px;margin-top:2px}
+.progress{height:11px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#2848c7,#8b5cf6);transition:.15s}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px;max-height:64vh}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:8px;border-bottom:1px solid #edf1f6;font-size:11px;text-align:center;white-space:nowrap}th{position:sticky;top:0;background:#f7f9fc;z-index:2;color:#455269}td.name{text-align:left;font-weight:900}.rank{font-weight:900;color:#5133a5}.top{background:#fffbea}.pos{color:var(--red);font-weight:800}.neg{color:var(--blue);font-weight:800}.score{font-size:15px;font-weight:900}.signal{display:inline-flex;padding:4px 7px;border-radius:999px;background:#ecfdf3;color:#087f5b;font-weight:800}.empty{padding:30px!important;color:var(--muted)}a{color:#245bd4;text-decoration:none}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0d225c,#542078);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px}.loginbox input{width:100%;height:50px;border:1px solid #cad5e3;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.hidden{display:none!important}.detailGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}.detailStat{border:1px solid var(--line);border-radius:12px;padding:9px;background:#f8fafc}.detailStat span{display:block;font-size:11px;color:var(--muted)}.detailStat b{display:block;margin-top:3px;font-size:14px}.chartBox{height:280px;border:1px solid var(--line);border-radius:14px;margin-top:10px;padding:8px}.chartTitle{font-size:13px;font-weight:900;margin-top:14px}.searchrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.searchrow input{flex:1;min-width:230px;height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:0 10px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}.stats,.detailGrid{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.wrap{padding:7px}.hero{padding:17px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats,.detailGrid{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:10px}.chartBox{height:230px}}
+</style>
+</head>
+<body>
+<div id="login" class="login hidden"><div class="loginbox">
+<h2>개인 1회 영구 인증</h2>
+<p class="small">인증번호를 한 번 입력하면 이 브라우저에 만료 없는 서명 토큰을 저장합니다. 로그아웃하거나 브라우저 저장공간을 지우기 전까지 다시 입력하지 않아도 됩니다.</p>
+<input id="authCode" type="password" inputmode="numeric" placeholder="인증번호" onkeydown="if(event.key==='Enter')login()">
+<button class="btn primary" onclick="login()">인증</button><div id="loginMsg" class="small"></div>
+</div></div>
+
+<div class="wrap">
+<section class="hero">
+<h1>KR Smart Money Pre-Spike Radar</h1>
+<p><b>오늘 급등주를 정답지로 역검증</b>하고, 최근 20거래일의 5분봉 상대거래량·15분 지속성·가격 억제·VWAP·기관/외국인 수급을 조합해 <b>아직 급등하지 않은 선행 후보</b>를 찾습니다.</p>
+<div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">1분 상세</span><span class="tag">5분 핵심탐지</span><span class="tag">15분 지속성</span><span class="tag">20거래일 패턴</span><span class="tag">기관·외국인 가점</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+</section>
+
+<section class="card">
+<h2>1. 시장 · 스마트머니 조건</h2>
+<div class="row" style="margin-top:10px">
+<button class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
+<button class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
+<button class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
+</div>
+<div class="grid">
+<div class="field"><label>학습기간</label><input id="lookbackDays" type="number" min="5" max="20" value="20"></div>
+<div class="field"><label>오늘 급등 기준 %</label><input id="spikePct" type="number" min="2" max="30" step=".5" value="5"></div>
+<div class="field"><label>5분 거래량 최소 배수</label><input id="min5x" type="number" min="1.5" max="20" step=".1" value="3"></div>
+<div class="field"><label>신호 당시 최대 상승률 %</label><input id="maxPreMove" type="number" min=".5" max="10" step=".5" value="3"></div>
+<div class="field"><label>스마트머니 최소점수</label><input id="minScore" type="number" min="0" max="100" value="60"></div>
+<div class="field"><label>미급등 판정 최대상승 %</label><input id="notSurgedPct" type="number" min="1" max="20" step=".5" value="5"></div>
+<div class="field"><label>현재 상승률 상한 %</label><input id="maxCurrentChange" type="number" min="-20" max="10" step=".5" value="3"></div>
+<div class="field"><label>최대 스캔 종목 (0=전체)</label><input id="maxStocks" type="number" min="0" max="4000" value="0"></div>
+<div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+<div class="field"><label>스팩 제외</label><select id="excludeSpac"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+<div class="field"><label>화면 표시</label><select id="displayLimit" onchange="render()"><option value="100">100개</option><option value="300" selected>300개</option><option value="9999">전체</option></select></div>
+</div>
+<div class="note"><b>핵심 판정:</b> 같은 시각의 과거 거래일 평균 대비 5분 거래량 급증 → 다음 10분까지 거래량 지속 → 15분 누적 거래량 확인 → 신호 당시 주가가 아직 크게 오르지 않았는지 → VWAP 위 유지 여부 → 최근 5거래일 기관·외국인 순매수 가점 순서로 점수화합니다.</div>
+<div class="warnbox">이 신호는 비정상적인 자금 유입 후보를 찾는 통계적 탐지입니다. 분봉만으로 내부자거래나 미공개정보 이용 여부를 판단하지 않습니다. 1분봉은 상세화면에서 최근 데이터 확인용으로 사용하고, 20거래일 역검증의 중심은 데이터 보존성이 더 좋은 5분봉입니다.</div>
+</section>
+
+<section class="card">
+<h2>2. 실행</h2>
+<div class="actions" style="margin-top:10px">
+<button id="reverseBtn" class="btn primary" onclick="runScan('reverse')">오늘 급등주 20일 역검증</button>
+<button id="candidateBtn" class="btn dark" onclick="runScan('candidate')">미급등 후보 전종목 스캔</button>
+<button id="stopBtn" class="btn warn" onclick="STOP=true" disabled>중지</button>
+<button id="excelBtn" class="btn" onclick="exportExcel()" disabled>Excel 최신형 저장</button>
+<button class="btn" onclick="clearAuth()">이 브라우저 인증 해제</button>
+</div>
+<div id="runMsg" class="small" style="margin-top:10px">조건을 정한 뒤 실행하세요.</div>
+<div class="progress"><div id="bar" class="bar"></div></div>
+<div class="stats">
+<div class="stat"><span>전체 종목</span><b id="stUniverse">0</b></div>
+<div class="stat"><span>스캔 대상</span><b id="stTarget">0</b></div>
+<div class="stat"><span>조회 완료</span><b id="stScanned">0</b></div>
+<div class="stat"><span>패턴 검출</span><b id="stMatch">0</b></div>
+<div class="stat"><span>오류</span><b id="stErr">0</b></div>
+<div class="stat"><span>실행 모드</span><b id="stMode" style="font-size:13px">-</b></div>
+</div>
+<div class="searchrow"><input id="q" placeholder="종목명 / 코드 검색" oninput="render()"></div>
+<div class="tableWrap"><table>
+<thead><tr><th>순위</th><th>종목</th><th>시장</th><th>점수</th><th>최초/최적 신호</th><th>5분 거래량</th><th>15분 지속</th><th>연속봉</th><th>신호 당시</th><th>이후 최대상승</th><th>현재등락</th><th>기관 5일</th><th>외국인 5일</th><th>상세</th><th>링크</th></tr></thead>
+<tbody id="rows"><tr><td colspan="15" class="empty">아직 실행하지 않았습니다.</td></tr></tbody>
+</table></div>
+</section>
+
+<section class="card" id="detailCard">
+<h2>3. 선택 종목 분봉 상세</h2>
+<div id="detailTitle" class="small" style="margin-top:8px">결과표에서 상세를 누르세요.</div>
+<div id="detailStats" class="detailGrid"></div>
+<div id="charts" class="hidden">
+<div class="chartTitle">5분봉 주가</div><div class="chartBox"><canvas id="priceChart"></canvas></div>
+<div class="chartTitle">5분 거래량</div><div class="chartBox"><canvas id="vol5Chart"></canvas></div>
+<div class="chartTitle">최근 1분 거래량</div><div class="chartBox"><canvas id="vol1Chart"></canvas></div>
+</div>
+</section>
+</div>
+
+<script>
+const API='/api/radar',TOKEN_KEY='krSmartMoneyPermanentTokenV1';
+let TOKEN='',MARKET='ALL',STOP=false,MODE='',RESULTS=[],ERRORS=[],CHARTS={};
+const $=id=>document.getElementById(id);
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,opt){opt=opt||{};opt.headers=Object.assign({},opt.headers||{},headers());const r=await fetch(url,opt);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
+async function login(){const code=$('authCode').value.trim();if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent=''}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').value='';$('login').classList.remove('hidden')}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
+function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
+function cfg(){return{lookbackDays:+$('lookbackDays').value||20,spikePct:+$('spikePct').value||5,min5x:+$('min5x').value||3,maxPreMove:+$('maxPreMove').value||3,minScore:+$('minScore').value||60,notSurgedPct:+$('notSurgedPct').value||5,maxCurrentChange:+$('maxCurrentChange').value||3}}
+function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
+function cleanUniverse(rows){let a=rows.slice();if($('excludePref').value==='1')a=a.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')a=a.filter(x=>!String(x.name).includes('스팩'));return a}
+function fmt(v,d){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '-';return Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d===undefined?1:d})}
+function pct(v){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '-';const x=Number(v);return (x>0?'+':'')+x.toFixed(2)+'%'}
+function cls(v){return Number(v)>0?'pos':Number(v)<0?'neg':''}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function reset(mode){MODE=mode;STOP=false;RESULTS=[];ERRORS=[];$('bar').style.width='0%';$('stUniverse').textContent='0';$('stTarget').textContent='0';$('stScanned').textContent='0';$('stMatch').textContent='0';$('stErr').textContent='0';$('stMode').textContent=mode==='reverse'?'오늘 급등 역검증':'미급등 후보';$('rows').innerHTML='<tr><td colspan="15" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true}
+async function runScan(mode){
+  reset(mode);$('reverseBtn').disabled=true;$('candidateBtn').disabled=true;$('stopBtn').disabled=false;
+  try{
+    $('runMsg').textContent='코스피·코스닥 종목 목록을 불러오는 중...';
+    const u=await api(API+'?op=universe&market='+MARKET),all=cleanUniverse(u.rows||[]);$('stUniverse').textContent=all.length;
+    const c=cfg();let target=mode==='reverse'?all.filter(x=>Number(x.changePct)>=c.spikePct):all.filter(x=>Number(x.changePct)<c.spikePct&&Number(x.changePct)<=c.maxCurrentChange);
+    if(mode==='candidate')target.sort((a,b)=>Number(b.volume||0)-Number(a.volume||0));
+    const max=Math.max(0,+$('maxStocks').value||0);if(max)target=target.slice(0,max);$('stTarget').textContent=target.length;
+    const batchSize=6;
+    for(let i=0;i<target.length;i+=batchSize){
+      if(STOP)break;const batch=target.slice(i,i+batchSize);
+      $('runMsg').textContent=(mode==='reverse'?'급등주 역검증 ':'미급등 후보 탐색 ')+Math.min(i+batch.length,target.length)+' / '+target.length;
+      try{
+        const j=await api(API+'?op=analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:mode,stocks:batch,cfg:c})});
+        (j.results||[]).forEach(r=>{if(r&&r.match)RESULTS.push(r);if(r&&r.error)ERRORS.push(r)});
+      }catch(e){ERRORS.push({error:e.message})}
+      $('stScanned').textContent=Math.min(i+batch.length,target.length);$('stMatch').textContent=RESULTS.length;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*Math.min(i+batch.length,target.length)/Math.max(1,target.length))+'%';render();
+    }
+    RESULTS.sort((a,b)=>Number(b.best?.score||0)-Number(a.best?.score||0)||Number(b.best?.ratio5||0)-Number(a.best?.ratio5||0));
+    render();$('excelBtn').disabled=!RESULTS.length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · 대상 '+target.length+'개 · 패턴 검출 '+RESULTS.length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
+    try{localStorage.setItem('krSmartMoneyLastScan',JSON.stringify({savedAt:new Date().toISOString(),mode:mode,results:RESULTS.slice(0,500)}))}catch{}
+  }catch(e){$('runMsg').textContent='실패: '+e.message}
+  finally{$('reverseBtn').disabled=false;$('candidateBtn').disabled=false;$('stopBtn').disabled=true}
+}
+function render(){
+  const q=$('q').value.trim().toLowerCase(),limit=+$('displayLimit').value||300;let list=RESULTS.filter(r=>!q||String(r.stock?.name||'').toLowerCase().includes(q)||String(r.stock?.code||'').includes(q));
+  list=list.slice().sort((a,b)=>Number(b.best?.score||0)-Number(a.best?.score||0));const tb=$('rows');tb.innerHTML='';
+  if(!list.length){tb.innerHTML='<tr><td colspan="15" class="empty">현재 조건에서 검출된 종목이 없습니다.</td></tr>';return}
+  list.slice(0,limit).forEach((r,i)=>{const s=r.stock||{},b=r.best||{},tr=document.createElement('tr');if(i<20)tr.className='top';
+    tr.innerHTML='<td class="rank">'+(i+1)+'</td><td class="name">'+esc(s.name)+' <span class="small">'+esc(s.code)+'</span></td><td>'+esc(s.market)+'</td>'+
+    '<td class="score">'+fmt(b.score,1)+'</td><td><span class="signal">'+esc(b.date)+' '+esc(b.time)+'</span></td><td>'+fmt(b.ratio5,1)+'배</td><td>'+fmt(b.ratio15,1)+'배</td><td>'+fmt(b.persist,0)+'/3</td>'+
+    '<td class="'+cls(b.priceMove)+'">'+pct(b.priceMove)+'</td><td class="'+cls(b.runupAfter)+'">'+pct(b.runupAfter)+'</td><td class="'+cls(s.changePct)+'">'+pct(s.changePct)+'</td>'+
+    '<td class="'+cls(b.institution5d)+'">'+fmt(b.institution5d,0)+'</td><td class="'+cls(b.foreign5d)+'">'+fmt(b.foreign5d,0)+'</td>'+
+    '<td><button class="btn" style="padding:6px 9px" onclick="detail(\''+s.code+'\',\''+s.market+'\',\''+String(s.name).replace(/'/g,"\\'")+'\')">보기</button></td>'+
+    '<td><a target="_blank" href="https://stock.naver.com/domestic/stock/'+s.code+'/total">네이버</a> · <a target="_blank" href="https://infostock.co.kr/stockitem?code='+s.code+'">인포스탁</a></td>';tb.appendChild(tr)});
+}
+async function detail(code,market,name){
+  $('detailTitle').textContent=name+' ('+code+') · 분봉 상세 불러오는 중...';$('charts').classList.add('hidden');$('detailStats').innerHTML='';
+  try{const j=await api(API+'?op=detail&code='+code+'&market='+market),sig=(j.signals||[])[0]||{};
+    $('detailTitle').innerHTML='<b>'+esc(name)+' ('+esc(code)+')</b> · '+esc(market)+' · 20거래일 5분봉 / 최근 1분봉';
+    $('detailStats').innerHTML=stat('최고 분봉점수',fmt(sig.score5m,1)) + stat('5분 상대거래량',fmt(sig.ratio5,1)+'배') + stat('15분 상대거래량',fmt(sig.ratio15,1)+'배') + stat('연속봉',fmt(sig.persist,0)+'/3') + stat('신호 당시',pct(sig.priceMove)) + stat('이후 최대',pct(sig.runupAfter));
+    drawCharts(j.m5||[],j.m1||[]);$('charts').classList.remove('hidden');$('detailCard').scrollIntoView({behavior:'smooth'});
+  }catch(e){$('detailTitle').textContent='상세 조회 실패: '+e.message}
+}
+function stat(a,b){return '<div class="detailStat"><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>'}
+function destroyCharts(){Object.values(CHARTS).forEach(c=>{try{c.destroy()}catch{}});CHARTS={}}
+function drawCharts(m5,m1){
+  destroyCharts();const a=m5.slice(-360),b=m1.slice(-360),labels=a.map(x=>x.date.slice(5)+' '+x.time);
+  CHARTS.price=new Chart($('priceChart'),{type:'line',data:{labels:labels,datasets:[{label:'5분 종가',data:a.map(x=>x.close),pointRadius:0,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8}}}}});
+  CHARTS.vol5=new Chart($('vol5Chart'),{type:'bar',data:{labels:labels,datasets:[{label:'5분 거래량',data:a.map(x=>x.volume)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8}},y:{beginAtZero:true}}}});
+  const l1=b.map(x=>String(x.date||'').slice(5)+' '+String(x.time||''));CHARTS.vol1=new Chart($('vol1Chart'),{type:'bar',data:{labels:l1,datasets:[{label:'1분 거래량',data:b.map(x=>x.volume)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8}},y:{beginAtZero:true}}}});
+}
+function exportExcel(){
+  if(!RESULTS.length)return;const rows=RESULTS.map((r,i)=>{const s=r.stock||{},b=r.best||{};return{'순위':i+1,'종목명':s.name,'코드':s.code,'시장':s.market,'스마트머니점수':b.score,'신호일':b.date,'신호시간':b.time,'5분거래량배수':b.ratio5,'15분거래량배수':b.ratio15,'연속봉':b.persist,'신호당시등락률%':b.priceMove,'신호후최대상승률%':b.runupAfter,'현재등락률%':s.changePct,'기관최근5일순매수':b.institution5d,'외국인최근5일순매수':b.foreign5d,'VWAP위':b.vwapAbove?'Y':'N'}});
+  const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,MODE==='reverse'?'급등주역검증':'미급등후보');XLSX.writeFile(wb,'KR_Smart_Money_PreSpike_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+</script>
+</body></html>
