@@ -5,7 +5,8 @@ const LOGIN_URL = "https://data.krx.co.kr/contents/MDC/COMS/client/MDCCOMS001D1.
 const REFERER = "https://data.krx.co.kr/contents/MDC/MDI/outerLoader/index.cmd";
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36";
 
-let authCache = { cookie: "", expiresAt: 0 };\nlet publicCache = { cookie: "", expiresAt: 0 };
+let authCache = { cookie: "", expiresAt: 0 };
+let publicCache = { cookie: "", expiresAt: 0 };
 
 function appendCookies(jar, response) {
   const headers = response.headers;
