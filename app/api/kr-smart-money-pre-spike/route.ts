@@ -239,7 +239,7 @@ export async function GET(req:Request){
   if(!validToken(reqToken(req)))return unauthorized();
   if(op==='ping')return json({ok:true});
   if(op==='universe'){
-    try{const rows=await getUniverse(u.searchParams.get('market')||'ALL');return json({ok:true,count:rows.length,rows},{headers:{'Cache-Control':'no-store'}})}
+    try{const [rows,mdRows]=await Promise.all([getUniverse(u.searchParams.get('market')||'ALL'),naverDaily('005930',12)]);const marketDate=mdRows.at(-1)?.date||'';return json({ok:true,count:rows.length,marketDate,rows},{headers:{'Cache-Control':'no-store'}})}
     catch(e:any){return json({error:'UNIVERSE_FAILED',message:String(e?.message||e)},{status:502})}
   }
   if(op==='detail'){
@@ -264,7 +264,7 @@ export async function POST(req:Request){
   if(!validToken(reqToken(req)))return unauthorized();
   if(op==='analyze'){
     const stocks=Array.isArray(body?.stocks)?body.stocks.slice(0,12):[],mode=body?.mode==='reverse'?'reverse':'candidate',cfg=body?.cfg||{};
-    const results=await mapLimit(stocks,6,(s:any)=>analyzeOne(s,cfg,mode));
+    const results=await mapLimit(stocks,4,(s:any)=>analyzeOne(s,cfg,mode));
     const errorSummary:any={};for(const r of results){if((r as any)?.error){const k=String((r as any).error).split(':')[0];errorSummary[k]=(errorSummary[k]||0)+1}}
     return json({ok:true,mode,results,errorSummary},{headers:{'Cache-Control':'no-store'}});
   }
