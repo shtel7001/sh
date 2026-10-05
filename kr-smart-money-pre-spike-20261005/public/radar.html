@@ -128,9 +128,13 @@ function showErrors(){if(!ERRORS.length){$('errorBox').classList.add('hidden');r
 async function runScan(mode){
   if(!$('asOf').value)return alert('기준일을 선택해 주세요.');reset(mode);$('reverseBtn').disabled=true;$('candidateBtn').disabled=true;$('stopBtn').disabled=false;
   try{
-    $('runMsg').textContent='종목 목록 불러오는 중...';const u=await api(API+'?op=universe&market='+MARKET),all=cleanUniverse(u.rows||[]);$('stUniverse').textContent=all.length;
-    let target=all.slice();const max=Math.max(0,+$('maxStocks').value||0);if(max)target=target.slice(0,max);$('stTarget').textContent=target.length;
-    const c=cfg(),batchSize=12;
+    $('runMsg').textContent='종목 목록과 최근 실제 거래일을 불러오는 중...';const u=await api(API+'?op=universe&market='+MARKET),all=cleanUniverse(u.rows||[]);$('stUniverse').textContent=all.length;
+    const c=cfg(),latest=u.marketDate||'';let target=all.slice();
+    if(latest&&c.asOf>=latest&&mode==='reverse')target=target.filter(x=>Number(x.changePct)>=c.spikePct);
+    if(latest&&c.asOf>=latest&&mode==='candidate')target=target.filter(x=>Number(x.changePct)<=c.maxCurrentChange&&Number(x.changePct)<c.spikePct);
+    const max=Math.max(0,+$('maxStocks').value||0);if(max)target=target.slice(0,max);$('stTarget').textContent=target.length;
+    $('runMsg').textContent='요청 기준일 '+c.asOf+' · 최근 실제 거래일 '+(latest||'확인 중')+' · 스캔 대상 '+target.length+'개';
+    const batchSize=8;
     for(let i=0;i<target.length;i+=batchSize){
       if(STOP)break;const batch=target.slice(i,i+batchSize);
       $('runMsg').textContent=(mode==='reverse'?'기준일 급등주 역검증 ':'미급등 후보 탐색 ')+Math.min(i+batch.length,target.length)+' / '+target.length;
@@ -143,7 +147,7 @@ async function runScan(mode){
           if(r&&r.match)RESULTS.push(r);
         });
       }catch(e){ERRORS.push({error:e.message})}
-      const done=Math.min(i+batch.length,target.length);$('stScanned').textContent=done;$('stEligible').textContent=mode==='reverse'?ELIGIBLE:'-';$('stMatch').textContent=RESULTS.length;$('stFallback').textContent=FALLBACK;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*done/Math.max(1,target.length))+'%';render();showErrors();
+      await new Promise(r=>setTimeout(r,90));const done=Math.min(i+batch.length,target.length);$('stScanned').textContent=done;$('stEligible').textContent=mode==='reverse'?ELIGIBLE:'-';$('stMatch').textContent=RESULTS.length;$('stFallback').textContent=FALLBACK;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*done/Math.max(1,target.length))+'%';render();showErrors();
     }
     RESULTS.sort((a,b)=>Number(b.best?.score||0)-Number(a.best?.score||0)||Number(b.best?.ratio5||0)-Number(a.best?.ratio5||0));render();showErrors();$('excelBtn').disabled=!RESULTS.length;
     const actual=[...new Set(RESULTS.map(r=>r.baseDate).filter(Boolean))].sort().pop()||'';
