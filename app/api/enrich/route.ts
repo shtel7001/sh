@@ -23,7 +23,7 @@ async function news(stock:UniverseStock){
   }catch{return {score:null,reasons:['뉴스 데이터 수집 실패'],items:[]};}
 }
 export async function POST(req:Request){
-  if(!await isAuthed())return unauthorized(); const body=await req.json().catch(()=>null); const stocks:UniverseStock[]=body?.stocks||[]; if(!Array.isArray(stocks)||stocks.length>20)return NextResponse.json({error:'최대 20종목'},{status:400});
+  if(!await isAuthed(req))return unauthorized(); const body=await req.json().catch(()=>null); const stocks:UniverseStock[]=body?.stocks||[]; if(!Array.isArray(stocks)||stocks.length>20)return NextResponse.json({error:'최대 20종목'},{status:400});
   const results=[]; for(let i=0;i<stocks.length;i+=4){const part=stocks.slice(i,i+4);const rr=await Promise.all(part.map(async s=>{const [n,flow]=await Promise.all([news(s),fetchInvestorFlow(s.code)]);const sup=supplyScore(flow);return {code:s.code,newsScore:n.score,newsReasons:n.reasons,news:n.items,supplyScore:sup.score,supplyReasons:sup.reasons};}));results.push(...rr);}
   return NextResponse.json({results});
 }
