@@ -119,7 +119,7 @@ function analyzeMinute(raw1:any[],days:any[],baseDate:string,cfg:any){
       const b=bars5[i],same5=prevDates.map(d=>(g5.get(d)||[]).find(x=>x.time===b.time)?.volume).filter((v:any)=>Number(v)>0).map(Number);
       if(same5.length<5)continue;const base5=median(same5)||avg(same5),r5=base5?b.volume/base5:0;if(r5<min5)continue;
       const move=(b.close/dayOpen-1)*100;if(move>maxMove)continue;
-      const slice1=bars1.filter(x=>x.time>=b.time&&x.time<bucket(String(Number(b.time.slice(0,2))*10000+Number(b.time.slice(2,4))*100+500).padStart(6,'0'),5));
+      const slice1=bars1.filter(x=>bucket(x.time,5)===b.time);
       let r1=0;
       for(const m1 of slice1){
         const vals=prevDates.map(d=>(g1.get(d)||[]).find(x=>x.time===m1.time)?.volume).filter((v:any)=>Number(v)>0).map(Number);
