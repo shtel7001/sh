@@ -1,0 +1,16 @@
+{
+  "name": "kr-investor-gross-flow-radar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "verify": "node --check api/krx.js && node --check api/excel.js && node --check lib/krx.mjs && node --check lib/calc.mjs && node scripts/verify.mjs && npm test"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

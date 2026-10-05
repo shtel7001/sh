@@ -1,0 +1,32 @@
+name: Verify investor gross flow radar
+
+on:
+  pull_request:
+    paths:
+      - "kr-investor-gross-flow-radar-20261006/**"
+      - ".github/workflows/investor-gross-flow-radar.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "kr-investor-gross-flow-radar-20261006/**"
+      - ".github/workflows/investor-gross-flow-radar.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kr-investor-gross-flow-radar-20261006
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Verify syntax, structure and calculations
+        run: npm run verify
