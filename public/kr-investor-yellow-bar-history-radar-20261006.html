@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
-<title>1~240일 누적분석 · 과거 N일 노란막대 레이더</title>
+<title>1~240일 누적분석 · 기간 노란막대 레이더</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -36,26 +36,26 @@
 
 <div class="wrap">
 <section class="hero">
-  <h1>1~240일 누적분석 · 과거 N일 노란막대 레이더</h1>
-  <p>누적 분석기간을 <b>1~240거래일</b> 사이에서 직접 정하고, 기준일 옆의 <b>과거 N거래일</b>에 0·10·20·30처럼 숫자를 넣어 그 시점을 가상 기준일로 검색합니다. 외국인·기관 누적순매수가 0 이하 구간을 지나 <b>선택한 시점에 +1 이상으로 전환</b>된 종목을 찾고, 차트의 해당 전환 막대를 <b>노란색</b>으로 강조합니다.</p>
-  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">누적분석 1~240거래일</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">외국인+기관 당일 노란막대</span><span class="tag">과거 N거래일 조회</span><span class="tag">20거래일 기본 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+  <h1>1~240일 누적분석 · 기간 노란막대 레이더</h1>
+  <p><b>시작날짜와 종료날짜</b>를 직접 정하면 그 사이의 모든 거래일을 하나씩 검사합니다. 각 거래일마다 선택한 <b>1~240거래일 누적분석</b>을 다시 계산해 외국인·기관 누적순매수가 0 이하 구간을 지나 <b>그 날 +1 이상으로 전환</b>된 노란막대를 찾습니다. 같은 종목에서 여러 번 발생하면 횟수와 날짜를 모두 표시합니다.</p>
+  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">누적분석 1~240거래일</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">외국인+기관 동시 검색</span><span class="tag">시작일~종료일 구간 검색</span><span class="tag">20거래일 기본 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
 </section>
 
 <section class="card">
-  <h2>1. 시장 · 기준일 · 당일 전환 주체</h2>
+  <h2>1. 시장 · 검색기간 · 노란막대 주체</h2>
   <div class="segrow" style="margin-top:10px">
     <button type="button" class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
     <button type="button" class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
     <button type="button" class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
   </div>
   <div class="rankrow" style="margin-top:10px">
-    <button type="button" class="modebtn active" data-mode="foreign" onclick="setMode(this)">외국인 당일 노란막대</button>
-    <button type="button" class="modebtn" data-mode="institution" onclick="setMode(this)">기관 당일 노란막대</button>
-    <button type="button" class="modebtn" data-mode="both" onclick="setMode(this)">외국인+기관 당일 노란막대</button>
+    <button type="button" class="modebtn active" data-mode="foreign" onclick="setMode(this)">외국인 노란막대</button>
+    <button type="button" class="modebtn" data-mode="institution" onclick="setMode(this)">기관 노란막대</button>
+    <button type="button" class="modebtn" data-mode="both" onclick="setMode(this)">외국인+기관 노란막대</button>
   </div>
   <div class="grid">
-    <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
-    <div class="field"><label>기준일 과거 N거래일</label><input id="offsetDays" type="number" min="0" max="240" step="1" value="0" inputmode="numeric" oninput="normalizeOffsetDays()" onchange="normalizeOffsetDays()"><div class="small">0=기준일 · 10=10거래일 전</div></div>
+    <div class="field"><label>시작날짜</label><input id="startDate" type="date" onchange="normalizeDateRange()"></div>
+    <div class="field"><label>종료날짜</label><input id="endDate" type="date" onchange="normalizeDateRange()"></div>
     <div class="field"><label>누적 분석기간 (1~240 거래일)</label><input id="analysisDays" type="number" min="1" max="240" step="1" value="120" inputmode="numeric" oninput="normalizeAnalysisDays()" onchange="normalizeAnalysisDays()"></div>
     <div class="field"><label>최대 스캔 종목 (0=전체)</label><input id="maxStocks" type="number" min="0" max="3000" value="0"></div>
     <div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
@@ -67,20 +67,20 @@
 </section>
 
 <section class="card">
-  <h2>2. 실행 · 선택일 노란막대 종목</h2>
+  <h2>2. 실행 · 기간 내 노란막대 종목</h2>
   <div class="actions" style="margin-top:10px">
     <button id="runBtn" class="btn primary" onclick="runAll()">전종목 노란막대 스캔</button>
     <button id="stopBtn" class="btn warn" onclick="stopScan()" disabled>중지</button>
     <button id="excelBtn" class="btn dark" onclick="exportExcel()" disabled>Excel 최신형 저장</button>
     <button class="btn" onclick="clearAuth()">이 브라우저 인증 해제</button>
   </div>
-  <div id="runMsg" class="small" style="margin-top:10px">시장과 기준일을 선택한 뒤 실행하세요.</div>
+  <div id="runMsg" class="small" style="margin-top:10px">시장과 시작날짜·종료날짜를 선택한 뒤 실행하세요.</div>
   <div class="progress"><div id="bar" class="bar"></div></div>
   <div class="stats">
     <div class="stat"><span>대상</span><b id="stUniverse">0</b></div>
     <div class="stat"><span>조회완료</span><b id="stScanned">0</b></div>
     <div class="stat"><span>정상분석</span><b id="stOk">0</b></div>
-    <div class="stat"><span>선택일 노란막대</span><b id="stMatches">0</b></div>
+    <div class="stat"><span>노란막대 종목</span><b id="stMatches">0</b></div>
     <div class="stat"><span>오류</span><b id="stErr">0</b></div>
     <div class="stat"><span>현재 주체</span><b id="stMode" style="font-size:14px">외국인</b></div>
   </div>
@@ -92,9 +92,9 @@
   <div class="tableWrap">
     <table>
       <thead><tr>
-        <th class="sticky1">순위</th><th class="sticky2">종목</th><th>시장</th><th>노란막대일</th><th>몇 거래일 전</th><th>전환 전 0이하 지속</th><th>전환값</th><th id="periodCumHead">120일 누적</th><th>외국인 전환</th><th>기관 전환</th><th>합산 전환</th><th>개인 전환</th><th>현재가</th><th>차트</th><th>링크</th>
+        <th class="sticky1">순위</th><th class="sticky2">종목</th><th>시장</th><th>최근 노란막대일</th><th>구간 발생횟수</th><th>최근 발생주체</th><th>전환 전 0이하 지속</th><th>전환값</th><th>외국인 횟수</th><th>기관 횟수</th><th>구간 발생일</th><th>현재가</th><th>차트</th><th>링크</th>
       </tr></thead>
-      <tbody id="rows"><tr><td colspan="15" class="empty">아직 실행하지 않았습니다.</td></tr></tbody>
+      <tbody id="rows"><tr><td colspan="14" class="empty">아직 실행하지 않았습니다.</td></tr></tbody>
     </table>
   </div>
 </section>
@@ -140,18 +140,30 @@
 const SCAN_API='/api/kr-investor-daily-cumulative-250-radar';
 const DETAIL_API='/api/kr-investor-turn-positive-radar';
 const TOKEN_KEY='gcFlowRadarTokenV1';
-let TOKEN='',MARKET='ALL',MODE='foreign',STOP=false,SUMMARIES=[],ERRORS=[],SELECTED=null,SELECTED_FULL=null,GRAPH_DAYS=20,ACTIVE_DAYS=120,OFFSET_DAYS=0,TOTAL_DAYS=120;
+let TOKEN='',MARKET='ALL',MODE='foreign',STOP=false,SUMMARIES=[],ERRORS=[],SELECTED=null,SELECTED_FULL=null,GRAPH_DAYS=20,ACTIVE_DAYS=120,TOTAL_DAYS=180,START_DATE='',END_DATE='';
 let CHARTS={}; const PRICE_CACHE=new Map(); const $=id=>document.getElementById(id);
 const MODE_LABEL={both:'외국인+기관',combined:'외국인+기관 합산',foreign:'외국인',institution:'기관',individual:'개인'};
 
 function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
-$('asOf').value=kstDate();
+function addCalendarDays(s,n){const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+$('endDate').value=kstDate();$('startDate').value=addCalendarDays($('endDate').value,-30);
+
 function getAnalysisDays(){const el=$('analysisDays');let d=Math.round(Number(el?.value)||120);d=Math.max(1,Math.min(240,d));if(el)el.value=d;return d}
-function getOffsetDays(){const el=$('offsetDays');let d=Math.round(Number(el?.value)||0);d=Math.max(0,Math.min(240,d));if(el)el.value=d;return d}
-function updateRuleNote(days=getAnalysisDays(),offset=getOffsetDays()){const el=$('ruleNote');if(!el)return;const when=offset===0?'기준일 당일':'기준일에서 <b>'+offset+'거래일 전</b>';el.innerHTML='<b>판정 방식:</b> '+when+'을 가상 기준일로 잡고 그 시점까지의 <b>'+days+'거래일</b>을 가장 오래된 날부터 다시 누적합니다. 외국인 또는 기관 누적순매수가 0 이하 상태를 지나 <b>그 선택일에 +1 이상으로 전환</b>된 종목만 잡습니다. <b>외국인+기관 한번에 검색</b>은 두 주체 중 하나라도 해당하면 표시하고, 둘 다 해당하면 우선 표시합니다.'}
-function normalizeAnalysisDays(){const d=getAnalysisDays();updateRuleNote(d,getOffsetDays());if(SUMMARIES.length&&d!==ACTIVE_DAYS)$('runMsg').textContent='누적 분석기간이 '+d+'거래일로 변경되었습니다. 적용하려면 다시 스캔하세요.'}
-function normalizeOffsetDays(){const d=getOffsetDays();updateRuleNote(getAnalysisDays(),d);if(SUMMARIES.length&&d!==OFFSET_DAYS)$('runMsg').textContent='과거 조회값이 '+d+'거래일 전으로 변경되었습니다. 적용하려면 다시 스캔하세요.'}
-updateRuleNote(120,0);
+function dateDiffDays(a,b){return Math.floor((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000)+1}
+function estimatedTradingSpan(a,b){const cal=Math.max(1,dateDiffDays(a,b));return Math.max(1,Math.ceil(cal*5/7)+20)}
+function validateRange(showAlert=true){
+  const s=$('startDate').value,e=$('endDate').value;if(!s||!e){if(showAlert)alert('시작날짜와 종료날짜를 선택해 주세요.');return false}
+  if(s>e){if(showAlert)alert('시작날짜는 종료날짜보다 늦을 수 없습니다.');return false}
+  const est=estimatedTradingSpan(s,e);if(est>240){if(showAlert)alert('검색 구간이 너무 깁니다. 한 번에 약 240거래일 이내(대략 1년 이내)로 나눠서 검색해 주세요.');return false}
+  return true;
+}
+function updateRuleNote(days=getAnalysisDays()){
+  const s=$('startDate').value||'-',e=$('endDate').value||'-',el=$('ruleNote');if(!el)return;
+  el.innerHTML='<b>판정 방식:</b> <b>'+s+' ~ '+e+'</b> 사이의 거래일을 하나씩 검사합니다. 각 날짜를 그 날의 가상 기준일로 잡고 직전 포함 <b>'+days+'거래일</b>을 가장 오래된 날부터 다시 누적합니다. 누적순매수가 0 이하 상태를 지나 <b>그 날 +1 이상으로 전환</b>되면 노란막대로 기록합니다. 같은 종목에서 여러 번 발생하면 <b>발생횟수와 전체 날짜</b>를 함께 표시합니다.';
+}
+function normalizeAnalysisDays(){const d=getAnalysisDays();updateRuleNote(d);if(SUMMARIES.length)$('runMsg').textContent='누적 분석기간이 '+d+'거래일로 변경되었습니다. 적용하려면 다시 스캔하세요.'}
+function normalizeDateRange(){updateRuleNote(getAnalysisDays());if(SUMMARIES.length)$('runMsg').textContent='검색기간이 변경되었습니다. 적용하려면 다시 스캔하세요.'}
+updateRuleNote(120);
 
 function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
 async function api(url,o={}){o.headers=Object.assign({},o.headers||{},headers());const r=await fetch(url,o);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
@@ -164,10 +176,11 @@ function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').v
 (async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await api(DETAIL_API+'?op=ping');$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
 
 function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el));$('runMsg').textContent='시장 선택: '+(MARKET==='ALL'?'KOSPI+KOSDAQ':MARKET)}
-function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];$('runMsg').textContent='전환 주체 선택: '+MODE_LABEL[MODE];render();if(SELECTED_FULL)drawSelected()}
+function setMode(el){MODE=el.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===el));$('stMode').textContent=MODE_LABEL[MODE];$('runMsg').textContent='검색 주체 선택: '+MODE_LABEL[MODE];render();if(SELECTED_FULL)drawSelected()}
 function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
 function prepareUniverse(rows){let a=rows.slice();if($('excludePref').value==='1')a=a.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')a=a.filter(x=>!String(x.name).includes('스팩'));const m=Math.max(0,Number($('maxStocks').value)||0);if(m)a=a.slice(0,m);return a}
 function stopScan(){STOP=true;$('runMsg').textContent='중지 요청됨 · 현재 묶음 처리 후 멈춥니다.'}
+function finiteOrNull(v){const x=Number(v);return Number.isFinite(x)?x:null}
 function metric(w,mode){
   if(!w)return null;
   if(mode==='foreign')return finiteOrNull(w.foreignSum);
@@ -175,24 +188,17 @@ function metric(w,mode){
   if(mode==='individual')return w.individualSum===null||w.individualSum===undefined?null:finiteOrNull(w.individualSum);
   const c=finiteOrNull(w.combinedSum);return c!==null?c:((finiteOrNull(w.foreignSum)||0)+(finiteOrNull(w.institutionSum)||0));
 }
-function finiteOrNull(v){const x=Number(v);return Number.isFinite(x)?x:null}
-function buildSeries(r,mode,days=ACTIVE_DAYS){
-  const N=Math.max(1,Math.min(480,Math.round(Number(days)||ACTIVE_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
+function buildSeries(r,mode,days=TOTAL_DAYS){
+  const N=Math.max(1,Math.min(480,Math.round(Number(days)||TOTAL_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
   if(total===null)return [];
   const out=[];
   for(let d=N;d>=1;d--){
     const wd=r.windows?.[String(d)];if(!wd)continue;
     let prev=0;if(d>1){prev=metric(r.windows?.[String(d-1)],mode);if(prev===null)return []}
     const date=String(wd.oldest||wd.newest||'');
-    out.push({date,cumulative:total-prev,daily:metric(wd,mode)-prev});
+    out.push({date,daily:metric(wd,mode)-prev});
   }
   return out;
-}
-function buildShiftedSeries(r,mode,days=ACTIVE_DAYS,offset=OFFSET_DAYS){
-  const D=Math.max(1,Math.min(240,Math.round(Number(days)||ACTIVE_DAYS))),O=Math.max(0,Math.min(240,Math.round(Number(offset)||0))),N=D+O;
-  const full=buildSeries(r,mode,N);if(full.length<N)return [];
-  const selected=full.slice(0,D);let cumulative=0;
-  return selected.map(x=>{const daily=Number(x.daily);if(!Number.isFinite(daily))return {...x,cumulative:NaN};cumulative+=daily;return {...x,cumulative};});
 }
 function detectTransition(series){
   let run=0,hadNeg=false,prev=null,latest=null;
@@ -207,106 +213,151 @@ function detectTransition(series){
   }
   return latest;
 }
-function summarize(r,days=ACTIVE_DAYS,offset=OFFSET_DAYS){
-  const signals={},cumPeriod={};let targetAsOf='';
-  ['combined','foreign','institution','individual'].forEach(m=>{const s=buildShiftedSeries(r,m,days,offset),sig=detectTransition(s);if(!targetAsOf&&s.length)targetAsOf=s[s.length-1].date;signals[m]=(sig&&sig.tradingDaysAgo===0)?{...sig,tradingDaysAgo:offset}:null;cumPeriod[m]=s.length?finiteOrNull(s[s.length-1].cumulative):null});
-  return {code:r.code,name:r.name,market:r.market,currentPrice:r.currentPrice,marketValue:r.marketValue,asOf:r.asOf,targetAsOf,analysisDays:days,offsetDays:offset,signals,cumPeriod,
+function buildWindowSeries(full,endIndex,days){
+  const s=endIndex-days+1;if(s<0)return [];
+  let cumulative=0;const out=[];
+  for(let i=s;i<=endIndex;i++){const daily=Number(full[i].daily);if(!Number.isFinite(daily))return [];cumulative+=daily;out.push({date:full[i].date,daily,cumulative})}
+  return out;
+}
+function findRangeEvents(r,mode,days,startDate,endDate,totalDays){
+  const full=buildSeries(r,mode,totalDays);if(full.length<days)return [];
+  const prefix=[];let acc=0;
+  for(const x of full){const d=Number(x.daily);if(!Number.isFinite(d))return [];acc+=d;prefix.push(acc)}
+  const events=[];
+  for(let i=0;i<full.length;i++){
+    const date=full[i].date;if(date<startDate||date>endDate)continue;
+    const s=i-days+1;if(s<0)continue;
+    const base=s>0?prefix[s-1]:0,prev=i>s?prefix[i-1]-base:null,now=prefix[i]-base;
+    if(prev===null||prev>0||now<1)continue;
+    const win=buildWindowSeries(full,i,days),sig=detectTransition(win);
+    if(sig&&sig.tradingDaysAgo===0)events.push({...sig,date,transitionValue:now,windowStart:win[0]?.date||''});
+  }
+  return events;
+}
+function summarize(r,days=ACTIVE_DAYS,startDate=START_DATE,endDate=END_DATE,totalDays=TOTAL_DAYS){
+  const events={},signals={};
+  ['combined','foreign','institution','individual'].forEach(m=>{events[m]=findRangeEvents(r,m,days,startDate,endDate,totalDays);signals[m]=events[m].length?events[m][events[m].length-1]:null});
+  return {code:r.code,name:r.name,market:r.market,currentPrice:r.currentPrice,marketValue:r.marketValue,asOf:r.asOf,analysisDays:days,startDate,endDate,events,signals,
     naver:r.naver||('https://stock.naver.com/domestic/stock/'+r.code+'/price'),
     investor:r.investor||('https://stock.naver.com/domestic/stock/'+r.code+'/investmentinfo'),
     infostock:'https://infostock.co.kr/stockitem?code='+r.code};
 }
-function modeSignal(r){
-  if(MODE!=='both')return r.signals?.[MODE]||null;
-  const f=r.signals?.foreign||null,i=r.signals?.institution||null;if(!f&&!i)return null;
-  if(f&&i)return {date:f.date||i.date,tradingDaysAgo:OFFSET_DAYS,negativeRun:Math.max(Number(f.negativeRun)||0,Number(i.negativeRun)||0),transitionValue:(Number(f.transitionValue)||0)+(Number(i.transitionValue)||0),bothCount:2,kind:'외국인+기관',foreign:f,institution:i};
-  const s=f||i;return {...s,bothCount:1,kind:f?'외국인':'기관',foreign:f,institution:i};
+function modeEvents(r){
+  if(MODE!=='both')return (r.events?.[MODE]||[]).map(x=>({...x,kind:MODE_LABEL[MODE],bothCount:1}));
+  const map=new Map();
+  for(const x of (r.events?.foreign||[]))map.set(x.date,{date:x.date,foreign:x,institution:null});
+  for(const x of (r.events?.institution||[])){const z=map.get(x.date)||{date:x.date,foreign:null,institution:null};z.institution=x;map.set(x.date,z)}
+  return [...map.values()].map(z=>{
+    if(z.foreign&&z.institution)return {date:z.date,foreign:z.foreign,institution:z.institution,bothCount:2,kind:'외국인+기관',negativeRun:Math.max(z.foreign.negativeRun||0,z.institution.negativeRun||0),transitionValue:(Number(z.foreign.transitionValue)||0)+(Number(z.institution.transitionValue)||0)};
+    const s=z.foreign||z.institution;return {...s,date:z.date,foreign:z.foreign,institution:z.institution,bothCount:1,kind:z.foreign?'외국인':'기관'};
+  }).sort((a,b)=>a.date.localeCompare(b.date));
 }
-function modeCum(r){if(MODE==='both')return (Number(r.cumPeriod?.foreign)||0)+(Number(r.cumPeriod?.institution)||0);return r.cumPeriod?.[MODE]}
+function modeSignal(r){const a=modeEvents(r);return a.length?a[a.length-1]:null}
 function negativeRunText(s){if(MODE==='both'&&s?.bothCount===2)return '외 '+s.foreign.negativeRun+'일 / 기 '+s.institution.negativeRun+'일';return (s?.negativeRun??0)+'일'}
+function eventDatesFull(r){return modeEvents(r).slice().reverse().map(x=>x.date+(MODE==='both'?'('+x.kind+')':'')).join(', ')}
+function eventDatesShort(r){const a=modeEvents(r).slice().reverse(),head=a.slice(0,5).map(x=>x.date).join(', ');return head+(a.length>5?' 외 '+(a.length-5)+'회':'')}
 function rankList(){
   const q=$('stockSearch').value.trim().toLowerCase(),mf=$('marketFilter').value;
-  const a=SUMMARIES.filter(r=>{const s=modeSignal(r);return !!s&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q))});
-  a.sort((x,y)=>{const a=modeSignal(x),b=modeSignal(y);return Number(b?.bothCount||0)-Number(a?.bothCount||0)||Number(b?.negativeRun||0)-Number(a?.negativeRun||0)||Number(modeCum(y)||0)-Number(modeCum(x)||0)});
+  const a=SUMMARIES.filter(r=>modeEvents(r).length&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q)));
+  a.sort((x,y)=>{const a=modeSignal(x),b=modeSignal(y);return String(b?.date||'').localeCompare(String(a?.date||''))||Number(b?.bothCount||0)-Number(a?.bothCount||0)||modeEvents(y).length-modeEvents(x).length||Number(b?.negativeRun||0)-Number(a?.negativeRun||0)});
   return a;
 }
 function reset(){
-  STOP=false;SUMMARIES=[];ERRORS=[];SELECTED=null;SELECTED_FULL=null;$('bar').style.width='0%';['stUniverse','stScanned','stOk','stMatches','stErr'].forEach(id=>$(id).textContent='0');$('rows').innerHTML='<tr><td colspan="15" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden');clearChartsUI();
+  STOP=false;SUMMARIES=[];ERRORS=[];SELECTED=null;SELECTED_FULL=null;$('bar').style.width='0%';['stUniverse','stScanned','stOk','stMatches','stErr'].forEach(id=>$(id).textContent='0');$('rows').innerHTML='<tr><td colspan="14" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden');clearChartsUI();
 }
 function errorSummary(){const m={};ERRORS.forEach(e=>{const k=String(e.scanError||'UNKNOWN').split(':')[0];m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>k+' : '+v+'건').join('\n')}
+function prepareScanConfig(){
+  if(!validateRange(true))return false;
+  ACTIVE_DAYS=getAnalysisDays();START_DATE=$('startDate').value;END_DATE=$('endDate').value;
+  const span=estimatedTradingSpan(START_DATE,END_DATE);TOTAL_DAYS=ACTIVE_DAYS+span;
+  if(TOTAL_DAYS>480){alert('누적 분석기간과 검색기간을 합치면 조회 한도를 초과합니다. 분석기간 또는 날짜 구간을 줄여 주세요.');return false}
+  updateRuleNote(ACTIVE_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);return true;
+}
 async function scanStocks(stocks){
   for(let i=0;i<stocks.length;i+=10){
     if(STOP)break;const batch=stocks.slice(i,i+10),end=Math.min(i+10,stocks.length);
-    $('runMsg').textContent=ACTIVE_DAYS+'거래일 누적 · '+(OFFSET_DAYS===0?'기준일':'기준일 '+OFFSET_DAYS+'거래일 전')+' · '+MODE_LABEL[MODE]+' 검사 '+end+' / '+stocks.length;
+    $('runMsg').textContent=START_DATE+' ~ '+END_DATE+' · '+ACTIVE_DAYS+'거래일 누적 · '+MODE_LABEL[MODE]+' 검사 '+end+' / '+stocks.length;
     try{
-      const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:batch,cfg:{asOf:$('asOf').value,minDays:1,maxDays:TOTAL_DAYS}})});
-      (j.results||[]).forEach(r=>SUMMARIES.push(summarize(r,ACTIVE_DAYS,OFFSET_DAYS)));ERRORS=ERRORS.concat(j.errors||[]);
+      const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:batch,cfg:{asOf:END_DATE,minDays:1,maxDays:TOTAL_DAYS}})});
+      (j.results||[]).forEach(r=>SUMMARIES.push(summarize(r,ACTIVE_DAYS,START_DATE,END_DATE,TOTAL_DAYS)));ERRORS=ERRORS.concat(j.errors||[]);
     }catch(e){ERRORS.push({scanError:'BATCH: '+e.message,codes:batch.map(x=>x.code).join(',')})}
     $('stScanned').textContent=end;$('stOk').textContent=SUMMARIES.length;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*end/Math.max(1,stocks.length))+'%';render();
   }
 }
 async function runAll(){
-  if(!$('asOf').value)return alert('기준일을 선택해 주세요.');ACTIVE_DAYS=getAnalysisDays();OFFSET_DAYS=getOffsetDays();TOTAL_DAYS=ACTIVE_DAYS+OFFSET_DAYS;updateRuleNote(ACTIVE_DAYS,OFFSET_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
+  if(!prepareScanConfig())return;reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;
   try{
     $('runMsg').textContent='전종목 목록 불러오는 중...';const u=await api(SCAN_API+'?op=universe&market='+MARKET),stocks=prepareUniverse(u.rows||[]);$('stUniverse').textContent=stocks.length;
-    await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · 분석 '+SUMMARIES.length+'개 · '+(OFFSET_DAYS===0?'기준일':'기준일 '+OFFSET_DAYS+'거래일 전')+' '+MODE_LABEL[MODE]+' 노란막대 '+rankList().length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
+    await scanStocks(stocks);render();$('excelBtn').disabled=!rankList().length;$('runMsg').textContent=(STOP?'중지됨':'완료')+' · '+START_DATE+' ~ '+END_DATE+' · 분석 '+SUMMARIES.length+'개 · '+MODE_LABEL[MODE]+' 노란막대 종목 '+rankList().length+'개 · 오류 '+ERRORS.length+'개';if(!STOP)$('bar').style.width='100%';
   }catch(e){$('runMsg').textContent='실패: '+e.message;alert(e.message)}
   finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
 }
 async function runDirect(){
-  const codes=($('directCodes').value.match(/\d{6}/g)||[]);if(!codes.length)return alert('종목코드를 입력해 주세요.');if(!$('asOf').value)return alert('기준일을 선택해 주세요.');
-  ACTIVE_DAYS=getAnalysisDays();OFFSET_DAYS=getOffsetDays();TOTAL_DAYS=ACTIVE_DAYS+OFFSET_DAYS;updateRuleNote(ACTIVE_DAYS,OFFSET_DAYS);if(GRAPH_DAYS>ACTIVE_DAYS)setGraphDays(ACTIVE_DAYS,null);reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;
-  try{await scanStocks(stocks);render();$('excelBtn').disabled=!SUMMARIES.length;$('runMsg').textContent='입력 종목 검증 완료 · '+MODE_LABEL[MODE]+' 노란막대 '+rankList().length+'개';}
+  const codes=($('directCodes').value.match(/\d{6}/g)||[]);if(!codes.length)return alert('종목코드를 입력해 주세요.');if(!prepareScanConfig())return;
+  reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const stocks=codes.map(code=>({code,name:code,market:'UNKNOWN'}));$('stUniverse').textContent=stocks.length;
+  try{await scanStocks(stocks);render();$('excelBtn').disabled=!rankList().length;$('runMsg').textContent='입력 종목 검증 완료 · 기간 내 '+MODE_LABEL[MODE]+' 노란막대 종목 '+rankList().length+'개';}
   catch(e){alert(e.message)}finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
 }
 function render(){
-  $('periodCumHead').textContent=ACTIVE_DAYS+'일 누적';
   const list=rankList(),limit=Number($('displayLimit').value)||300,tb=$('rows');$('stMatches').textContent=list.length;tb.innerHTML='';
   const eb=$('errorBox');if(ERRORS.length){eb.textContent='오류 유형\n'+errorSummary();eb.classList.remove('hidden')}else eb.classList.add('hidden');
-  if(!list.length){tb.innerHTML='<tr><td colspan="15" class="empty">현재 조건에서 선택한 시점의 '+MODE_LABEL[MODE]+' 노란막대 종목이 없습니다.</td></tr>';return}
+  if(!list.length){tb.innerHTML='<tr><td colspan="14" class="empty">현재 조건에서 '+START_DATE+' ~ '+END_DATE+' 사이 '+MODE_LABEL[MODE]+' 노란막대 종목이 없습니다.</td></tr>';return}
   list.slice(0,limit).forEach((r,i)=>{
-    const s=modeSignal(r),tr=document.createElement('tr');if(i<20)tr.className='toprank';
+    const s=modeSignal(r),ev=modeEvents(r),tr=document.createElement('tr');if(i<20)tr.className='toprank';
     tr.innerHTML='<td class="sticky1 rank">'+(i+1)+'</td>'+
       '<td class="sticky2 name">'+esc(r.name)+' <span class="small">'+r.code+'</span></td>'+
       '<td>'+esc(r.market)+'</td>'+
-      '<td><span class="signal">'+(MODE==='both'?esc(s.kind)+' · ':'')+esc(s.date)+'</span></td>'+
-      '<td>'+OFFSET_DAYS+'거래일 전</td>'+
+      '<td><span class="signal">'+esc(s.date)+'</span></td>'+
+      '<td><b>'+ev.length+'회</b></td>'+
+      '<td>'+esc(s.kind||MODE_LABEL[MODE])+'</td>'+
       '<td>'+negativeRunText(s)+'</td>'+
       '<td class="pos">'+signed(s.transitionValue)+'</td>'+
-      '<td class="'+pn(modeCum(r))+'">'+signed(modeCum(r))+'</td>'+
-      '<td>'+sigDate(r.signals.foreign)+'</td><td>'+sigDate(r.signals.institution)+'</td><td>'+sigDate(r.signals.combined)+'</td><td>'+sigDate(r.signals.individual)+'</td>'+
+      '<td>'+((r.events?.foreign||[]).length)+'회</td>'+
+      '<td>'+((r.events?.institution||[]).length)+'회</td>'+
+      '<td title="'+esc(eventDatesFull(r))+'">'+esc(eventDatesShort(r))+'</td>'+
       '<td>'+money(r.currentPrice)+'</td>'+
       '<td><button class="btn soft" style="padding:6px 9px" onclick="selectStock(\''+r.code+'\')">보기</button></td>'+
       '<td><a target="_blank" href="'+r.naver+'">네이버</a> · <a target="_blank" href="'+r.infostock+'">인포스탁</a></td>';
     tb.appendChild(tr);
   });
 }
-function sigDate(s){return s?'<span title="전환 전 '+s.negativeRun+'일 0이하">'+esc(s.date)+'</span>':'<span class="muted">-</span>'}
-
 async function selectStock(code){
-  const s=SUMMARIES.find(x=>x.code===code);if(!s)return;SELECTED=s;$('selectedTitle').textContent=s.name+' ('+s.code+') · '+s.market;$('selectedLinks').innerHTML='<a target="_blank" href="'+s.naver+'">네이버증권</a><a target="_blank" href="'+s.investor+'">투자자정보</a><a target="_blank" href="'+s.infostock+'">인포스탁 테마</a>';
+  const s=SUMMARIES.find(x=>x.code===code);if(!s)return;SELECTED=s;const sig=modeSignal(s);
+  $('selectedTitle').textContent=s.name+' ('+s.code+') · '+s.market+' · 최근 노란막대 '+(sig?.date||'-');
+  $('selectedLinks').innerHTML='<a target="_blank" href="'+s.naver+'">네이버증권</a><a target="_blank" href="'+s.investor+'">투자자정보</a><a target="_blank" href="'+s.infostock+'">인포스탁 테마</a>';
   $('chartPlaceholder').classList.remove('hidden');$('chartPlaceholder').textContent=ACTIVE_DAYS+'거래일 상세 수급을 불러오는 중...';$('charts').classList.add('hidden');
   try{
-    const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:[{code:s.code,name:s.name,market:s.market,currentPrice:s.currentPrice,marketValue:s.marketValue}],cfg:{asOf:$('asOf').value,minDays:1,maxDays:TOTAL_DAYS}})});
+    const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:[{code:s.code,name:s.name,market:s.market,currentPrice:s.currentPrice,marketValue:s.marketValue}],cfg:{asOf:END_DATE,minDays:1,maxDays:TOTAL_DAYS}})});
     if(!j.results?.length)throw new Error(j.errors?.[0]?.scanError||'상세 수급 데이터 없음');SELECTED_FULL=j.results[0];await drawSelected();document.getElementById('chartCard').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){$('chartPlaceholder').textContent='차트 불러오기 실패: '+e.message}
 }
 function setGraphDays(days,el){
-  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
+  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(20,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
 }
-function applyCustomDays(){const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(60,cap))));setGraphDays(d,null)}
+function applyCustomDays(){const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(20,cap))));setGraphDays(d,null)}
+function buildEventSeries(r,mode,days,eventDate){
+  const full=buildSeries(r,mode,TOTAL_DAYS),idx=full.findIndex(x=>x.date===eventDate);if(idx<0)return [];
+  const take=Math.min(days,idx+1),s=idx-take+1;let cumulative=0;const out=[];
+  for(let i=s;i<=idx;i++){const daily=Number(full[i].daily);if(!Number.isFinite(daily))return [];cumulative+=daily;out.push({date:full[i].date,daily,cumulative})}
+  return out;
+}
 async function drawSelected(){
   if(!SELECTED||!SELECTED_FULL)return;
+  const selectedSignal=modeSignal(SELECTED);if(!selectedSignal)return;
   $('chartPlaceholder').classList.add('hidden');$('charts').classList.remove('hidden');
-  const signals=SELECTED.signals,selectedSignal=modeSignal(SELECTED),ds=$('detailStats');ds.innerHTML='';
+  const ev=modeEvents(SELECTED),ds=$('detailStats');ds.innerHTML='';
   const cards=[
-    ['현재 검색주체',MODE_LABEL[MODE]],['노란막대일',selectedSignal?.date||'-'],['기준일에서',OFFSET_DAYS+'거래일 전'],['전환 전 0이하 지속',selectedSignal?negativeRunText(selectedSignal):'-'],['선택 '+ACTIVE_DAYS+'일 누적',signed(modeCum(SELECTED))]
+    ['현재 검색주체',MODE_LABEL[MODE]],['최근 노란막대일',selectedSignal.date],['구간 발생횟수',ev.length+'회'],['최근 발생주체',selectedSignal.kind||MODE_LABEL[MODE]],['전환 전 0이하 지속',negativeRunText(selectedSignal)]
   ];
-  cards.forEach(([a,b])=>ds.insertAdjacentHTML('beforeend','<div class="detailStat"><span>'+a+'</span><b>'+b+'</b></div>'));
-  const price=await getPrice(SELECTED.code,GRAPH_DAYS,selectedSignal?.date||SELECTED.targetAsOf||'').catch(()=>[]);
-  drawPrice(price,selectedSignal?.date||'');
-  drawFlow('institutionChart','기관',buildShiftedSeries(SELECTED_FULL,'institution',GRAPH_DAYS,OFFSET_DAYS),signals.institution?.date||'');
-  drawFlow('foreignChart','외국인',buildShiftedSeries(SELECTED_FULL,'foreign',GRAPH_DAYS,OFFSET_DAYS),signals.foreign?.date||'');
-  drawFlow('individualChart','개인',buildShiftedSeries(SELECTED_FULL,'individual',GRAPH_DAYS,OFFSET_DAYS),signals.individual?.date||'');
+  cards.forEach(([a,b])=>ds.insertAdjacentHTML('beforeend','<div class="detailStat"><span>'+a+'</span><b>'+esc(b)+'</b></div>'));
+  const eventDate=selectedSignal.date,price=await getPrice(SELECTED.code,GRAPH_DAYS,eventDate).catch(()=>[]);
+  drawPrice(price,eventDate);
+  const instMark=(SELECTED.events?.institution||[]).some(x=>x.date===eventDate)?eventDate:'';
+  const foreignMark=(SELECTED.events?.foreign||[]).some(x=>x.date===eventDate)?eventDate:'';
+  const individualMark=(SELECTED.events?.individual||[]).some(x=>x.date===eventDate)?eventDate:'';
+  drawFlow('institutionChart','기관',buildEventSeries(SELECTED_FULL,'institution',GRAPH_DAYS,eventDate),instMark);
+  drawFlow('foreignChart','외국인',buildEventSeries(SELECTED_FULL,'foreign',GRAPH_DAYS,eventDate),foreignMark);
+  drawFlow('individualChart','개인',buildEventSeries(SELECTED_FULL,'individual',GRAPH_DAYS,eventDate),individualMark);
 }
 async function getPrice(code,days,asOfDate=''){
   const k=code+'|'+days+'|'+asOfDate;if(PRICE_CACHE.has(k))return PRICE_CACHE.get(k);const j=await api(DETAIL_API+'?op=price&code='+encodeURIComponent(code)+'&days='+days+'&asOf='+encodeURIComponent(asOfDate)),rows=j.rows||[];PRICE_CACHE.set(k,rows);return rows;
@@ -322,17 +373,16 @@ function drawFlow(id,label,series,markDate){
 }
 function chartOptions(yTitle){return{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{boxWidth:12}},tooltip:{callbacks:{label:c=>(c.dataset.label||'')+': '+Number(c.raw||0).toLocaleString()}}},scales:{x:{ticks:{autoSkip:true,maxTicksLimit:10,maxRotation:0}},y:{title:{display:true,text:yTitle},grid:{color:'rgba(148,163,184,.18)'},ticks:{callback:v=>Number(v).toLocaleString()}}}}}
 function clearChartsUI(){
-  Object.keys(CHARTS).forEach(destroyChart);$('selectedTitle').textContent='순위표에서 종목을 선택하세요.';$('selectedLinks').innerHTML='';$('detailStats').innerHTML='';$('charts').classList.add('hidden');$('chartPlaceholder').classList.remove('hidden');$('chartPlaceholder').textContent='종목을 선택하면 위에는 주가, 아래에는 기관·외국인·개인의 날짜별 누적순매수 막대그래프가 표시됩니다.';
+  Object.keys(CHARTS).forEach(destroyChart);$('selectedTitle').textContent='순위표에서 종목을 선택하세요.';$('selectedLinks').innerHTML='';$('detailStats').innerHTML='';$('charts').classList.add('hidden');$('chartPlaceholder').classList.remove('hidden');$('chartPlaceholder').textContent='종목을 선택하면 최근 노란막대일 기준으로 주가와 기관·외국인·개인의 누적순매수 차트가 표시됩니다.';
 }
 function exportExcel(){
-  const list=rankList();if(!list.length)return alert('선택한 시점의 노란막대 종목이 없습니다.');
-  const rows=list.map((r,i)=>{const s=modeSignal(r);return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,검색주체:MODE_LABEL[MODE],검출주체:s.kind||MODE_LABEL[MODE],노란막대일:s.date,기준일에서_거래일전:OFFSET_DAYS,전환전_0이하_지속:negativeRunText(s),전환값:s.transitionValue,선택기간_누적:modeCum(r),분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,입력기준일:$('asOf').value,실제검색기준일:r.targetAsOf||s.date,네이버증권:r.naver,인포스탁:r.infostock}});
-  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{입력기준일:$('asOf').value,기준일에서_거래일전:OFFSET_DAYS,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',검색주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,노란막대종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'노란막대순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일누적_'+OFFSET_DAYS+'거래일전_'+MODE_LABEL[MODE]+'_노란막대_레이더_'+$('asOf').value+'.xlsx',{compression:true});
+  const list=rankList();if(!list.length)return alert('기간 내 노란막대 종목이 없습니다.');
+  const rows=list.map((r,i)=>{const s=modeSignal(r),ev=modeEvents(r);return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,검색주체:MODE_LABEL[MODE],최근노란막대일:s.date,구간발생횟수:ev.length,최근발생주체:s.kind||MODE_LABEL[MODE],전환전_0이하_지속:negativeRunText(s),전환값:s.transitionValue,외국인횟수:(r.events?.foreign||[]).length,기관횟수:(r.events?.institution||[]).length,외국인발생일:(r.events?.foreign||[]).map(x=>x.date).join(', '),기관발생일:(r.events?.institution||[]).map(x=>x.date).join(', '),전체발생일:eventDatesFull(r),현재가:r.currentPrice,시가총액:r.marketValue,시작날짜:START_DATE,종료날짜:END_DATE,분석기간_거래일:ACTIVE_DAYS,네이버증권:r.naver,인포스탁:r.infostock}});
+  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{시작날짜:START_DATE,종료날짜:END_DATE,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',검색주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,노란막대종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'기간노란막대');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,'기간노란막대_'+START_DATE+'_'+END_DATE+'_'+MODE_LABEL[MODE]+'.xlsx',{compression:true});
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function money(v){const x=Number(v);return Number.isFinite(x)&&x?x.toLocaleString():'-'}
 function signed(v){const x=Number(v);return Number.isFinite(x)?(x>0?'+':'')+Math.round(x).toLocaleString():'-'}
-function pn(v){const x=Number(v);return !Number.isFinite(x)?'':x>0?'pos':x<0?'neg':''}
 </script>
 </body>
 </html>
