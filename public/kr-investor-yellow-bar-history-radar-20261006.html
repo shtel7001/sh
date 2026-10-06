@@ -38,7 +38,7 @@
 <section class="hero">
   <h1>1~240일 누적분석 · 과거 N일 노란막대 레이더</h1>
   <p>누적 분석기간을 <b>1~240거래일</b> 사이에서 직접 정하고, 기준일 옆의 <b>과거 N거래일</b>에 0·10·20·30처럼 숫자를 넣어 그 시점을 가상 기준일로 검색합니다. 외국인·기관 누적순매수가 0 이하 구간을 지나 <b>선택한 시점에 +1 이상으로 전환</b>된 종목을 찾고, 차트의 해당 전환 막대를 <b>노란색</b>으로 강조합니다.</p>
-  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">누적분석 1~240거래일</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">외국인+기관 한번에 검색</span><span class="tag">과거 N거래일 조회</span><span class="tag">20거래일 기본 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">누적분석 1~240거래일</span><span class="tag">외국인 당일 전환</span><span class="tag">기관 당일 전환</span><span class="tag">외국인+기관 당일 노란막대</span><span class="tag">과거 N거래일 조회</span><span class="tag">20거래일 기본 차트</span><span class="tag">당일 막대 노란색</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
 </section>
 
 <section class="card">
@@ -51,7 +51,7 @@
   <div class="rankrow" style="margin-top:10px">
     <button type="button" class="modebtn active" data-mode="foreign" onclick="setMode(this)">외국인 당일 노란막대</button>
     <button type="button" class="modebtn" data-mode="institution" onclick="setMode(this)">기관 당일 노란막대</button>
-    <button type="button" class="modebtn" data-mode="both" onclick="setMode(this)">외국인+기관 한번에 검색</button>
+    <button type="button" class="modebtn" data-mode="both" onclick="setMode(this)">외국인+기관 당일 노란막대</button>
   </div>
   <div class="grid">
     <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
