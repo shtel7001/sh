@@ -239,7 +239,7 @@ export async function POST(req){
   if(op==='longFlow'){
     const stocks=Array.isArray(body.stocks)?body.stocks.slice(0,10):[];
     if(!stocks.length)return NextResponse.json({error:'NO_STOCKS'},{status:400});
-    const b=body.cfg||{},asOf=String(b.asOf||''),minDays=clamp(Math.round(Number(b.minDays||1)),1,250),maxDays=clamp(Math.round(Number(b.maxDays||250)),1,250);
+    const b=body.cfg||{},asOf=String(b.asOf||''),minDays=clamp(Math.round(Number(b.minDays||1)),1,250),maxDays=clamp(Math.round(Number(b.maxDays||250)),1,480);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(asOf)||minDays>maxDays)return NextResponse.json({error:'BAD_CONFIG'},{status:400});
     const needDays=Math.max(maxDays,60),results=[],errors=[];
     for(let i=0;i<stocks.length;i+=5){
