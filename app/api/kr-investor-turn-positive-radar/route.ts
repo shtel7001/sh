@@ -57,10 +57,10 @@ export async function GET(req){
   if(op==='ping')return NextResponse.json({ok:true},{headers:{'Cache-Control':'no-store'}});
   if(op==='price'){
     const code=String(u.searchParams.get('code')||'').replace(/\D/g,'').slice(0,6);
-    const days=clamp(Math.round(Number(u.searchParams.get('days')||120)),1,120);
+    const days=clamp(Math.round(Number(u.searchParams.get('days')||120)),1,240);
     if(!/^\d{6}$/.test(code))return NextResponse.json({error:'BAD_CODE'},{status:400});
     try{
-      const count=clamp(days+15,20,150);
+      const count=clamp(days+20,20,300);
       const xml=await fetchText('https://fchart.stock.naver.com/sise.nhn?symbol='+encodeURIComponent(code)+'&timeframe=day&count='+count+'&requestType=0');
       const rows=parseFchart(xml).slice(-days);
       if(!rows.length)throw new Error('PRICE_EMPTY');
