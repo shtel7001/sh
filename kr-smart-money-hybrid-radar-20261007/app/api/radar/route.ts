@@ -123,7 +123,7 @@ function feature(rows:any[]){
   const baseVol=Math.max(1,avg((prior.length?prior:a.slice(0,-3)).map(x=>Number(x.volume)||0)));
   const r5=(Number(last.volume)||0)/baseVol,r15=last3.reduce((s,x)=>s+(Number(x.volume)||0),0)/(baseVol*3),persist=last3.filter(x=>(Number(x.volume)||0)>=baseVol*1.5).length;
   const sessionMove=(last.close/a[0].open-1)*100,move30=(last.close/last6[0].open-1)*100,hi=Math.max(...last6.map(x=>x.high)),lo=Math.min(...last6.map(x=>x.low));
-  const closePos=hi===lo?.5:(last.close-lo)/(hi-lo),first3=last6.slice(0,3).reduce((s,x)=>s+x.volume,0),tail3=last3.reduce((s,x)=>s+x.volume,0),volumeSlope=first3>0?tail3/first3:1;
+  const closePos=hi===lo ? 0.5 : (last.close-lo)/(hi-lo),first3=last6.slice(0,3).reduce((s,x)=>s+x.volume,0),tail3=last3.reduce((s,x)=>s+x.volume,0),volumeSlope=first3>0?tail3/first3:1;
   return {date:last.date,time:last.time,r5,r15,persist,sessionMove,move30,closePos,volumeSlope,close:last.close,volume:last.volume,bars:a.length};
 }
 function sim(a:any,b:any){
