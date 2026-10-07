@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>KR Smart Money Hybrid Pre-Spike Radar</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#dfe6ef;--navy:#102a63;--violet:#673ab7;--blue:#2854d9;--red:#d92d20;--green:#067647;--amber:#b54708;--shadow:0 12px 28px rgba(25,35,75,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif}.wrap{max-width:1760px;margin:auto;padding:11px}
+.hero{background:linear-gradient(135deg,#0c245f,#542078 68%,#7b2cbf);color:#fff;border-radius:22px;padding:22px;box-shadow:var(--shadow)}.hero h1{font-size:27px;margin:0 0 8px}.hero p{margin:0;line-height:1.6}.chips,.row,.actions{display:flex;gap:8px;flex-wrap:wrap}.chips{margin-top:12px}.chip{background:rgba(255,255,255,.15);padding:7px 10px;border-radius:999px;font-size:12px}
+.card{margin-top:11px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}h2{font-size:18px;margin:0}.small{font-size:12px;color:var(--muted);line-height:1.55}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:8px;margin-top:10px}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:0 9px}
+.btn,.seg{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer}.seg.active,.btn.primary{background:#2748c7;color:#fff;border-color:#2748c7}.btn.dark{background:#172033;color:#fff;border-color:#172033}.btn.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.btn:disabled{opacity:.5;cursor:not-allowed}
+.note{margin-top:10px;padding:11px 12px;border-radius:12px;background:#eef5ff;border:1px solid #ccdcf4;font-size:12px;line-height:1.6}.warnbox{margin-top:10px;padding:11px 12px;border-radius:12px;background:#fff8e6;border:1px solid #efd99e;color:#72500c;font-size:12px;line-height:1.6}
+.status{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}.ok{background:#ecfdf3;color:#067647}.off{background:#f2f4f7;color:#475467}.hot{background:#fff1f0;color:#b42318}
+.stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:10px}.stat{border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:9px}.stat span{font-size:11px;color:var(--muted)}.stat b{display:block;font-size:19px;margin-top:2px}
+.progress{height:11px;background:#e8edf5;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,#2848c7,#8b5cf6);transition:.15s}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px;max-height:66vh}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:8px;border-bottom:1px solid #edf1f6;font-size:11px;text-align:center;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:#f7f9fc;color:#455269}td.name{text-align:left;font-weight:900}.rank,.score{font-weight:900}.score{font-size:15px}.top{background:#fffbea}.pos{color:var(--red);font-weight:800}.neg{color:#2563eb;font-weight:800}.match{display:inline-flex;padding:4px 7px;border-radius:999px;background:#ecfdf3;color:#067647;font-weight:900}.nomatch{display:inline-flex;padding:4px 7px;border-radius:999px;background:#f2f4f7;color:#667085;font-weight:800}.source{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef4ff;color:#3538cd;font-weight:800}.empty{padding:34px!important;color:var(--muted)}a{color:#245bd4;text-decoration:none}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#0d225c,#542078);display:flex;align-items:center;justify-content:center;padding:18px}.loginbox{width:min(430px,100%);background:#fff;border-radius:22px;padding:24px}.loginbox input{width:100%;height:50px;border:1px solid #cad5e3;border-radius:12px;padding:0 14px;font-size:18px;margin:12px 0}.hidden{display:none!important}
+.detail{margin-top:10px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.detail>div{border:1px solid var(--line);border-radius:12px;background:#f8fafc;padding:9px}.detail span{display:block;font-size:11px;color:var(--muted)}.detail b{display:block;font-size:14px;margin-top:3px}.hist{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}.histItem{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;font-size:12px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}.stats,.detail{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.wrap{padding:7px}.hero{padding:17px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.stats,.detail{grid-template-columns:repeat(2,1fr)}.actions .btn{flex:1 1 calc(50% - 8px);white-space:normal}.card{padding:10px}}
+</style>
+</head>
+<body>
+<div id="login" class="login hidden"><div class="loginbox">
+<h2>개인 1회 영구 인증</h2>
+<p class="small">인증번호를 한 번 입력하면 이 브라우저에 서명 토큰을 저장합니다. 브라우저 데이터를 지우기 전까지 다시 입력하지 않습니다.</p>
+<input id="authCode" type="password" autocomplete="off" placeholder="개인 인증번호" onkeydown="if(event.key==='Enter')login()">
+<button class="btn primary" onclick="login()">인증</button>
+<div id="loginMsg" class="small" style="margin-top:8px"></div>
+</div></div>
+
+<div class="wrap">
+<section class="hero">
+<h1>KR Smart Money Hybrid Pre-Spike Radar</h1>
+<p><b>과거 급등 전날 패턴은 네이버 5분봉</b>으로 학습하고, 오늘 장중은 <b>키움 REST 5분봉</b>을 우선 사용해 아직 크게 오르지 않은 선행 후보를 찾습니다.</p>
+<div class="chips">
+<span class="chip">Naver 5분봉 과거학습</span><span class="chip">15분 지속성 자동계산</span><span class="chip">Kiwoom REST 장중 우선</span>
+<span class="chip">+3% 이하 후보</span><span class="chip">5분 거래량 3~10배</span><span class="chip">과거 +5% 급등 경험</span><span class="chip">주문 기능 없음</span><span class="chip">Excel .xlsx</span>
+</div>
+</section>
+
+<section class="card">
+<div class="status"><h2>1. 데이터 연결 상태</h2><span id="authState" class="pill ok">개인인증 완료</span><span id="kiwState" class="pill off">키움 확인 중</span></div>
+<div id="connMsg" class="note">서버 연결 상태를 확인하고 있습니다.</div>
+<div class="actions" style="margin-top:10px">
+<button class="btn" onclick="testData()">삼성전자 데이터 테스트</button>
+<button class="btn warn" onclick="clearAuth()">이 브라우저 인증 해제</button>
+</div>
+<div class="warnbox"><b>키움 연결 방식:</b> 이 사이트는 Vercel 서버 환경변수에 키움 키가 등록돼 있으면 자동으로 키움 REST를 사용하고, 없으면 네이버 5분봉으로 자동 대체합니다. 키움 주문 API는 코드에 포함하지 않았습니다.</div>
+</section>
+
+<section class="card">
+<h2>2. 스캔 조건</h2>
+<div class="row" style="margin-top:10px">
+<button class="seg active" data-market="ALL" onclick="setMarket(this)">KOSPI+KOSDAQ</button>
+<button class="seg" data-market="KOSPI" onclick="setMarket(this)">KOSPI 전종목</button>
+<button class="seg" data-market="KOSDAQ" onclick="setMarket(this)">KOSDAQ 전종목</button>
+</div>
+<div class="grid">
+<div class="field"><label>과거 학습기간(거래일)</label><input id="lookbackDays" type="number" min="10" max="240" value="120"></div>
+<div class="field"><label>과거 급등 기준 %</label><input id="spikePct" type="number" min="1" max="30" step=".5" value="5"></div>
+<div class="field"><label>오늘 최대 상승률 %</label><input id="maxCurrentChange" type="number" min="-20" max="20" step=".5" value="3"></div>
+<div class="field"><label>5분 거래량 최소 배수</label><input id="minVol" type="number" min="1" max="20" step=".1" value="3"></div>
+<div class="field"><label>5분 거래량 최대 배수</label><input id="maxVol" type="number" min="2" max="50" step=".5" value="10"></div>
+<div class="field"><label>최소 종합점수</label><input id="minScore" type="number" min="0" max="100" value="60"></div>
+<div class="field"><label>최대 스캔 종목</label><select id="maxStocks"><option value="20">20개 빠른 테스트</option><option value="60" selected>60개 권장</option><option value="120">120개</option><option value="300">300개</option><option value="0">전종목</option></select></div>
+<div class="field"><label>정렬 전 1차 후보</label><select id="prefilter"><option value="value" selected>거래대금 우선</option><option value="volume">거래량 우선</option><option value="marketCap">시총 우선</option></select></div>
+<div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+<div class="field"><label>스팩 제외</label><select id="excludeSpac"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
+<div class="field"><label>결과 표시</label><select id="displayLimit" onchange="render()"><option value="30">30개</option><option value="100" selected>100개</option><option value="9999">전체</option></select></div>
+<div class="field"><label>결과 필터</label><select id="onlyMatch" onchange="render()"><option value="0" selected>전체 점수순</option><option value="1">조건충족만</option></select></div>
+</div>
+<div class="note"><b>빠른 구조:</b> 전 종목을 1년치 1분봉으로 모으지 않습니다. 네이버 현재 종목군 → 거래대금 우선 후보 → Yahoo 일봉으로 과거 급등일 탐색 → 해당 급등 직전 거래일만 네이버 5분봉 분석 → 오늘 키움/네이버 5분봉과 비교합니다.</div>
+</section>
+
+<section class="card">
+<h2>3. 실행</h2>
+<div class="actions" style="margin-top:10px">
+<button id="runBtn" class="btn primary" onclick="runScan()">오늘 선행 후보 스캔</button>
+<button id="stopBtn" class="btn warn" onclick="STOP=true" disabled>중지</button>
+<button id="excelBtn" class="btn" onclick="exportExcel()" disabled>Excel 최신형 저장</button>
+</div>
+<div id="runMsg" class="small" style="margin-top:10px">조건을 확인한 뒤 실행하세요.</div>
+<div class="progress"><div id="bar" class="bar"></div></div>
+<div class="stats">
+<div class="stat"><span>전체 종목</span><b id="stUniverse">0</b></div>
+<div class="stat"><span>1차 후보</span><b id="stTarget">0</b></div>
+<div class="stat"><span>조회 완료</span><b id="stDone">0</b></div>
+<div class="stat"><span>조건충족</span><b id="stMatch">0</b></div>
+<div class="stat"><span>키움 사용</span><b id="stKiw">0</b></div>
+<div class="stat"><span>네이버 대체</span><b id="stNav">0</b></div>
+<div class="stat"><span>오류</span><b id="stErr">0</b></div>
+</div>
+<div class="tableWrap"><table>
+<thead><tr><th>순위</th><th>종목</th><th>시장</th><th>현재등락</th><th>점수</th><th>판정</th><th>과거유사도</th><th>5분 거래량배수</th><th>15분 거래량배수</th><th>15분 지속</th><th>당일 움직임</th><th>과거 급등일</th><th>급등률</th><th>데이터</th><th>상세</th><th>링크</th></tr></thead>
+<tbody id="rows"><tr><td colspan="16" class="empty">아직 실행하지 않았습니다.</td></tr></tbody>
+</table></div>
+</section>
+
+<section class="card">
+<h2>4. 선택 종목 상세</h2>
+<div id="detailTitle" class="small" style="margin-top:8px">결과표에서 상세를 누르세요.</div>
+<div id="detailStats" class="detail"></div>
+<div id="hist" class="hist"></div>
+</section>
+</div>
+
+<script>
+const API='/api/radar',TOKEN_KEY='krHybridPermanentTokenV1';
+let TOKEN='',MARKET='ALL',STOP=false,RESULTS=[],KIW_CONFIG=false,ERRORS=0;
+const $=id=>document.getElementById(id);
+function headers(){return TOKEN?{'Authorization':'Bearer '+TOKEN}:{}}
+async function api(url,opt){opt=opt||{};opt.headers=Object.assign({},opt.headers||{},headers());const r=await fetch(url,opt);let j={};try{j=await r.json()}catch{}if(r.status===401){$('login').classList.remove('hidden');throw new Error('인증이 필요합니다.')}if(!r.ok)throw new Error(j.message||j.error||('HTTP '+r.status));return j}
+async function login(){const code=$('authCode').value;if(!code)return;$('loginMsg').textContent='인증 중...';try{const r=await fetch(API+'?op=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok||!j.token)throw new Error(j.error||'인증 실패');TOKEN=j.token;localStorage.setItem(TOKEN_KEY,TOKEN);$('login').classList.add('hidden');$('loginMsg').textContent='';await ping()}catch(e){$('loginMsg').textContent='인증 실패: '+e.message}}
+function clearAuth(){localStorage.removeItem(TOKEN_KEY);TOKEN='';$('authCode').value='';$('login').classList.remove('hidden')}
+async function ping(){try{const j=await api(API+'?op=ping');KIW_CONFIG=!!j.kiwoomConfigured;$('kiwState').textContent=KIW_CONFIG?'키움 REST 연결 설정됨':'키움 미설정 · 네이버 자동대체';$('kiwState').className='pill '+(KIW_CONFIG?'ok':'off');$('connMsg').innerHTML='<b>서버 정상.</b> 현재 장중 데이터 우선순위: '+(KIW_CONFIG?'<b>키움 REST → 네이버</b>':'<b>네이버 5분봉</b>')+' · 과거 학습: <b>네이버 5분봉</b> · 주문 기능: <b>없음</b>'}catch(e){$('connMsg').textContent='서버 확인 실패: '+e.message}}
+(async()=>{TOKEN=localStorage.getItem(TOKEN_KEY)||'';if(!TOKEN){$('login').classList.remove('hidden');return}try{await ping();$('login').classList.add('hidden')}catch{$('login').classList.remove('hidden')}})();
+
+function setMarket(el){MARKET=el.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===el))}
+function cfg(){return{lookbackDays:+$('lookbackDays').value||120,spikePct:+$('spikePct').value||5,maxCurrentChange:+$('maxCurrentChange').value||3,minVol:+$('minVol').value||3,maxVol:+$('maxVol').value||10,minScore:+$('minScore').value||60}}
+function isPreferred(n){return /(우|우B|우C|1우|2우B|3우B)$/.test(String(n))}
+function fmt(v,d){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '-';return Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d===undefined?1:d})}
+function pct(v){if(v===null||v===undefined||!Number.isFinite(Number(v)))return '-';const x=Number(v);return (x>0?'+':'')+x.toFixed(2)+'%'}
+function cls(v){return Number(v)>0?'pos':Number(v)<0?'neg':''}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function src(s){return s==='KIWOOM_5M'?'키움 5분':'네이버 5분'}
+function reset(){STOP=false;RESULTS=[];ERRORS=0;$('bar').style.width='0%';['stUniverse','stTarget','stDone','stMatch','stKiw','stNav','stErr'].forEach(id=>$(id).textContent='0');$('rows').innerHTML='<tr><td colspan="16" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true}
+function filtered(){let a=RESULTS.slice().sort((a,b)=>(b.score||0)-(a.score||0));if($('onlyMatch').value==='1')a=a.filter(x=>x.match);return a.slice(0,+$('displayLimit').value||100)}
+function render(){
+  const a=filtered();if(!a.length){$('rows').innerHTML='<tr><td colspan="16" class="empty">표시할 결과가 없습니다.</td></tr>';return}
+  $('rows').innerHTML=a.map((r,i)=>{const s=r.stock||{},c=r.current||{},h=r.historical?.[0]||{};return '<tr class="'+(i<5?'top':'')+'">'+
+    '<td class="rank">'+(i+1)+'</td><td class="name">'+esc(s.name)+' <span class="small">'+esc(s.code)+'</span></td><td>'+esc(s.market)+'</td>'+
+    '<td class="'+cls(s.changePct)+'">'+pct(s.changePct)+'</td><td class="score">'+fmt(r.score,1)+'</td>'+
+    '<td>'+(r.match?'<span class="match">조건충족</span>':'<span class="nomatch">'+esc(r.reason||'관찰')+'</span>')+'</td>'+
+    '<td>'+fmt(r.similarity,1)+'</td><td>'+fmt(c.r5,2)+'x</td><td>'+fmt(c.r15,2)+'x</td><td>'+fmt(c.persist,0)+'/3</td>'+
+    '<td>'+pct(c.sessionMove)+'</td><td>'+esc(h.spikeDate||'-')+'</td><td class="pos">'+pct(h.spikePct)+'</td>'+
+    '<td><span class="source">'+src(r.source)+'</span></td><td><button class="btn" style="padding:5px 8px" onclick="detailByCode(\''+esc(s.code)+'\')">상세</button></td>'+
+    '<td><a target="_blank" href="https://finance.naver.com/item/main.naver?code='+esc(s.code)+'">네이버</a></td></tr>'}).join('');
+}
+function detailByCode(code){
+  const r=RESULTS.find(x=>x.stock?.code===code);if(!r)return;const s=r.stock||{},c=r.current||{};
+  $('detailTitle').innerHTML='<b>'+esc(s.name)+' ('+esc(s.code)+')</b> · '+esc(s.market)+' · '+src(r.source);
+  const vals=[['종합점수',fmt(r.score,1)],['과거 유사도',fmt(r.similarity,1)],['5분 거래량',fmt(c.r5,2)+'x'],['15분 거래량',fmt(c.r15,2)+'x'],['지속성',fmt(c.persist,0)+'/3'],['신호시각',esc(c.time||'-')],['당일 움직임',pct(c.sessionMove)],['30분 움직임',pct(c.move30)],['마감위치',fmt((c.closePos||0)*100,1)+'%'],['거래량 기울기',fmt(c.volumeSlope,2)+'x'],['현재가',fmt(s.currentPrice,0)],['현재등락',pct(s.changePct)]];
+  $('detailStats').innerHTML=vals.map(x=>'<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+  $('hist').innerHTML=(r.historical||[]).map(h=>'<div class="histItem"><b>급등 '+esc(h.spikeDate)+'</b> '+pct(h.spikePct)+'<br>직전 '+esc(h.preDate)+' · 유사도 '+fmt(h.similarity,1)+'<br>5분 '+fmt(h.feature?.r5,2)+'x · 15분 '+fmt(h.feature?.r15,2)+'x · 지속 '+fmt(h.feature?.persist,0)+'/3</div>').join('')||'<span class="small">최근 학습기간에 조건에 맞는 과거 급등 패턴이 없습니다.</span>';
+  document.getElementById('detailTitle').scrollIntoView({behavior:'smooth',block:'center'});
+}
+async function testData(){try{$('connMsg').textContent='삼성전자 네이버 5분봉 테스트 중...';const j=await api(API+'?op=test');$('connMsg').innerHTML='<b>테스트 정상:</b> 삼성전자 정규장 5분봉 '+j.naver5m+'개 · 키움 서버설정 '+(j.kiwoomConfigured?'있음':'없음')+(j.latest?.length?' · 최신 '+esc(j.latest[j.latest.length-1].time):'')}catch(e){$('connMsg').textContent='테스트 실패: '+e.message}}
+async function runScan(){
+  reset();$('runBtn').disabled=true;$('stopBtn').disabled=false;const c=cfg();
+  try{
+    $('runMsg').textContent='종목군을 불러오는 중...';
+    const u=await api(API+'?op=universe&market='+MARKET);let all=u.rows||[];$('stUniverse').textContent=all.length;
+    if($('excludePref').value==='1')all=all.filter(x=>!isPreferred(x.name));if($('excludeSpac').value==='1')all=all.filter(x=>!String(x.name).includes('스팩'));
+    all=all.filter(x=>Number(x.changePct??0)<=c.maxCurrentChange);
+    const key=$('prefilter').value,metric=key==='volume'?'volume':key==='marketCap'?'marketCap':'tradeValue';
+    all.sort((a,b)=>Number(b[metric]||0)-Number(a[metric]||0));
+    const mx=+$('maxStocks').value||0,target=mx?all.slice(0,mx):all;$('stTarget').textContent=target.length;
+    const batch=6;let done=0;
+    for(let i=0;i<target.length&&!STOP;i+=batch){
+      const part=target.slice(i,i+batch);$('runMsg').textContent='분석 중 '+(i+1)+'~'+Math.min(i+batch,target.length)+' / '+target.length+' · 과거 급등일만 골라 네이버 5분봉을 읽습니다.';
+      try{
+        const j=await api(API+'?op=analyze-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:part,cfg:c})});
+        for(const r of j.results||[]){RESULTS.push(r);if(r.error)ERRORS++;if(r.source==='KIWOOM_5M')$('stKiw').textContent=+($('stKiw').textContent||0)+1;else if(r.source)$('stNav').textContent=+($('stNav').textContent||0)+1}
+      }catch(e){ERRORS+=part.length}
+      done=Math.min(i+batch,target.length);$('stDone').textContent=done;$('stErr').textContent=ERRORS;$('stMatch').textContent=RESULTS.filter(x=>x.match).length;$('bar').style.width=Math.round(done/Math.max(1,target.length)*100)+'%';render();
+    }
+    $('runMsg').textContent=STOP?'사용자가 중지했습니다. 현재 결과는 유지됩니다.':'완료. 점수는 과거 급등 직전 패턴 유사도 + 5분 거래량 + 15분 지속성 + 미급등 조건을 합산합니다.';
+    $('excelBtn').disabled=RESULTS.length===0;
+  }catch(e){$('runMsg').textContent='실행 실패: '+e.message}
+  finally{$('runBtn').disabled=false;$('stopBtn').disabled=true}
+}
+function exportExcel(){
+  if(!RESULTS.length)return;const rows=RESULTS.slice().sort((a,b)=>(b.score||0)-(a.score||0)).map((r,i)=>{const s=r.stock||{},c=r.current||{},h=r.historical?.[0]||{};return{
+    순위:i+1,종목명:s.name,코드:s.code,시장:s.market,현재가:s.currentPrice,현재등락률:s.changePct,종합점수:r.score,조건충족:r.match?'Y':'N',사유:r.reason,
+    과거유사도:r.similarity,'5분거래량배수':c.r5,'15분거래량배수':c.r15,'15분지속성':c.persist,당일움직임:c.sessionMove,'30분움직임':c.move30,
+    과거급등일:h.spikeDate,과거급등률:h.spikePct,과거직전일:h.preDate,데이터소스:src(r.source),네이버링크:'https://finance.naver.com/item/main.naver?code='+s.code
+  }});
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,'Hybrid Radar');const d=new Date(),ds=d.toISOString().slice(0,10).replace(/-/g,'');XLSX.writeFile(wb,'kr_smart_money_hybrid_radar_'+ds+'.xlsx');
+}
+</script>
+</body>
+</html>
