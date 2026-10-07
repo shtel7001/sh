@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "private": true,
   "description": "Korea intraday theme laggard radar",
-  "engines": { "node": ">=20" },
-  "dependencies": {
-    "cheerio": "latest",
-    "exceljs": "latest"
-  }
+  "engines": { "node": ">=20" }
 }
