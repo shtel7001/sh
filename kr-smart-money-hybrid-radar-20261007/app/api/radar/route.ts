@@ -86,17 +86,21 @@ async function getUniverse(market:string){
   const [a,b]=await Promise.all([universeMarket('KOSPI'),universeMarket('KOSDAQ')]);
   return a.concat(b);
 }
-function symbol(code:string,market:string){return code+'.'+(market==='KOSDAQ'?'KQ':'KS')}
-function kstFromUnix(ts:number){const d=new Date((ts+9*3600)*1000).toISOString();return d.slice(0,10)}
-async function yahooDaily(code:string,market:string){
-  const url='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol(code,market))+'?range=1y&interval=1d&events=history';
-  const z=(await fetchJson(url,{},10000)).data?.chart?.result?.[0],ts:any[]=z?.timestamp||[],q=z?.indicators?.quote?.[0]||{},out:any[]=[];
-  for(let i=0;i<ts.length;i++){
-    const c=num(q.close?.[i]),o=num(q.open?.[i]),h=num(q.high?.[i]),l=num(q.low?.[i]),v=num(q.volume?.[i]);
-    if([c,o,h,l].some(x=>x===null))continue;
-    out.push({date:kstFromUnix(Number(ts[i])),open:o,high:h,low:l,close:c,volume:v||0});
-  }
-  return out;
+function normalizeDate(v:any){
+  const s=String(v??'').replace(/\D/g,'');
+  if(s.length<8)return '';
+  return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+}
+async function naverDaily(code:string,count=300){
+  const url='https://api.stock.naver.com/chart/domestic/item/'+encodeURIComponent(code)+'?periodType=dayCandle&count='+Math.max(20,Math.min(300,count));
+  const j=(await fetchJson(url,{},12000)).data;
+  const rows=Array.isArray(j?.priceInfos)?j.priceInfos:[];
+  return rows.map((p:any)=>({
+    date:normalizeDate(p?.localDate),
+    open:num(p?.openPrice),high:num(p?.highPrice),low:num(p?.lowPrice),close:num(p?.closePrice),
+    volume:num(p?.accumulatedTradingVolume)??0
+  })).filter((x:any)=>x.date&&[x.open,x.high,x.low,x.close].every((v:any)=>v!==null))
+    .sort((a:any,b:any)=>a.date.localeCompare(b.date));
 }
 
 function findDateTime(o:any){
@@ -220,7 +224,7 @@ async function currentBars(stock:any,interval:number){
 async function historicalOne(stock:any,cfg:any){
   const histDate=String(cfg.histDate||''),spikePct=clamp(cfg.spikePct??5,1,30),interval=[5,15,30].includes(Number(cfg.histInterval))?Number(cfg.histInterval):5;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(histDate))return {stock,match:false,reason:'BAD_DATE'};
-  const daily=await yahooDaily(stock.code,stock.market);
+  const daily=await naverDaily(stock.code,300);
   const i=daily.findIndex(x=>x.date===histDate);
   if(i<1)return {stock,match:false,reason:'NO_DAILY_DATE'};
   const prev=daily[i-1],cur=daily[i],pct=(cur.close/prev.close-1)*100;
