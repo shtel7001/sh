@@ -19,3 +19,17 @@ input,select,textarea{background:#fff!important;color:#18345b!important;border:1
 table th{background:#e5f0ff!important;color:#173d7c!important}table td{background:#fff!important;color:#23466e!important}
 footer{color:#657f9e!important}
 @media(max-width:760px){.app{width:calc(100% - 10px)!important}.hero{padding:17px 13px!important;border-radius:14px!important}}
+
+
+/* High-contrast pale-blue controls and score tiles */
+.tabs{background:linear-gradient(#eaf3ff 85%,transparent)!important}
+.tabs button,.choice button,.toolbar button:not(.primary),.ghost,.sectionTitle button{background:#e2f0ff!important;color:#102b4b!important;border:1px solid #9ebfe4!important;box-shadow:none!important}
+.tabs button.active,.choice button.active{background:#c7e3ff!important;color:#073568!important;border-color:#2481ed!important;box-shadow:inset 0 0 0 2px #2481ed!important;font-weight:800!important}
+.toolbar,.progress,.status,.panel{background:#fff!important;color:#16395e!important}
+.miniGrid label,.settingsGrid label,.stats article,.metricGrid span,.note{background:#e3f1ff!important;color:#183a5d!important;border:1px solid #c2daf4!important}
+.miniGrid b,.miniGrid .score,.stats b,.metricGrid b,.settingsGrid b{color:#102b4b!important}
+.scoreHero strong{color:#1264c9!important}.scoreHero span,.stockMain span,.detected,.miniGrid label,.rank,.sectionTitle span{color:#4c6580!important}
+.stockCard{background:#fff!important;color:#122f51!important}
+.stockMain b,.stockCard b{color:#102b4b}
+.close{background:#d7eaff!important;color:#143657!important}
+.ghost:disabled,.toolbar button:disabled,.tabs button:disabled{background:#edf4fb!important;color:#697f98!important;opacity:.8!important}
