@@ -33,3 +33,17 @@ footer{color:#657f9e!important}
 .stockMain b,.stockCard b{color:#102b4b}
 .close{background:#d7eaff!important;color:#143657!important}
 .ghost:disabled,.toolbar button:disabled,.tabs button:disabled{background:#edf4fb!important;color:#697f98!important;opacity:.8!important}
+
+
+/* Readable chart on the pale blue dashboard */
+.chartWrap{background:#fff!important;border:1px solid #bdd4ee!important;padding:12px!important}
+.chartWrap svg{background:#fff!important;min-height:260px!important}
+.chartWrap .axis{stroke:#8aa6c4!important;stroke-width:1.4}
+.chartWrap .priceLine{stroke:#0863ca!important;stroke-width:3.3!important}
+.chartWrap .ma5{stroke:#079d76!important;stroke-width:2.8!important}
+.chartWrap .ma20{stroke:#d18a08!important;stroke-width:2.7!important}
+.chartWrap .ma60{stroke:#7b4dd0!important;stroke-width:2.7!important}
+.chartWrap .vol{fill:#4e7eae!important;opacity:.8!important}
+.chartWrap .mark{stroke:#dc4a5a!important;stroke-width:1.4}
+.chartWrap .markDot{fill:#e93e59!important}
+.legend{color:#25496d!important;font-size:13px!important;font-weight:700!important;gap:15px!important}
