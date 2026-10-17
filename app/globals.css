@@ -47,3 +47,11 @@ footer{color:#657f9e!important}
 .chartWrap .mark{stroke:#dc4a5a!important;stroke-width:1.4}
 .chartWrap .markDot{fill:#e93e59!important}
 .legend{color:#25496d!important;font-size:13px!important;font-weight:700!important;gap:15px!important}
+
+
+/* Independent market scan selection */
+.marketFilter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.marketFilter button{background:#e3f1ff!important;color:#163b63!important;border:1px solid #a9c9ea!important;border-radius:12px!important;padding:14px 8px!important;font-weight:750!important;font-size:clamp(13px,2.5vw,18px)!important;cursor:pointer}
+.marketFilter button.active{background:#bcdfff!important;color:#063d7e!important;border:2px solid #2583e8!important;box-shadow:0 2px 8px #287ce333!important}
+.marketFilter button:disabled{opacity:.65;cursor:wait}
+@media(max-width:560px){.marketFilter{gap:5px}.marketFilter button{padding:12px 3px!important;font-size:13px!important;letter-spacing:-.5px}}
