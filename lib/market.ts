@@ -139,39 +139,41 @@ export async function fetchUniverse(){
   const errors:string[]=[];
   const sources:string[]=[];
 
+  // Request extra ranked listings and refill from alternate providers when a source
+  // contains fewer than the requested number of ordinary shares.
+  const excluded=/(?:스팩|스펙|SPAC|기업인수목적|ETF|ETN|레버리지|인버스|선물|국고채|통안채|채권|TIGER|KODEX|RISE|KBSTAR|ARIRANG|HANARO|KOSEF|KINDEX|TIMEFOLIO|TREX|히어로즈|ACE\\s|SOL\\s|PLUS\\s|FOCUS\\s|WOORI\\s|SMART\\s|QV\\s|TRUE\\s)/i;
+  const limits:{[key:string]:number}={KOSPI:500,KOSDAQ:1000};
   for(const [market,target] of specs){
-    let rows:UniverseStock[]=[];
-    try{
-      rows=await fetchUniverseMobile(market,target);
-      if(rows.length<Math.min(target,50)) throw new Error(`${market} mobile JSON ${rows.length}건`);
-      sources.push(`${market}:mobile-json(${rows.length})`);
-    }catch(e1){
-      errors.push(`${market} mobile: ${e1 instanceof Error?e1.message:'오류'}`);
+    const eligible=new Map<string,UniverseStock>();
+    const add=(rows:UniverseStock[])=>{
+      for(const stock of rows){
+        if(!excluded.test(stock.name)&&!eligible.has(stock.code)) eligible.set(stock.code,stock);
+        if(eligible.size>=limits[market]) break;
+      }
+    };
+    const sourcesForMarket=[
+      {name:'mobile-json',load:fetchUniverseMobile},
+      {name:'front-api',load:fetchUniverseFrontApi},
+      {name:'pc-html',load:fetchUniversePc}
+    ];
+    for(const src of sourcesForMarket){
+      if(eligible.size>=limits[market]) break;
       try{
-        rows=await fetchUniverseFrontApi(market,target);
-        if(rows.length<Math.min(target,50)) throw new Error(`${market} front-api ${rows.length}건`);
-        sources.push(`${market}:front-api(${rows.length})`);
-      }catch(e2){
-        errors.push(`${market} front-api: ${e2 instanceof Error?e2.message:'오류'}`);
-        try{
-          rows=await fetchUniversePc(market,target);
-          if(rows.length<Math.min(target,50)) throw new Error(`${market} PC ${rows.length}건`);
-          sources.push(`${market}:pc-html(${rows.length})`);
-        }catch(e3){
-          errors.push(`${market} pc: ${e3 instanceof Error?e3.message:'오류'}`);
-          rows=[];
-        }
+        const rows=await src.load(market,target);
+        add(rows);
+        sources.push(`${market}:${src.name}(${rows.length},eligible=${eligible.size})`);
+      }catch(e){
+        errors.push(`${market} ${src.name}: ${e instanceof Error?e.message:'오류'}`);
       }
     }
-    out.push(...rows.slice(0,target));
+    if(eligible.size<limits[market]){
+      errors.push(`${market} 일반주식 ${eligible.size}/${limits[market]}종목만 확보; 추가 데이터 확인 필요`);
+    }
+    out.push(...[...eligible.values()].slice(0,limits[market]));
   }
-
-  // Exclude exchange-traded funds/notes, SPACs, leveraged/inverse and other non-operating securities.
-  const excluded=/스팩|스펙|SPAC|기업인수목적|ETF|ETN|레버리지|인버스|선물|채권|국고채|통안채|TIGER|KODEX|RISE|KBSTAR|ACE |ARIRANG|SOL |HANARO|KOSEF|KINDEX|TIMEFOLIO|PLUS |FOCUS |WOORI |TREX|SMART |QV |TRUE /i;
-  const uniq=[...new Map(out.filter(x=>!excluded.test(x.name)).map(x=>[`${x.market}-${x.code}`,x])).values()];
-  console.log('[universe]',{count:uniq.length,sources,errors});
-  if(!uniq.length) throw new Error(`네이버 종목목록 수집 0건 · ${errors.slice(-4).join(' / ')}`);
-  return {stocks:[...uniq.filter(x=>x.market==='KOSPI').slice(0,500),...uniq.filter(x=>x.market==='KOSDAQ').slice(0,1000)],errors,sources};
+  console.log('[universe]',{count:out.length,sources,errors});
+  if(!out.length) throw new Error(`네이버 종목목록 수집 0건 · ${errors.slice(-4).join(' / ')}`);
+  return {stocks:out,errors,sources};
 }
 
 export function yahooSymbol(code:string, market:'KOSPI'|'KOSDAQ'){ return `${code}.${market==='KOSPI'?'KS':'KQ'}`; }
