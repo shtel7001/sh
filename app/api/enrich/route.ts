@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import * as cheerio from 'cheerio';
 import { isAuthed, unauthorized } from '@/lib/guard';
 import { fetchInvestorFlow, type UniverseStock } from '@/lib/market';
 export const runtime='nodejs'; export const maxDuration=60;
@@ -11,8 +12,18 @@ function supplyScore(rows:{date:string;inst:number;foreign:number}[]|null){
   const f3=recent.slice(-3).every(x=>x.foreign>0),i3=recent.slice(-3).every(x=>x.inst>0);if(f3){s+=2;reasons.push('외국인 3일 연속 순매수');}if(i3){s+=1;reasons.push('기관 3일 연속 순매수');}
   return {score:Math.min(15,s),reasons};
 }
+async function publicNews(stock:UniverseStock){
+ try{
+ const q=encodeURIComponent(stock.name+' 주식');
+ const res=await fetch('https://news.google.com/rss/search?q='+q+'&hl=ko&gl=KR&ceid=KR:ko',{cache:'no-store',signal:AbortSignal.timeout(7000)});
+ if(!res.ok)throw Error('HTTP '+res.status);
+ const xml=await res.text();const $=cheerio.load(xml,{xmlMode:true});
+ const items=$('item').slice(0,15).map((_,el)=>({title:$(el).find('title').first().text().trim(),link:$(el).find('link').first().text().trim(),date:$(el).find('pubDate').first().text().trim()})).get().filter(x=>x.title&&x.link).map(x=>({...x,date:new Date(x.date).toISOString()}));
+ return {score:null,reasons:['공개 뉴스 검색 결과 (점수 미반영)'],items};
+ }catch{return {score:null,reasons:['공개 뉴스 조회 실패'],items:[]};}
+}
 async function news(stock:UniverseStock){
-  const id=process.env.NAVER_CLIENT_ID,secret=process.env.NAVER_CLIENT_SECRET; if(!id||!secret)return {score:null,reasons:['뉴스 API 미연결'],items:[]};
+  const id=process.env.NAVER_CLIENT_ID,secret=process.env.NAVER_CLIENT_SECRET; if(!id||!secret)return publicNews(stock);
   try{
     const q=encodeURIComponent(stock.name); const r=await fetch(`https://openapi.naver.com/v1/search/news.json?query=${q}&display=100&sort=date`,{headers:{'X-Naver-Client-Id':id,'X-Naver-Client-Secret':secret},cache:'no-store'}); if(!r.ok)throw new Error(String(r.status));
     const j=await r.json(); const seen=new Set<string>(); const items:any[]=(j.items||[]).map((x:any)=>({title:clean(x.title||''),link:x.originallink||x.link,date:new Date(x.pubDate).toISOString()})).filter((x:any)=>{const k=x.title.replace(/\s/g,'').slice(0,40);if(seen.has(k))return false;seen.add(k);return true;});
@@ -20,7 +31,7 @@ async function news(stock:UniverseStock){
     const rd=recent.length/5,pd=prev.length/20,ratio=pd?rd/pd:(recent.length?5:0); let s=0; const reasons:string[]=[]; if(recent.length>=5){s+=4;reasons.push(`최근 5일 관련뉴스 ${recent.length}건`);} if(ratio>=2){s+=5;reasons.push(`뉴스 발생속도 이전 구간 대비 ${ratio.toFixed(1)}배`);} if(ratio>=4)s+=4;
     const hits=eventWords.filter(w=>recent.some(x=>x.title.includes(w))); if(hits.length){s+=Math.min(4,hits.length);reasons.push(`이벤트 키워드 증가: ${hits.slice(0,5).join(', ')}`);} if(recent.length>=8)s+=3;
     return {score:Math.min(20,s),reasons,items:recent.slice(0,12)};
-  }catch{return {score:null,reasons:['뉴스 데이터 수집 실패'],items:[]};}
+  }catch{return publicNews(stock);}
 }
 export async function POST(req:Request){
   if(!await isAuthed())return unauthorized(); const body=await req.json().catch(()=>null); const stocks:UniverseStock[]=body?.stocks||[]; if(!Array.isArray(stocks)||stocks.length>20)return NextResponse.json({error:'최대 20종목'},{status:400});
