@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 // Reuse the existing permanent-login scope/hash so the user's old one-time code and token keep working.
 const SCOPE = 'gc-flow-accumulation-radar-20261002-v1';
-const ACCESS_CODE_HASH = '696db21cbff09ada1a61dce8499bd5de35f5f8a7f68a90ac294e091a131ca70f';
+const ACCESS_CODE_HASH = 'fdf8be63bfaa6b49555f4f893582e03d652cd8ce1a22a12d2e01bf2b41be63d7';
 const BASE = 'https://apis.data.go.kr/1220000/prlstMmUtPrviExpAcrs';
 const ITEMTRADE_ENDPOINT = 'https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList';
 const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
