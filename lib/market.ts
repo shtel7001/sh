@@ -134,7 +134,7 @@ async function fetchUniversePc(market:'KOSPI'|'KOSDAQ', target:number){
 }
 
 export async function fetchUniverse(){
-  const specs:[market:'KOSPI'|'KOSDAQ',target:number][]=[['KOSPI',500],['KOSDAQ',300]];
+  const specs:[market:'KOSPI'|'KOSDAQ',target:number][]=[['KOSPI',500],['KOSDAQ',1000]];
   const out:UniverseStock[]=[];
   const errors:string[]=[];
   const sources:string[]=[];
@@ -166,10 +166,12 @@ export async function fetchUniverse(){
     out.push(...rows.slice(0,target));
   }
 
-  const uniq=[...new Map(out.map(x=>[`${x.market}-${x.code}`,x])).values()];
+  // Exclude exchange-traded funds/notes, SPACs, leveraged/inverse and other non-operating securities.
+  const excluded=/스팩|스펙|SPAC|기업인수목적|ETF|ETN|레버리지|인버스|선물|채권|국고채|통안채|TIGER|KODEX|RISE|KBSTAR|ACE|ARIRANG|SOL|HANARO|KOSEF|KINDEX|TIMEFOLIO|PLUS|FOCUS|WOORI|TREX|SMART|마이티|히어로즈|파워|QV |TRUE |신한 레버리지|삼성 레버리지/i;
+  const uniq=[...new Map(out.filter(x=>!excluded.test(x.name)).map(x=>[`${x.market}-${x.code}`,x])).values()];
   console.log('[universe]',{count:uniq.length,sources,errors});
   if(!uniq.length) throw new Error(`네이버 종목목록 수집 0건 · ${errors.slice(-4).join(' / ')}`);
-  return {stocks:uniq.slice(0,800),errors,sources};
+  return {stocks:uniq,errors,sources};
 }
 
 export function yahooSymbol(code:string, market:'KOSPI'|'KOSDAQ'){ return `${code}.${market==='KOSPI'?'KS':'KQ'}`; }
