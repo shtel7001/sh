@@ -12,6 +12,7 @@
 @media(max-width:1050px){.grid{grid-template-columns:repeat(3,1fr)}.themegrid{grid-template-columns:repeat(2,minmax(230px,1fr))}.twocol{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:680px){.wrap{padding:9px}.hero{padding:18px;border-radius:16px}.hero h1{font-size:21px}.grid{grid-template-columns:repeat(2,1fr)}.themegrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.btn{flex:1}.card{padding:11px}.chart{height:280px}.seg,.toggle{padding:9px 10px}}
 </style>
+<link rel="stylesheet" href="/radar-unified-theme.css" data-radar-unified-theme="1">
 </head>
 <body>
 <div id="login" class="login"><div class="loginbox"><h2>개인 1회 인증</h2><div class="small">기존 개인 인증번호를 한 번 입력하면 이 브라우저에 서명 토큰만 저장됩니다. 토큰 자체에는 만료일을 두지 않아 브라우저 데이터를 지우거나 서버 비밀키가 바뀌기 전까지 계속 사용됩니다.</div><input id="authCode" inputmode="numeric" maxlength="12" placeholder="인증번호 입력"><button class="btn primary" style="width:100%" onclick="login()">인증하고 시작</button><div id="loginMsg" class="small" style="margin-top:8px"></div></div></div>
