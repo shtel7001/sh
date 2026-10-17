@@ -83,3 +83,54 @@
   .dateRangeGrid{grid-template-columns:1fr 18px 1fr;gap:6px}
   .dateRangeGrid input{padding:9px 7px;font-size:13px;min-height:44px}
 }
+
+/* Oct 17 reference-inspired full light palette: fix actual V4/V5 selectors */
+html{color-scheme:light}
+.v5app{max-width:none!important;width:100%;padding:7px 6px 32px!important;color:#173d47}
+.v5hero{background:linear-gradient(115deg,#e4f4ff,#e8fff3 55%,#fff1e1)!important;border:1px solid #c7e5ef!important;color:#173d47!important;border-radius:16px;padding:12px!important}
+.v5hero h1{color:#164b65!important;font-size:clamp(21px,3vw,30px);line-height:1.25}
+.v5hero p,.v5hero p b{color:#567a88!important;line-height:1.5}
+.v5flow{gap:6px;margin:9px 0}.v5flow article{background:#edf7ff!important;color:#173d47!important;min-height:76px;padding:9px;border-color:#cce6f7;border-radius:12px;box-shadow:none}
+.v5flow article:nth-of-type(4n+2){background:#eafbf2!important;border-color:#c5ead9}.v5flow article:nth-of-type(4n+3){background:#fff4e6!important;border-color:#f3dfbf}.v5flow article:nth-of-type(4n){background:#f4efff!important;border-color:#e4d7f8}
+.v5flow article b{background:#3e92e8}.v5flow article:nth-of-type(4n+2) b{background:#11a778}.v5flow article:nth-of-type(4n+3) b{background:#e89b37}.v5flow article:nth-of-type(4n) b{background:#9c63df}
+.v5flow article span{color:#1c4a57!important;margin-top:5px}.v5flow article small{color:#698595!important;margin-top:3px}
+.v5app .v2panel,.v5app .panel{background:#fff!important;color:#183f49!important;border:1px solid #d1e6f2!important;padding:11px!important;margin-top:8px;border-radius:14px}
+.v5app .panelHead{margin-bottom:9px}.v5app .panelHead h2{color:#194957!important;font-size:19px}.v5app .panelHead span{color:#738d9c!important}
+.v5app .marketChoice button,.v5app .quickRow button{background:#fff!important;color:#255567!important;border:1px solid #cbdfea!important;border-radius:11px;padding:9px 7px;font-size:14px}
+.v5app .marketChoice button.active,.v5app .quickRow button.active{background:linear-gradient(125deg,#e1f2ff,#e5fff2)!important;border-color:#57a7db!important;color:#1672a8!important;box-shadow:inset 0 0 0 1px #90d1ed!important}
+.v5app .quickRow{margin:10px 0 6px;gap:5px}.v5app .quickRow>b{color:#486d7e!important}
+.v5app .rangeBox{border-color:#d8e8f1!important;padding:10px 2px}.v5app .rangeBox>div span,.v5app .rangeBox small{color:#647f91!important}.v5app .rangeBox>div b{color:#217be4!important}
+.v5app .leadDesc{background:#eaf8ff!important;color:#456c7e!important;border:1px solid #cde7f4!important;border-radius:12px;padding:11px}.v5app .leadDesc b{color:#155f86!important}
+.v5app .dateRangeBox{background:#f0f8ff!important;border:1px solid #cde5f2!important;color:#254f62!important;padding:11px;border-radius:13px;margin:8px 0}
+.v5app .dateRangeBox.active{border-color:#4a9ee3!important;box-shadow:inset 0 0 0 1px #9dcaf1}
+.v5app .dateRangeTitle b{color:#1b526b!important}.v5app .dateRangeTitle small{color:#68869a!important}
+.v5app .dateRangeTitle button{background:#fff!important;color:#3176a8!important;border-color:#c5dce9!important}
+.v5app .dateRangeGrid label span{color:#4c7489!important}.v5app .dateRangeGrid input{background:#fff!important;color:#254f65!important;color-scheme:light!important;border-color:#bfd9e9!important}
+.v5app .dateRangeGrid i{color:#718b9b!important}.v5app .dateRangeBox p{color:#078e75!important}
+.v5app .dateRangeBox p.rangeError{color:#c63d57!important}
+.v5app .statsV2{gap:7px;margin-top:8px}
+.v5app .statsV2 article{background:#e8f5ff!important;border:1px solid #cce7fa!important;border-radius:14px;padding:11px!important;color:#2679c7!important}
+.v5app .statsV2 article:nth-child(4n+2){background:#e8faef!important;border-color:#c6ead5!important;color:#098e68!important}
+.v5app .statsV2 article:nth-child(4n+3){background:#fff3e6!important;border-color:#f2dfc5!important;color:#c47b20!important}
+.v5app .statsV2 article:nth-child(4n){background:#f2eaff!important;border-color:#e3d4f8!important;color:#8955c6!important}
+.v5app .statsV2 article span,.v5app .statsV2 article small{color:#678291!important;font-size:12px}
+.v5app .statsV2 article b{color:inherit!important;font-size:27px}
+.v5app .resultPanel{background:#fff!important;border:1px solid #cfe4f2!important;border-radius:15px;padding:0 10px 11px!important;margin-top:9px}
+.v5app .resultPanel .sectionTitle h2{color:#184f5d!important;font-size:21px}.v5app .resultPanel .sectionTitle p{color:#6a8493!important;font-size:12px;line-height:1.5}.v5app .resultPanel .sectionTitle span{color:#557b8c!important}
+.v5app .resultSearch{background:#fff!important;color:#204b5e!important;border:1px solid #c4dce9!important;padding:10px!important;border-radius:10px}
+.v5app .resultSearch::placeholder{color:#8b9daa!important}
+.v5app .v5results{gap:7px}.v5app .v5row{background:linear-gradient(130deg,#fff,#effbf5)!important;border:1px solid #bfe8d6!important;color:#19454d!important;box-shadow:0 2px 8px #266b6b0b;border-radius:14px}
+.v5app .v5row:nth-child(4n+2){background:linear-gradient(130deg,#fff,#eef7ff)!important;border-color:#c9e4f8!important}
+.v5app .v5row:nth-child(4n+3){background:linear-gradient(130deg,#fff,#fff5e8)!important;border-color:#f1dec4!important}
+.v5app .v5row:nth-child(4n){background:linear-gradient(130deg,#fff,#f5f0ff)!important;border-color:#e4d6f5!important}
+.v5app .v2rank{color:#287fc4!important;background:#e0f2ff;border-radius:11px;padding:8px 4px;text-align:center}
+.v5app .v5name b{color:#17414a!important}.v5app .v5name small{color:#708998!important}.v5app .v5name em{color:#257fcb!important}
+.v5app .v5metric strong{color:#168e72!important}.v5app .v5metric span,.v5app .v5metric small{color:#6b8595!important}
+.v5app .scoreGuide span{background:#edf7ff!important;color:#2d6178!important}
+.v5app .scoreGuide span:nth-child(4n+2){background:#eafaf1!important}.v5app .scoreGuide span:nth-child(4n+3){background:#fff4e6!important}.v5app .scoreGuide span:nth-child(4n){background:#f5efff!important}
+.v5app .checkRow{background:#f0f9ff!important;color:#255465!important}
+.v5app .sourceText,.v5app .progressText{color:#307a8c!important}
+.v5app .excelAction{background:#e6faef!important;color:#0a8d66!important;border-color:#bde8d1!important}
+.v5app .modal{background:#fff!important;color:#1a424d!important}.v5app .detailGrid>div{background:#f1f9ff!important;color:#204c5c!important}.v5app .componentList span{color:#56798b!important}
+.v5app .chartWrap{background:#fff!important}
+@media(max-width:680px){.v5app{padding:5px 5px 25px!important}.v5app .v5hero{padding:9px!important}.v5app .v5hero h1{font-size:21px}.v5app .v5flow article{padding:7px;min-height:70px}.v5app .v2panel{padding:9px!important}.v5app .marketChoice.v5choices{gap:6px}.v5app .marketChoice.v5choices button{padding:8px 4px;font-size:13px;min-height:40px}.v5app .quickRow button{padding:8px 5px}.v5app .statsV2{grid-template-columns:repeat(2,minmax(0,1fr))}.v5app .statsV2 article{padding:10px!important}.v5app .v5row{padding:9px 7px}.v5app .resultPanel .sectionTitle h2{font-size:18px}}
