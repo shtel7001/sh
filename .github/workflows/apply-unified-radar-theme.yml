@@ -1,0 +1,30 @@
+name: Apply unified radar theme
+on:
+  push:
+    paths:
+      - 'scripts/apply_radar_theme.py'
+      - 'public/radar-unified-theme.css'
+      - '.github/workflows/apply-unified-radar-theme.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python scripts/apply_radar_theme.py
+      - name: Commit dashboard styling
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/*.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply unified theme to all static radar pages"
+            git push
+          fi
