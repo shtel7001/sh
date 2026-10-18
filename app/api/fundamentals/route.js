@@ -1,60 +1,58 @@
-import {publicEps} from '../../../lib/public-eps.js';
 import {NextResponse} from 'next/server';
-export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=60;
-const raw=x=>{const v=x?.raw??x;return typeof v==='number'&&Number.isFinite(v)?v:null};
-async function fmpEps(symbol){
- const key=process.env.FMP_API_KEY;
- if(!key)return {epsError:'FMP_API_KEY 미등록 (Vercel 환경변수 설정 필요)'};
- try{
-  const u=new URL('https://financialmodelingprep.com/stable/earnings');
-  u.searchParams.set('symbol',symbol);u.searchParams.set('limit','16');u.searchParams.set('apikey',key);
-  const r=await fetch(u,{next:{revalidate:3600},signal:AbortSignal.timeout(8500)});
-  if(!r.ok)throw Error('FMP HTTP '+r.status+(r.status===402?' (요금제 접근 제한)':''));
-  const j=await r.json();
-  if(!Array.isArray(j))throw Error(j?.['Error Message']||j?.message||'FMP 응답 형식 오류');
-  const rows=j.filter(x=>x.symbol===symbol&&x.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const past=rows.filter(x=>typeof x.epsActual==='number').at(-1);
-  const future=rows.find(x=>x.date>new Date().toISOString().slice(0,10)&&x.epsActual==null&&typeof x.epsEstimated==='number');
-  const actual=past?.epsActual??null,estimate=future?.epsEstimated??null;
-  return {epsActual:actual,epsEstimate:estimate,epsGrowth:actual>0&&estimate!==null?(estimate/actual-1)*100:null,epsActualPeriod:past?.date||null,epsEstimatePeriod:future?.date||null,epsSource:'FMP',epsNote:'최근 발표 분기와 다음 발표 예정 분기 비교',epsError:actual===null||estimate===null?'발표 또는 향후 예상 EPS 미제공':null};
- }catch(e){return {epsError:'FMP: '+String(e.message||e)}}
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+export const maxDuration=60;
+const UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0 Safari/537.36';
+const raw=x=>{const v=x?.raw??x;if(v==null||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null};
+const headers={'User-Agent':UA,'Accept':'application/json,text/plain,*/*','Accept-Language':'en-US,en;q=0.9'};
+async function session(){
+ const r=await fetch('https://fc.yahoo.com',{headers,signal:AbortSignal.timeout(6500),cache:'no-store'});
+ const cookies=r.headers.get('set-cookie')||'';
+ const cookie=cookies.split(/,(?=\s*[^;,=]+\s*=)/).map(x=>x.trim().split(';')[0]).filter(Boolean).join('; ');
+ if(!cookie)throw Error('Yahoo cookie unavailable');
+ const cr=await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb',{headers:{...headers,Cookie:cookie},signal:AbortSignal.timeout(6500),cache:'no-store'});
+ if(!cr.ok)throw Error('Yahoo crumb HTTP '+cr.status);
+ const crumb=(await cr.text()).trim();
+ if(!crumb||crumb.startsWith('<'))throw Error('Yahoo crumb invalid');
+ return {cookie,crumb};
 }
-async function fundamentals(symbol){
- const fmp=await fmpEps(symbol);if(fmp.epsActual!==undefined&&fmp.epsActual!==null&&fmp.epsEstimate!==null)return {symbol,sector:null,...fmp};
- const fallback=await publicEps(symbol);
- if(fallback.epsActual!==null&&fallback.epsEstimate!==null)return {symbol,...fallback};
- const ua={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36'};
- try{
-  const cookieRes=await fetch('https://fc.yahoo.com',{headers:ua,signal:AbortSignal.timeout(7000)});
-  const cookie=cookieRes.headers.get('set-cookie')?.split(';')[0];
-  if(!cookie)throw Error('Yahoo 인증 쿠키 수신 실패');
-  const crumbRes=await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb',{headers:{...ua,Cookie:cookie},signal:AbortSignal.timeout(7000)});
-  if(!crumbRes.ok)throw Error('Yahoo 인증 토큰 조회 실패');
-  const crumb=await crumbRes.text();
-  if(!crumb||crumb.startsWith('<'))throw Error('Yahoo 인증 토큰 유효하지 않음');
-  const url='https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules=earningsHistory,earningsTrend,earnings,calendarEvents,defaultKeyStatistics,summaryDetail,financialData,assetProfile&crumb='+encodeURIComponent(crumb);
-  const r=await fetch(url,{headers:{...ua,Cookie:cookie},signal:AbortSignal.timeout(9000),next:{revalidate:1800}});
-  if(!r.ok)throw Error('Yahoo 재무 API HTTP '+r.status);
-  const j=await r.json(),v=j.quoteSummary?.result?.[0];
-  if(!v)throw Error('EPS 자료 없음');
-  const history=v.earningsHistory?.history||[];
-  const past=history.filter(x=>raw(x.epsActual)!==null).sort((a,b)=>String(a.quarter||'').localeCompare(String(b.quarter||''))).at(-1);
-  const trends=v.earningsTrend?.trend||[];
-  const next=trends.find(x=>x.period==='0q'&&raw(x.earningsEstimate?.avg)!==null)||trends.find(x=>x.period==='+1q');
-  const reported=raw(past?.epsActual),estimate=raw(next?.earningsEstimate?.avg);
-  const growth=reported!==null&&estimate!==null&&reported>0?(estimate/reported-1)*100:null;
-  const pastEstimate=raw(past?.epsEstimate);
-  const following=trends.find(x=>x.period==='+1q');
-  const nextNext=raw(following?.earningsEstimate?.avg);
-  const pe=raw(v.summaryDetail?.trailingPE)||raw(v.defaultKeyStatistics?.trailingPE);
-  const forwardPe=raw(v.summaryDetail?.forwardPE)||raw(v.defaultKeyStatistics?.forwardPE);
-  
-  return {symbol,sector:v.assetProfile?.sector||fallback.sector||null,epsActual:reported??fallback.epsActual,epsPastEstimate:pastEstimate??fallback.epsPastEstimate,epsEstimate:estimate??fallback.epsEstimate,epsNextEstimate:nextNext??fallback.epsNextEstimate,epsGrowth:growth??fallback.epsGrowth,epsActualPeriod:past?.quarter||fallback.epsActualPeriod||null,epsEstimatePeriod:next?.endDate||fallback.epsEstimatePeriod||null,epsNextPeriod:following?.endDate||fallback.epsNextPeriod||null,epsSource:'Yahoo Finance',epsMethod:v.earningsHistory?.defaultMethodology||null,epsReportDate:v.calendarEvents?.earnings?.earningsDate?.[0]||null,pe:pe??fallback.pe,forwardPe:forwardPe??fallback.forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:fallback.peDrop,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
- }catch(e){return {symbol,...fallback,epsError:[fallback.epsError,'Yahoo summary: '+String(e.message||e)].filter(Boolean).join(' / ')}}
+async function yahooSummary(symbol,auth){
+ const modules='earningsHistory,earningsTrend,summaryDetail,defaultKeyStatistics,assetProfile,price,quoteType';
+ let lastError='';
+ for(const host of ['query1','query2']){
+  try{
+   const url='https://'+host+'.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules='+modules+'&crumb='+encodeURIComponent(auth.crumb);
+   const r=await fetch(url,{headers:{...headers,Cookie:auth.cookie},signal:AbortSignal.timeout(10000),cache:'no-store'});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   const j=await r.json();const v=j?.quoteSummary?.result?.[0];
+   if(!v)throw Error(j?.quoteSummary?.error?.description||'Yahoo response missing');
+   return v;
+  }catch(e){lastError=String(e.message||e)}
+ }
+ throw Error(lastError);
+}
+function parse(symbol,v){
+ const history=[...(v.earningsHistory?.history||[])].filter(x=>raw(x.epsActual)!==null).sort((a,b)=>String(a.quarter||'').localeCompare(String(b.quarter||'')));
+ const past=history.at(-1);
+ const trend=v.earningsTrend?.trend||[];
+ const next=trend.find(x=>x.period==='0q')||trend.find(x=>x.period==='+1q');
+ const after=trend.find(x=>x.period==='+1q'&&x!==next)||trend.find(x=>x.period==='+2q');
+ const epsActual=raw(past?.epsActual),epsPastEstimate=raw(past?.epsEstimate),epsEstimate=raw(next?.earningsEstimate?.avg),epsNextEstimate=raw(after?.earningsEstimate?.avg);
+ const pe=raw(v.summaryDetail?.trailingPE)??raw(v.defaultKeyStatistics?.trailingPE);
+ const forwardPe=raw(v.summaryDetail?.forwardPE)??raw(v.defaultKeyStatistics?.forwardPE);
+ return {symbol,nameYahoo:v.price?.longName||v.price?.shortName||v.quoteType?.longName||v.quoteType?.shortName||null,sector:v.assetProfile?.sector||null,epsActual,epsPastEstimate,epsEstimate,epsNextEstimate,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNextPeriod:after?.endDate||null,pe,forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:null,epsGrowth:epsActual>0&&epsEstimate!==null?(epsEstimate/epsActual-1)*100:null,epsSource:'Yahoo Finance',epsError:epsActual===null||epsEstimate===null?'Yahoo 응답에 발표 또는 예상 EPS 필드 없음':null};
 }
 export async function POST(req){
- try{const b=await req.json(),symbols=[...new Set((Array.isArray(b.symbols)?b.symbols:[]).filter(x=>/^[A-Z0-9.-]{1,15}$/.test(x)))].slice(0,12);
- const items=await Promise.all(symbols.map(async symbol=>{try{return await fundamentals(symbol)}catch(e){return {symbol,epsActual:null,epsEstimate:null,epsSource:'조회 실패',epsError:'EPS 수집 예외: '+String(e.message||e)}}}));
- return NextResponse.json({ok:true,items});
+ try{
+  const b=await req.json();
+  const symbols=[...new Set((Array.isArray(b.symbols)?b.symbols:[]).filter(x=>typeof x==='string'&&/^[A-Z0-9.-]{1,15}$/.test(x)))].slice(0,12);
+  let auth,sessionError;
+  try{auth=await session()}catch(e){sessionError=String(e.message||e)}
+  const items=await Promise.all(symbols.map(async symbol=>{
+   if(!auth)return {symbol,epsSource:'Yahoo Finance',epsActual:null,epsEstimate:null,epsError:'Yahoo 인증 실패: '+sessionError};
+   try{return parse(symbol,await yahooSummary(symbol,auth))}
+   catch(e){return {symbol,epsSource:'Yahoo Finance',epsActual:null,epsEstimate:null,epsError:'Yahoo 조회 실패: '+String(e.message||e)}}
+  }));
+  return NextResponse.json({ok:true,source:'Yahoo Finance only',items});
  }catch(e){return NextResponse.json({ok:false,error:String(e.message||e)},{status:500})}
 }
