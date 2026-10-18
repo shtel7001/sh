@@ -19,7 +19,7 @@ async function fmpEps(symbol){
  }catch(e){return {epsError:'FMP: '+String(e.message||e)}}
 }
 async function fundamentals(symbol){
- const fmp=await fmpEps(symbol);if(fmp.epsActual!==undefined)return {symbol,sector:null,...fmp};
+ const fmp=await fmpEps(symbol);if(fmp.epsActual!==undefined&&fmp.epsActual!==null&&fmp.epsEstimate!==null)return {symbol,sector:null,...fmp};
  const ua={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36'};
  try{
   const cookieRes=await fetch('https://fc.yahoo.com',{headers:ua,signal:AbortSignal.timeout(7000)});
@@ -29,18 +29,24 @@ async function fundamentals(symbol){
   if(!crumbRes.ok)throw Error('Yahoo 인증 토큰 조회 실패');
   const crumb=await crumbRes.text();
   if(!crumb||crumb.startsWith('<'))throw Error('Yahoo 인증 토큰 유효하지 않음');
-  const url='https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules=earningsHistory,earningsTrend,assetProfile&crumb='+encodeURIComponent(crumb);
+  const url='https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules=earningsHistory,earningsTrend,earnings,calendarEvents,defaultKeyStatistics,summaryDetail,financialData,assetProfile&crumb='+encodeURIComponent(crumb);
   const r=await fetch(url,{headers:{...ua,Cookie:cookie},signal:AbortSignal.timeout(9000),next:{revalidate:1800}});
   if(!r.ok)throw Error('Yahoo 재무 API HTTP '+r.status);
   const j=await r.json(),v=j.quoteSummary?.result?.[0];
   if(!v)throw Error('EPS 자료 없음');
   const history=v.earningsHistory?.history||[];
-  const past=history.filter(x=>raw(x.epsActual)!==null).at(-1);
+  const past=history.filter(x=>raw(x.epsActual)!==null).sort((a,b)=>String(a.quarter||'').localeCompare(String(b.quarter||''))).at(-1);
   const trends=v.earningsTrend?.trend||[];
-  const next=trends.find(x=>x.period==='0q')||trends.find(x=>x.period==='+1q');
+  const next=trends.find(x=>x.period==='0q'&&raw(x.earningsEstimate?.avg)!==null)||trends.find(x=>x.period==='+1q');
   const reported=raw(past?.epsActual),estimate=raw(next?.earningsEstimate?.avg);
   const growth=reported!==null&&estimate!==null&&reported>0?(estimate/reported-1)*100:null;
-  return {symbol,sector:v.assetProfile?.sector||null,epsActual:reported,epsEstimate:estimate,epsGrowth:growth,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
+  const pastEstimate=raw(past?.epsEstimate);
+  const following=trends.find(x=>x.period==='+1q');
+  const nextNext=raw(following?.earningsEstimate?.avg);
+  const pe=raw(v.summaryDetail?.trailingPE)||raw(v.defaultKeyStatistics?.trailingPE);
+  const forwardPe=raw(v.summaryDetail?.forwardPE)||raw(v.defaultKeyStatistics?.forwardPE);
+  
+  return {symbol,sector:v.assetProfile?.sector||null,epsActual:reported,epsPastEstimate:pastEstimate,epsEstimate:estimate,epsNextEstimate:nextNext,epsGrowth:growth,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNextPeriod:following?.endDate||null,epsSource:'Yahoo Finance',epsMethod:v.earningsHistory?.defaultMethodology||null,epsReportDate:v.calendarEvents?.earnings?.earningsDate?.[0]||null,pe,forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:null,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
  }catch(e){return {symbol,sector:null,epsActual:null,epsEstimate:null,epsGrowth:null,epsError:fmp.epsError+' / Yahoo: '+String(e.message||e)}}
 }
 export async function POST(req){
