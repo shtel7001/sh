@@ -15,17 +15,22 @@ async function bars(symbol){
  }
  throw Error('일봉 데이터 부족');
 }
-function detect(a,days,tol,breakPct,period){
+function detect(a,days,tol,breakPct,period,mode){
  const n=a.length,ma=a.slice(-period).reduce((s,x)=>s+x.c,0)/period;
  const old=a.slice(Math.max(0,n-days-1),n-16);
  if(old.length<15)return null;
  const prior=Math.min(...old.map(x=>x.l));
  const recent=a.slice(n-16,n-1),low=Math.min(...recent.map(x=>x.l));
  const peak=Math.max(...a.slice(Math.max(0,n-days-1),n-1).map(x=>x.h));
- const last=a[n-1],distance=(last.l/ma-1)*100;
- if(low>prior*(1-breakPct/100)||Math.abs(distance)>tol||last.c<ma*(1-tol/100))return null;
+ const last=a[n-1],distance=(last.c/ma-1)*100;
+ const nearNow=Math.abs(distance)<=tol||Math.abs((last.l/ma-1)*100)<=tol;
+ const touchedRecently=a.slice(-6).some(x=>x.l<=ma*(1+tol/100)&&x.h>=ma*(1-tol/100));
+ const broken=low<=prior*(1-breakPct/100);
+ if(mode==='strict'){if(!broken||!nearNow||last.c<ma*(1-tol/100))return null;}
+ else if(mode==='support'){if(!nearNow&&!touchedRecently)return null;}
+ else {if(!nearNow)return null;}
  const score=Math.round(Math.max(0,100-Math.abs(distance)*12));
- return {current:last.c,priorHigh:peak,highGapPct:(last.c/peak-1)*100,ma150:a.slice(-150).reduce((v,p)=>v+p.c,0)/150,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-200).map((x,i)=>[i,x.c]),sparkMA150:a.slice(-200).map((x,i)=>n-200+i>=149?a.slice(n-200+i-149,n-200+i+1).reduce((v,p)=>v+p.c,0)/150:null),sparkSupport:a.slice(-200).map((x,i)=>n-200+i>=period-1?a.slice(n-200+i-period+1,n-200+i+1).reduce((v,p)=>v+p.c,0)/period:null),supportPeriod:period,supportMA:ma,ma20:a.slice(-20).reduce((s,x)=>s+x.c,0)/20,ma50:a.slice(-50).reduce((s,x)=>s+x.c,0)/50,ma100:a.slice(-100).reduce((s,x)=>s+x.c,0)/100,reason:'전저점 이탈 후 '+period+'일선 접근'};
+ return {current:last.c,priorHigh:peak,highGapPct:(last.c/peak-1)*100,ma150:a.slice(-150).reduce((v,p)=>v+p.c,0)/150,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-200).map((x,i)=>[i,x.c]),sparkMA150:a.slice(-200).map((x,i)=>n-Math.min(n,200)+i>=149?a.slice(n-Math.min(n,200)+i-149,n-Math.min(n,200)+i+1).reduce((v,p)=>v+p.c,0)/150:null),sparkSupport:a.slice(-200).map((x,i)=>n-Math.min(n,200)+i>=period-1?a.slice(n-Math.min(n,200)+i-period+1,n-Math.min(n,200)+i+1).reduce((v,p)=>v+p.c,0)/period:null),supportPeriod:period,supportMA:ma,ma20:a.slice(-20).reduce((s,x)=>s+x.c,0)/20,ma50:a.slice(-50).reduce((s,x)=>s+x.c,0)/50,ma100:a.slice(-100).reduce((s,x)=>s+x.c,0)/100,reason:(broken?'전저점 이탈 · ':'')+period+'일선 '+(nearNow?'접근':'최근 6거래일 터치')};
 }
 export async function POST(req){
  try{
@@ -34,7 +39,8 @@ export async function POST(req){
   const tol=Math.max(.5,Math.min(15,Number(b.proximity)||3));
   const bp=Math.max(.1,Math.min(15,Number(b.breakPct)||1));
   const period=[20,50,100,150].includes(Number(b.supportPeriod))?Number(b.supportPeriod):150;
-  const z=await Promise.all(stocks.map(async s=>{try{const v=detect(await bars(s.yahoo||s.code),days,tol,bp,period);return {hit:v?{...s,...v}:null}}catch(e){return {error:{code:s.code,error:String(e.message||e)}}}}));
+  const mode=['strict','support','near'].includes(b.mode)?b.mode:'support';
+  const z=await Promise.all(stocks.map(async s=>{try{const v=detect(await bars(s.yahoo||s.code),days,tol,bp,period,mode);return {hit:v?{...s,...v}:null}}catch(e){return {error:{code:s.code,error:String(e.message||e)}}}}));
   return NextResponse.json({ok:true,hits:z.filter(x=>x.hit).map(x=>x.hit),errors:z.filter(x=>x.error).map(x=>x.error)});
  }catch(e){return NextResponse.json({ok:false,error:String(e.message||e)},{status:500})}
 }
