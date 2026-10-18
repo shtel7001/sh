@@ -50,11 +50,11 @@ async function fundamentals(symbol){
   const forwardPe=raw(v.summaryDetail?.forwardPE)||raw(v.defaultKeyStatistics?.forwardPE);
   
   return {symbol,sector:v.assetProfile?.sector||fallback.sector||null,epsActual:reported??fallback.epsActual,epsPastEstimate:pastEstimate??fallback.epsPastEstimate,epsEstimate:estimate??fallback.epsEstimate,epsNextEstimate:nextNext??fallback.epsNextEstimate,epsGrowth:growth??fallback.epsGrowth,epsActualPeriod:past?.quarter||fallback.epsActualPeriod||null,epsEstimatePeriod:next?.endDate||fallback.epsEstimatePeriod||null,epsNextPeriod:following?.endDate||fallback.epsNextPeriod||null,epsSource:'Yahoo Finance',epsMethod:v.earningsHistory?.defaultMethodology||null,epsReportDate:v.calendarEvents?.earnings?.earningsDate?.[0]||null,pe:pe??fallback.pe,forwardPe:forwardPe??fallback.forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:fallback.peDrop,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
- }catch(e){return {symbol,...fallback,epsError:fallback.epsError||('Yahoo summary: '+String(e.message||e))}}
+ }catch(e){return {symbol,...fallback,epsError:[fallback.epsError,'Yahoo summary: '+String(e.message||e)].filter(Boolean).join(' / ')}}
 }
 export async function POST(req){
  try{const b=await req.json(),symbols=[...new Set((Array.isArray(b.symbols)?b.symbols:[]).filter(x=>/^[A-Z0-9.-]{1,15}$/.test(x)))].slice(0,12);
- const items=await Promise.all(symbols.map(fundamentals));
+ const items=await Promise.all(symbols.map(async symbol=>{try{return await fundamentals(symbol)}catch(e){return {symbol,epsActual:null,epsEstimate:null,epsSource:'조회 실패',epsError:'EPS 수집 예외: '+String(e.message||e)}}}));
  return NextResponse.json({ok:true,items});
  }catch(e){return NextResponse.json({ok:false,error:String(e.message||e)},{status:500})}
 }
