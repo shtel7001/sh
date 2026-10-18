@@ -25,7 +25,7 @@ function detect(a,days,tol,breakPct,period){
  const last=a[n-1],distance=(last.l/ma-1)*100;
  if(low>prior*(1-breakPct/100)||Math.abs(distance)>tol||last.c<ma*(1-tol/100))return null;
  const score=Math.round(Math.max(0,100-Math.abs(distance)*12));
- return {current:last.c,priorHigh:peak,highGapPct:(last.c/peak-1)*100,ma150:ma,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-200).map((x,i)=>[i,x.c]),sparkMA150:a.slice(-200).map((x,i)=>n-200+i>=149?a.slice(n-200+i-149,n-200+i+1).reduce((v,p)=>v+p.c,0)/150:null),sparkSupport:a.slice(-200).map((x,i)=>n-200+i>=period-1?a.slice(n-200+i-period+1,n-200+i+1).reduce((v,p)=>v+p.c,0)/period:null),supportPeriod:period,supportMA:ma,ma20:a.slice(-20).reduce((s,x)=>s+x.c,0)/20,ma50:a.slice(-50).reduce((s,x)=>s+x.c,0)/50,ma100:a.slice(-100).reduce((s,x)=>s+x.c,0)/100,reason:'전저점 이탈 후 '+period+'일선 접근'};
+ return {current:last.c,priorHigh:peak,highGapPct:(last.c/peak-1)*100,ma150:a.slice(-150).reduce((v,p)=>v+p.c,0)/150,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-200).map((x,i)=>[i,x.c]),sparkMA150:a.slice(-200).map((x,i)=>n-200+i>=149?a.slice(n-200+i-149,n-200+i+1).reduce((v,p)=>v+p.c,0)/150:null),sparkSupport:a.slice(-200).map((x,i)=>n-200+i>=period-1?a.slice(n-200+i-period+1,n-200+i+1).reduce((v,p)=>v+p.c,0)/period:null),supportPeriod:period,supportMA:ma,ma20:a.slice(-20).reduce((s,x)=>s+x.c,0)/20,ma50:a.slice(-50).reduce((s,x)=>s+x.c,0)/50,ma100:a.slice(-100).reduce((s,x)=>s+x.c,0)/100,reason:'전저점 이탈 후 '+period+'일선 접근'};
 }
 export async function POST(req){
  try{
