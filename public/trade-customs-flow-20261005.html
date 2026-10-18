@@ -82,6 +82,37 @@ html,body{background:#edf7ff!important;color:#183b35!important}
  .nav button{padding:8px 11px!important}
 }
 
+
+/* 2026-10-18 readable mobile layout and natural document scrolling */
+html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;overscroll-behavior-y:auto!important}
+.top{position:relative!important;top:auto!important;z-index:10}
+.wrap,.topin{max-width:none!important;width:100%!important;padding-left:6px!important;padding-right:6px!important}
+.panel,.hero{width:100%;max-width:100%;margin-left:0;margin-right:0}
+.panelHead h3,.brand h1,.hero h2{color:#173b61!important}
+.panelHead p,.brand p,.hero p,.field label,.sourceNote,.foot,.status,.kpi span,.kpi em,.metric span,.item .name,.table th,.table td,.chip,.pill{color:#34536d!important;opacity:1!important}
+.panelHead p,.field label,.status,.sourceNote,.table th,.table td{font-size:max(12px,1em)}
+.field input,.field select{color:#193a5b!important;background:#fff!important;border:1px solid #b5cde2!important}
+.btn:not(.primary),.nav button{color:#174b77!important}
+.tableWrap{max-height:none!important;overflow-x:auto!important;overflow-y:visible!important}
+.table th{position:static!important;background:#e8f3ff!important;color:#234b73!important}
+.table td{background:#fff!important}
+.kpi,.item,.metric{color:#173b61!important}
+.kpi b,.item .amt,.metric b{color:#163b60!important}
+@media(max-width:720px){
+ .wrap,.topin{padding-left:5px!important;padding-right:5px!important}
+ .hero{padding:14px 11px!important;margin-top:8px!important}
+ .panelHead{padding:12px 9px 9px!important}
+ .controls,.grid,.kpis{gap:7px!important;padding-left:9px!important;padding-right:9px!important}
+ .actionrow{padding-left:9px!important;padding-right:9px!important}
+ .field label{font-size:12px!important}
+ .field input,.field select{min-width:0!important;font-size:14px!important}
+ .nav button{font-size:12px!important}
+ .item{padding:10px!important;min-width:0}
+ .item .name{font-size:13px!important}
+ .item .amt{font-size:17px!important}
+ .metric span{font-size:11px!important}
+ .metric b{font-size:12px!important}
+}
 </style>
 <link rel="stylesheet" href="/radar-unified-theme.css" data-radar-unified-theme="1">
 </head>
