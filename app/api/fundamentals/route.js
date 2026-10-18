@@ -1,3 +1,4 @@
+import {publicEps} from '../../../lib/public-eps.js';
 import {NextResponse} from 'next/server';
 export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=60;
 const raw=x=>{const v=x?.raw??x;return typeof v==='number'&&Number.isFinite(v)?v:null};
@@ -20,6 +21,8 @@ async function fmpEps(symbol){
 }
 async function fundamentals(symbol){
  const fmp=await fmpEps(symbol);if(fmp.epsActual!==undefined&&fmp.epsActual!==null&&fmp.epsEstimate!==null)return {symbol,sector:null,...fmp};
+ const fallback=await publicEps(symbol);
+ if(fallback.epsActual!==null&&fallback.epsEstimate!==null)return {symbol,...fallback};
  const ua={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36'};
  try{
   const cookieRes=await fetch('https://fc.yahoo.com',{headers:ua,signal:AbortSignal.timeout(7000)});
@@ -46,8 +49,8 @@ async function fundamentals(symbol){
   const pe=raw(v.summaryDetail?.trailingPE)||raw(v.defaultKeyStatistics?.trailingPE);
   const forwardPe=raw(v.summaryDetail?.forwardPE)||raw(v.defaultKeyStatistics?.forwardPE);
   
-  return {symbol,sector:v.assetProfile?.sector||null,epsActual:reported,epsPastEstimate:pastEstimate,epsEstimate:estimate,epsNextEstimate:nextNext,epsGrowth:growth,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNextPeriod:following?.endDate||null,epsSource:'Yahoo Finance',epsMethod:v.earningsHistory?.defaultMethodology||null,epsReportDate:v.calendarEvents?.earnings?.earningsDate?.[0]||null,pe,forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:null,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
- }catch(e){return {symbol,sector:null,epsActual:null,epsEstimate:null,epsGrowth:null,epsError:fmp.epsError+' / Yahoo: '+String(e.message||e)}}
+  return {symbol,sector:v.assetProfile?.sector||fallback.sector||null,epsActual:reported??fallback.epsActual,epsPastEstimate:pastEstimate??fallback.epsPastEstimate,epsEstimate:estimate??fallback.epsEstimate,epsNextEstimate:nextNext??fallback.epsNextEstimate,epsGrowth:growth??fallback.epsGrowth,epsActualPeriod:past?.quarter||fallback.epsActualPeriod||null,epsEstimatePeriod:next?.endDate||fallback.epsEstimatePeriod||null,epsNextPeriod:following?.endDate||fallback.epsNextPeriod||null,epsSource:'Yahoo Finance',epsMethod:v.earningsHistory?.defaultMethodology||null,epsReportDate:v.calendarEvents?.earnings?.earningsDate?.[0]||null,pe:pe??fallback.pe,forwardPe:forwardPe??fallback.forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:fallback.peDrop,epsNote:growth===null?'비교 불가':'최근 발표 분기 대비 다음 미발표 분기 예상 EPS 변화율'};
+ }catch(e){return {symbol,...fallback,epsError:fallback.epsError||('Yahoo summary: '+String(e.message||e))}}
 }
 export async function POST(req){
  try{const b=await req.json(),symbols=[...new Set((Array.isArray(b.symbols)?b.symbols:[]).filter(x=>/^[A-Z0-9.-]{1,15}$/.test(x)))].slice(0,12);
