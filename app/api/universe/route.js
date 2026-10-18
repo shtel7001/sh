@@ -8,6 +8,9 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const SP500_CSV = 'https://raw.githubusercontent.com/datasets/s-and-p-500-constituents/main/data/constituents.csv';
 const SP500_WIKI = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies';
 
+const sectors={'Financials':'금융','Information Technology':'정보기술','Health Care':'헬스케어','Industrials':'산업재','Consumer Discretionary':'경기소비재','Consumer Staples':'필수소비재','Communication Services':'커뮤니케이션','Energy':'에너지','Utilities':'유틸리티','Materials':'소재','Real Estate':'부동산','Technology':'정보기술','Finance':'금융','Healthcare':'헬스케어','Consumer Cyclical':'경기소비재','Consumer Defensive':'필수소비재','Basic Materials':'소재','Communication':'커뮤니케이션'};
+const names={'AAPL':'애플','MSFT':'마이크로소프트','NVDA':'엔비디아','AMZN':'아마존','GOOGL':'알파벳','GOOG':'알파벳','META':'메타 플랫폼스','TSLA':'테슬라','AMD':'AMD','AVGO':'브로드컴','NFLX':'넷플릭스','PLTR':'팔란티어','INTC':'인텔','MU':'마이크론 테크놀로지','JPM':'JP모건 체이스','BAC':'뱅크오브아메리카','WFC':'웰스파고','C':'씨티그룹','BPOP':'포퓰러','TFSL':'TFS 파이낸셜','CINF':'신시내티 파이낸셜','EWBC':'이스트웨스트 뱅코프','CWST':'카셀라 웨이스트 시스템스','V':'비자','MA':'마스터카드','UNH':'유나이티드헬스','JNJ':'존슨앤드존슨','XOM':'엑슨모빌','CVX':'셰브론','COST':'코스트코','WMT':'월마트','HD':'홈디포','PG':'프록터앤드갬블','KO':'코카콜라','PEP':'펩시코','DIS':'월트디즈니','UBER':'우버','ORCL':'오라클','CRM':'세일즈포스','ADBE':'어도비','QCOM':'퀄컴','TXN':'텍사스 인스트루먼트','AMAT':'어플라이드 머티어리얼즈','LRCX':'램리서치','KLAC':'KLA','SNOW':'스노우플레이크','SHOP':'쇼피파이'};
+const sectorKo=s=>sectors[String(s||'').trim()]||String(s||'미분류');
 function normSymbol(s){ return String(s||'').trim().toUpperCase().replace(/[./\s]+/g,'-'); }
 function parseCSV(text){
   const rows=[]; let row=[], f='', q=false;
@@ -75,10 +78,10 @@ async function buildNasdaq500(){
     const marketCap=parseCap(r.marketCap); if(!marketCap) continue;
     const name=String(r.name||raw); if(bad.test(name)) continue;
     const code=normSymbol(raw); if(seen.has(code)) continue; seen.add(code);
-    out.push({code,name:cleanName(name)||code,marketCap});
+    out.push({code,name:cleanName(name)||code,marketCap,sector:sectorKo(r.sector||r.industry)});
   }
   out.sort((a,b)=>b.marketCap-a.marketCap);
-  return out.slice(0,500).map((x,i)=>({rank:i+1,code:x.code,name:x.name,current:null,marketCapB:x.marketCap/1e9,market:'NASDAQ',yahoo:x.code}));
+  return out.slice(0,500).map((x,i)=>({rank:i+1,code:x.code,name:x.name,nameKo:names[x.code]||null,sector:x.sector,current:null,marketCapB:x.marketCap/1e9,market:'NASDAQ',yahoo:x.code}));
 }
 
 async function buildSP500(){
@@ -95,14 +98,15 @@ async function buildSP500(){
   const head=rows[0].map(h=>h.trim().toLowerCase());
   const iSym=head.indexOf('symbol'); let iName=head.indexOf('security'); if(iName<0) iName=head.indexOf('name');
   if(iSym<0) throw new Error('S&P 500 CSV format changed');
+  const iSector=head.indexOf('gics sector');
   const seen=new Set(), out=[];
   for(const r of rows.slice(1)){
     const code=normSymbol(r[iSym]); if(!code||seen.has(code)) continue; seen.add(code);
     const marketCap=capMap.get(code)||0;
-    out.push({code,name:(iName>=0&&r[iName])||code,marketCap});
+    out.push({code,name:(iName>=0&&r[iName])||code,marketCap,sector:sectorKo(iSector>=0?r[iSector]:'')});
   }
   out.sort((a,b)=>b.marketCap-a.marketCap);
-  return out.map((x,i)=>({rank:i+1,code:x.code,name:x.name,current:null,marketCapB:x.marketCap?x.marketCap/1e9:null,market:'S&P 500',yahoo:x.code}));
+  return out.map((x,i)=>({rank:i+1,code:x.code,name:x.name,nameKo:names[x.code]||null,sector:x.sector,current:null,marketCapB:x.marketCap?x.marketCap/1e9:null,market:'S&P 500',yahoo:x.code}));
 }
 
 export async function GET(req){
