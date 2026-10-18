@@ -21,10 +21,11 @@ function detect(a,days,tol,breakPct){
  if(old.length<15)return null;
  const prior=Math.min(...old.map(x=>x.l));
  const recent=a.slice(n-16,n-1),low=Math.min(...recent.map(x=>x.l));
+ const peak=Math.max(...a.slice(Math.max(0,n-days-1),n-1).map(x=>x.h));
  const last=a[n-1],distance=(last.l/ma-1)*100;
  if(low>prior*(1-breakPct/100)||Math.abs(distance)>tol||last.c<ma*(1-tol/100))return null;
  const score=Math.round(Math.max(0,100-Math.abs(distance)*12));
- return {current:last.c,ma150:ma,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-60).map((x,i)=>[i,x.c]),reason:'전저점 이탈 후 150일선 접근'};
+ return {current:last.c,priorHigh:peak,highGapPct:(last.c/peak-1)*100,ma150:ma,priorLow:prior,newLow:low,distance,breakdownPct:(low/prior-1)*100,score,spark:a.slice(-60).map((x,i)=>[i,x.c]),reason:'전저점 이탈 후 150일선 접근'};
 }
 export async function POST(req){
  try{
