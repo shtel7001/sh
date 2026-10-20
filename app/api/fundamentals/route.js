@@ -17,7 +17,7 @@ async function session(){
  return {cookie,crumb};
 }
 async function yahooSummary(symbol,auth){
- const modules='earningsHistory,earningsTrend,summaryDetail,defaultKeyStatistics,assetProfile,price,quoteType';
+ const modules='earningsHistory,earningsTrend,summaryDetail,defaultKeyStatistics,financialData,assetProfile,price,quoteType';
  let lastError='';
  for(const host of ['query1','query2']){
   try{
@@ -38,9 +38,10 @@ function parse(symbol,v){
  const next=trend.find(x=>x.period==='0q')||trend.find(x=>x.period==='+1q');
  const after=trend.find(x=>x.period==='+1q'&&x!==next)||trend.find(x=>x.period==='+2q');
  const epsActual=raw(past?.epsActual),epsPastEstimate=raw(past?.epsEstimate),epsEstimate=raw(next?.earningsEstimate?.avg),epsNextEstimate=raw(after?.earningsEstimate?.avg);
+ const targetPrice=raw(v.financialData?.targetMeanPrice);
  const pe=raw(v.summaryDetail?.trailingPE)??raw(v.defaultKeyStatistics?.trailingPE);
  const forwardPe=raw(v.summaryDetail?.forwardPE)??raw(v.defaultKeyStatistics?.forwardPE);
- return {symbol,nameYahoo:v.price?.longName||v.price?.shortName||v.quoteType?.longName||v.quoteType?.shortName||null,sector:v.assetProfile?.sector||null,epsActual,epsPastEstimate,epsEstimate,epsNextEstimate,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNextPeriod:after?.endDate||null,pe,forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:null,epsGrowth:epsActual>0&&epsEstimate!==null?(epsEstimate/epsActual-1)*100:null,epsSource:'Yahoo Finance',epsError:epsActual===null||epsEstimate===null?'Yahoo 응답에 발표 또는 예상 EPS 필드 없음':null};
+ return {symbol,nameYahoo:v.price?.longName||v.price?.shortName||v.quoteType?.longName||v.quoteType?.shortName||null,sector:v.assetProfile?.sector||null,targetPrice,targetPriceSource:targetPrice!==null?'Yahoo Finance 애널리스트 평균 목표가':null,epsActual,epsPastEstimate,epsEstimate,epsNextEstimate,epsActualPeriod:past?.quarter||null,epsEstimatePeriod:next?.endDate||null,epsNextPeriod:after?.endDate||null,pe,forwardPe,peDrop:pe>0&&forwardPe>0?(1-forwardPe/pe)*100:null,epsGrowth:epsActual>0&&epsEstimate!==null?(epsEstimate/epsActual-1)*100:null,epsSource:'Yahoo Finance',epsError:epsActual===null||epsEstimate===null?'Yahoo 응답에 발표 또는 예상 EPS 필드 없음':null};
 }
 export async function POST(req){
  try{
