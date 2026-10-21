@@ -32,7 +32,7 @@ async function news(stock:UniverseStock){
   if(!id||!secret)return {newsVelocityScore:null,keywordNoveltyScore:null,sourceDiversityScore:null,themeConfirmationScore:null,reasons:['뉴스 API 미연결'],items:[],keywords:[]};
   try{
     const q=encodeURIComponent(stock.name);
-    const r=await fetch(`https://openapi.naver.com/v1/search/news.json?query=${q}&display=100&sort=date`,{headers:{'X-Naver-Client-Id':id,'X-Naver-Client-Secret':secret},cache:'no-store'});
+    const r=await fetch(`https://naverapihub.apigw.ntruss.com/search/v1/news?query=${q}&display=100&sort=date`,{headers:{'X-NCP-APIGW-API-KEY-ID':id,'X-NCP-APIGW-API-KEY':secret},cache:'no-store'});
     if(!r.ok){console.error('[V5 Naver News] HTTP',r.status,'stock',stock.code);throw new Error(`NAVER_HTTP_${r.status}`);}
     const j=await r.json(); const seen=new Set<string>();
     const items:any[]=(j.items||[]).map((x:any)=>({title:clean(x.title||''),link:x.originallink||x.link,date:Number.isFinite(Date.parse(x.pubDate))?new Date(x.pubDate).toISOString():'',source:host(x.originallink||x.link)})).filter((x:any)=>{const k=x.title.replace(/\s/g,'').slice(0,45);if(!k||seen.has(k))return false;seen.add(k);return true;});
