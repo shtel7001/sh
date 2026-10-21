@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>주식시장 뉴스 검색 지휘실</title>
-<meta name="theme-color" content="#0b1020">
+<meta name="theme-color" content="#edf8ff">
 <style>
 :root{--bg:#08101e;--panel:#101a2d;--panel2:#15223a;--line:#263653;--txt:#edf3ff;--muted:#9fb0ca;--accent:#57a6ff;--good:#4ed3a4;--warn:#ffca57;--bad:#ff6b78}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#07101e,#0c1423 42%,#09111d);color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
@@ -26,8 +26,15 @@ textarea{min-height:210px;resize:vertical;line-height:1.5}.btn{border:1px solid 
 #auth{position:fixed;inset:0;background:rgba(3,7,14,.96);display:flex;align-items:center;justify-content:center;z-index:99;padding:20px}.authbox{width:min(410px,100%);background:#101a2b;border:1px solid #314663;border-radius:18px;padding:22px;box-shadow:0 30px 80px #000b}.authbox h2{margin:0 0 8px}.authbox p{color:#9fb0ca;line-height:1.55;font-size:13px}.hidden{display:none!important}
 .notice{border-left:3px solid var(--accent);padding:8px 10px;background:#0b1728;color:#bbcae0;font-size:12px;line-height:1.5;border-radius:8px;margin-top:10px}
 @media(max-width:850px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:repeat(4,1fr)}.dest{grid-template-columns:repeat(2,1fr)}.wrap{padding:10px}.hero h1{font-size:21px}}
+
+/* Bright compact responsive theme — presentation only */
+:root{--bg:#eff8ff;--panel:#ffffff;--panel2:#edf5ff;--line:#b8d3e9;--txt:#101b2b;--muted:#42546a;--accent:#2875cb;--good:#227e61;--warn:#a76714;--bad:#a63c49}
+html,body{background:#edf8ff!important;color:#101b2b!important}body{background:linear-gradient(135deg,#edf9ff,#f2f0ff 50%,#eefcf2)!important}
+.wrap{max-width:none!important;width:100%;padding:5px!important}.hero,.card,.authbox{background:#fff!important;color:#101b2b!important;border:1px solid #b9d5eb!important;box-shadow:0 2px 9px #4277a51c!important;border-radius:13px!important}.hero{background:linear-gradient(110deg,#e4f5ff,#f0edff,#e9faef)!important;padding:12px!important}.hero h1{font-size:clamp(19px,3vw,25px);overflow-wrap:anywhere}.hero p,.small,.label,.notice,.authbox p{color:#364b60!important}.grid{gap:8px!important;margin-top:8px!important}.card{padding:10px!important}.card h2{color:#142638!important}.row,.toolbar{gap:5px!important}.btn,.pill,.cat,.links a{color:#10263a!important;border:1px solid #a8c8e4!important;background:#e4f1ff!important;border-radius:8px!important;padding:7px 9px!important}.primary{background:#c5e3ff!important}.good{background:#d4f4df!important}.warn{background:#ffedcc!important}.danger{background:#ffe0e1!important}.ghost{background:#eee9ff!important}
+input[type=text],input[type=password],textarea,select{background:#fff!important;color:#101b2b!important;border:1px solid #aac7df!important;padding:8px!important}input::placeholder,textarea::placeholder{color:#66778a!important}.slots{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}.slot{min-width:0;background:#e7f4ff!important;border:1px solid #b4d1e9!important;color:#142538!important;padding:8px 3px!important}.slot:nth-child(4n+2){background:#eaf8ed!important}.slot:nth-child(4n+3){background:#f0ebff!important}.slot:nth-child(4n){background:#fff1e2!important}.slot.active{background:#b8dfff!important;border:2px solid #2875cb!important;color:#0c2540!important}.slot span,.slot b{color:#263d52!important}.dest{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}.dest label{background:#f1f8ff!important;color:#15293d!important;border-color:#c4d9eb!important}.notice{background:#eaf4ff!important}.pillbox{max-height:300px}.pill{white-space:normal;text-align:left}.catbar{flex-wrap:wrap;overflow:visible}.result{background:#f5faff!important;color:#13263a!important;border-color:#c4d9e9!important}.links a{background:#e6f1ff!important;color:#12304b!important}.stat span{background:#e9f5ff!important;color:#263e54!important;border-color:#c7dfef!important}#auth{background:#eaf5ffed!important}
+@media(max-width:850px){.grid{grid-template-columns:minmax(0,1fr)!important}.wrap{padding:4px!important}.hero,.card{width:100%;min-width:0}.hero h1{font-size:20px!important}.slot b{font-size:12px!important}.slot span{font-size:11px!important}}
 </style>
-<link rel="stylesheet" href="/radar-unified-theme.css" data-radar-unified-theme="1">
+
 </head>
 <body>
 <div id="auth">
