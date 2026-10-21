@@ -33,9 +33,9 @@ async function news(stock:UniverseStock){
   try{
     const q=encodeURIComponent(stock.name);
     const r=await fetch(`https://openapi.naver.com/v1/search/news.json?query=${q}&display=100&sort=date`,{headers:{'X-Naver-Client-Id':id,'X-Naver-Client-Secret':secret},cache:'no-store'});
-    if(!r.ok)throw new Error(String(r.status));
+    if(!r.ok){console.error('[V5 Naver News] HTTP',r.status,'stock',stock.code);throw new Error(`NAVER_HTTP_${r.status}`);}
     const j=await r.json(); const seen=new Set<string>();
-    const items:any[]=(j.items||[]).map((x:any)=>({title:clean(x.title||''),link:x.originallink||x.link,date:new Date(x.pubDate).toISOString(),source:host(x.originallink||x.link)})).filter((x:any)=>{const k=x.title.replace(/\s/g,'').slice(0,45);if(!k||seen.has(k))return false;seen.add(k);return true;});
+    const items:any[]=(j.items||[]).map((x:any)=>({title:clean(x.title||''),link:x.originallink||x.link,date:Number.isFinite(Date.parse(x.pubDate))?new Date(x.pubDate).toISOString():'',source:host(x.originallink||x.link)})).filter((x:any)=>{const k=x.title.replace(/\s/g,'').slice(0,45);if(!k||seen.has(k))return false;seen.add(k);return true;});
     const now=Date.now(),d7=7*86400000,d35=35*86400000;
     const recent=items.filter(x=>now-new Date(x.date).getTime()<=d7);
     const prev=items.filter(x=>{const d=now-new Date(x.date).getTime();return d>d7&&d<=d35;});
@@ -66,8 +66,11 @@ async function news(stock:UniverseStock){
     if(eventHits.length)reasons.push(`테마/이벤트 확인: ${eventHits.slice(0,6).join(', ')}`);
 
     return {newsVelocityScore:velocity,keywordNoveltyScore:novelty,sourceDiversityScore:diversity,themeConfirmationScore:theme,reasons,items:recent.slice(0,12),keywords:[...new Set([...novel,...eventHits])].slice(0,10)};
-  }catch{
-    return {newsVelocityScore:null,keywordNoveltyScore:null,sourceDiversityScore:null,themeConfirmationScore:null,reasons:['뉴스 데이터 수집 실패'],items:[],keywords:[]};
+  }catch(e){
+    const reason=e instanceof Error?e.message:'UNKNOWN';
+    console.error('[V5 Naver News] failure',stock.code,reason);
+    const label=/^NAVER_HTTP_\d+$/.test(reason)?`네이버 뉴스 API 오류 (${reason.slice(-3)})`:'뉴스 데이터 수집 실패 (서버 로그 확인 필요)';
+    return {newsVelocityScore:null,keywordNoveltyScore:null,sourceDiversityScore:null,themeConfirmationScore:null,reasons:[label],items:[],keywords:[]};
   }
 }
 
