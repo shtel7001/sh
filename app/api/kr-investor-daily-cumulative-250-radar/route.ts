@@ -183,8 +183,17 @@ async function loadTrendLegacy(code,maxPages=40){
 function usableRows(rows,target){return [...new Map(rows.map(x=>[x.date,x])).values()].filter(x=>!target||x.date<=target).sort((a,b)=>b.date.localeCompare(a.date));}
 async function loadVerifiedKrxSample(code,target,needDays){
   // Only use separately collected, validated KRX samples. Never invent missing rows.
-  if(code!=='005930')return null;
-  const payload=krxSamsungSample;
+  // Batch collector writes one public JSON file per ticker; missing tickers remain unverified.
+  let payload=null;
+  if(code==='005930')payload=krxSamsungSample;
+  else if(process.env.VERCEL_URL){
+    try{
+      const response=await fetch('https://'+process.env.VERCEL_URL+'/krx-investor-data/'+code+'.json',
+        {signal:AbortSignal.timeout(3500),cache:'no-store'});
+      if(response.ok)payload=await response.json();
+    }catch{}
+  }
+  if(!payload)return null;
   if(payload?.source!=='KRX via pykrx'||payload?.ticker!==code||!Array.isArray(payload.rows))return null;
   const rows=payload.rows.filter(x=>/^\d{8}$/.test(String(x.date))&&String(x.date)<=target)
     .map(x=>{
