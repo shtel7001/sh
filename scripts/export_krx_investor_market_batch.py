@@ -55,6 +55,13 @@ def main():
     for i,ticker in enumerate(chosen,1):
         try:
             result=run(ticker,a.days,a.asof)
+            if result.get('partialHistory'):
+                prices=stock.get_market_ohlcv_by_date('20000101',a.asof,ticker)
+                if prices is None or prices.empty: raise RuntimeError('LISTING_UNVERIFIED')
+                first=prices.index.min().strftime('%Y%m%d')
+                if first < result['oldest']: raise RuntimeError('PARTIAL_NOT_IPO')
+                result['newListingVerified']=True
+                result['listingFirstTradingDate']=first
             (out/(ticker+".json")).write_text(json.dumps(result,ensure_ascii=False),encoding="utf-8")
             report["success"].append(ticker)
             print(f"OK {i}/{len(chosen)} {ticker} {result['actualDays']} days",flush=True)
