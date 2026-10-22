@@ -152,9 +152,17 @@ async function loadTrendMobile(code){
     'https://m.stock.naver.com/front-api/stock/domestic/trend?code='+encodeURIComponent(code),
     'https://m.stock.naver.com/front-api/stock/domestic/integration?code='+encodeURIComponent(code)+'&endType=stock'
   ];
-  let all=[];
-  for(const u of urls){try{all=all.concat(extractTrendRows(await fetchJson(u,11000),'Naver mobile trend'));}catch{}}
-  return [...new Map(all.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
+  let all=[];const diagnostics=[];
+  for(let i=0;i<urls.length;i++){
+    const u=urls[i];
+    try{
+      const rows=extractTrendRows(await fetchJson(u,11000),'Naver mobile trend');
+      diagnostics.push({endpoint:i+1,rows:rows.length,newest:rows[0]?.date||null,oldest:rows[rows.length-1]?.date||null});
+      all=all.concat(rows);
+    }catch(e){diagnostics.push({endpoint:i+1,error:String(e?.message||e).slice(0,100)});}
+  }
+  const deduped=[...new Map(all.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
+  return {rows:deduped,diagnostics};
 }
 async function loadTrendLegacy(code,maxPages=40){
   const out=[];
@@ -185,7 +193,7 @@ async function loadTrendLong(code,asOf,needDays){
       if(after>=needDays){const data=usableRows(all,target);trendCache.set(cacheKey,{time:Date.now(),data});return data;}
     }catch(e){attempts.push({start,error:String(e?.message||e)});}
   }
-  try{const mobile=await loadTrendMobile(code);all=all.concat(mobile);attempts.push({start:'mobile',rows:mobile.length,added:usableRows(all,target).length});}catch(e){attempts.push({start:'mobile',error:String(e?.message||e)});}
+  try{const mobile=await loadTrendMobile(code);all=all.concat(mobile.rows);attempts.push({start:'mobile',rows:mobile.rows.length,added:usableRows(all,target).length});for(const d of mobile.diagnostics)attempts.push({start:'mobile'+d.endpoint,error:d.error||('rows='+d.rows+',newest='+d.newest+',oldest='+d.oldest)});}catch(e){attempts.push({start:'mobile',error:String(e?.message||e)});}
   if(usableRows(all,target).length<needDays){
     try{const legacy=await loadTrendLegacy(code,Math.ceil(needDays/18)+6);all=all.concat(legacy);attempts.push({start:'legacy',rows:legacy.length,added:usableRows(all,target).length});}catch(e){attempts.push({start:'legacy',error:String(e?.message||e)});}
   }
