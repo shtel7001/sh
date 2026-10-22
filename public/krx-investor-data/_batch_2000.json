@@ -1,0 +1,32 @@
+{
+  "asOf": "20261022",
+  "market": "BOTH",
+  "days": 240,
+  "start": 2000,
+  "count": 20,
+  "universeCount": 2695,
+  "success": [
+    "241520",
+    "241560",
+    "241590",
+    "241690",
+    "241710",
+    "241770",
+    "241790",
+    "241840",
+    "242040",
+    "243070",
+    "243840",
+    "244920",
+    "246690",
+    "246710",
+    "246960"
+  ],
+  "failures": {
+    "241820": "KRX_EMPTY: KRX returned no daily investor data; no zero filling",
+    "244460": "KRX_EMPTY: KRX returned no daily investor data; no zero filling",
+    "245620": "KRX_EMPTY: KRX returned no daily investor data; no zero filling",
+    "246250": "KRX_EMPTY: KRX returned no daily investor data; no zero filling",
+    "246720": "KRX_RANGE_SHORT_187_NEED_240"
+  }
+}
