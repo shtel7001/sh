@@ -1,0 +1,40 @@
+name: Verify KRX investor daily data
+on:
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: 'Six-digit Korean stock code'
+        required: true
+        default: '005930'
+        type: string
+      days:
+        description: 'Trading days (1-250)'
+        required: true
+        default: '120'
+        type: string
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install collector dependencies
+        run: python -m pip install --disable-pip-version-check pykrx pandas
+      - name: Collect and validate KRX investor flow
+        env:
+          TICKER: ${{ inputs.ticker }}
+          DAYS: ${{ inputs.days }}
+        run: |
+          python scripts/export_krx_investor_daily.py --ticker "$TICKER" --days "$DAYS" --output krx-investor-daily.json
+      - name: Upload verified JSON artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: krx-investor-daily-${{ inputs.ticker }}
+          path: krx-investor-daily.json
+          retention-days: 7
