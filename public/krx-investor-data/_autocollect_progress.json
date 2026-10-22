@@ -1,7 +1,7 @@
 {
-  "nextStart": 1240,
+  "nextStart": 1440,
   "universeCount": 2695,
   "days": 240,
   "batchSize": 20,
-  "completedChunks": 40
+  "completedChunks": 50
 }

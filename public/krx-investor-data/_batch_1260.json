@@ -1,0 +1,32 @@
+{
+  "asOf": "20261022",
+  "market": "BOTH",
+  "days": 240,
+  "start": 1260,
+  "count": 20,
+  "universeCount": 2695,
+  "success": [
+    "072770",
+    "072870",
+    "072950",
+    "072990",
+    "073010",
+    "073110",
+    "073190",
+    "073240",
+    "073490",
+    "073540",
+    "073560",
+    "073570",
+    "074430",
+    "074600",
+    "075130",
+    "075180",
+    "075580",
+    "075970"
+  ],
+  "failures": {
+    "073640": "KRX_EMPTY: KRX returned no daily investor data; no zero filling",
+    "074610": "KRX_EMPTY: KRX returned no daily investor data; no zero filling"
+  }
+}
