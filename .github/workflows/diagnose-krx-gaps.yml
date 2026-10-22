@@ -1,0 +1,59 @@
+name: Diagnose remaining KRX investor gaps
+on:
+  push:
+    branches: [fix/investor-flex-240-diagnostics-20261022]
+    paths: ['.github/workflows/diagnose-krx-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pykrx pandas
+      - name: Inspect real KRX history without altering data
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          test -n "$KRX_ID" && test -n "$KRX_PW"
+          PYTHONPATH=scripts python - <<'PY'
+          import json,time
+          from pathlib import Path
+          from pykrx import stock
+          from export_krx_investor_daily import run
+          codes='001570 217590 348950 001470 000300 298000 004380 007570 002210 011810 015590 119650 007610 020760 002410 069460 074610 019490 017040 143210 009310 015020 008600 009440 145210'.split()
+          result=[]
+          for code in codes:
+              entry={'code':code}
+              try:
+                  prices=stock.get_market_ohlcv_by_date('20000101','20261022',code)
+                  entry['priceDays']=len(prices) if prices is not None else 0
+                  entry['firstPriceDate']=prices.index.min().strftime('%Y%m%d') if prices is not None and not prices.empty else None
+                  try:
+                      data=run(code,120,'20261022')
+                      entry['investorDays']=data['actualDays']
+                      entry['firstInvestorDate']=data['oldest']
+                      entry['classification']='verified_120' if data['actualDays']>=120 else ('verified_new_listing' if entry['firstPriceDate']==data['oldest'] else 'short_unverified')
+                  except Exception as e:
+                      entry['investorError']=str(e)[:160]
+                      entry['classification']='unavailable_or_short'
+              except Exception as e:
+                  entry['priceError']=str(e)[:160]
+                  entry['classification']='price_lookup_failed'
+              result.append(entry)
+              print('DIAG',json.dumps(entry,ensure_ascii=False),flush=True)
+              time.sleep(0.3)
+          Path('krx-gap-diagnostics.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: krx-gap-diagnostics
+          path: krx-gap-diagnostics.json
