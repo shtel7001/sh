@@ -1,5 +1,5 @@
 name: KRX full market investor batch
-# Continue 240-day KRX collection for eligible tickers 201-300.
+# Switch to 20-ticker batches for more targeted retries; continue at index 300.
 on:
   push:
     branches:
@@ -11,11 +11,11 @@ on:
       start:
         description: 'Start index in sorted KOSPI+KOSDAQ universe'
         required: true
-        default: '200'
+        default: '300'
       count:
         description: 'Batch size (1-100)'
         required: true
-        default: '100'
+        default: '20'
       days:
         description: 'Trading days (1-250)'
         required: true
@@ -39,8 +39,8 @@ jobs:
         env:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
-          START: ${{ inputs.start || '200' }}
-          COUNT: ${{ inputs.count || '100' }}
+          START: ${{ inputs.start || '300' }}
+          COUNT: ${{ inputs.count || '20' }}
           DAYS: ${{ inputs.days || '240' }}
         run: |
           python scripts/export_krx_investor_market_batch.py --market BOTH --start "$START" --count "$COUNT" --days "$DAYS"
