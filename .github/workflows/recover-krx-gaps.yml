@@ -1,0 +1,52 @@
+name: Recover verified KRX investor gaps
+on:
+  push:
+    branches: [fix/investor-flex-240-diagnostics-20261022]
+    paths: ['.github/workflows/recover-krx-gaps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pykrx pandas
+      - name: Recover three verified 120-day records
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          test -n "$KRX_ID" && test -n "$KRX_PW"
+          PYTHONPATH=scripts python - <<'PY'
+          import json
+          from pathlib import Path
+          from export_krx_investor_daily import run
+          root=Path('public/krx-investor-data')
+          for code in ('217590','004380','007570'):
+              p=root/(code+'.json')
+              if p.exists():
+                  old=json.loads(p.read_text())
+                  if old.get('actualDays',0)>=120:
+                      print('ALREADY_VALID',code,old['actualDays'])
+                      continue
+              data=run(code,120,'20261022')
+              assert data['actualDays']==120 and not data['partialHistory']
+              p.write_text(json.dumps(data,ensure_ascii=False),encoding='utf-8')
+              print('RECOVERED',code,data['actualDays'])
+          PY
+      - name: Commit recovered data only to isolated branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/krx-investor-data/217590.json public/krx-investor-data/004380.json public/krx-investor-data/007570.json
+          if git diff --cached --quiet; then echo NO_CHANGES; exit 0; fi
+          git commit -m 'Recover three verified KRX 120-day investor records'
+          git pull --rebase origin fix/investor-flex-240-diagnostics-20261022
+          git push origin HEAD:fix/investor-flex-240-diagnostics-20261022
