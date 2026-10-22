@@ -122,9 +122,9 @@ function keyValue(o,hints){
 function trendRow(x,source){
   const date=ymd(x?.bizdate??x?.localDate??x?.date??x?.tradeDate??x?.businessDay??keyValue(x,['bizdate','tradedate','localdate','date']));
   if(!/^\d{8}$/.test(date))return null;
-  const foreign=x?.foreignerPureBuyQuant??x?.foreignPureBuyQuant??x?.foreignerNetBuyQuantity??x?.foreignNetBuy??x?.foreignPureBuy??x?.foreignValue??keyValue(x,['foreignerpurebuy','foreignpurebuy','foreignnetbuy','foreignvalue','frgnpurebuy','frgnnetbuy']);
-  const institution=x?.organPureBuyQuant??x?.institutionPureBuyQuant??x?.institutionNetBuyQuantity??x?.organNetBuy??x?.institutionalValue??keyValue(x,['organpurebuy','institutionpurebuy','institutionnetbuy','organnnetbuy','institutionalvalue','orgpurebuy','orgnetbuy']);
-  const individual=x?.individualPureBuyQuant??x?.personalPureBuyQuant??x?.individualNetBuyQuantity??x?.personalValue??x?.individualNetBuy??keyValue(x,['individualpurebuy','personalpurebuy','individualnetbuy','personalvalue','individualnetbuy','personnetbuy']);
+  const foreign=x?.foreignerPureBuyQuant??x?.foreignPureBuyQuant??x?.foreignerNetBuyQuantity??x?.foreignNetBuy??x?.foreignPureBuy??x?.frgn_pure_buy_quant??x?.foreignValue??keyValue(x,['foreignerpurebuy','foreignpurebuy','foreignnetbuy','foreignvalue','frgnpurebuy','frgnnetbuy']);
+  const institution=x?.organPureBuyQuant??x?.institutionPureBuyQuant??x?.institutionNetBuyQuantity??x?.organNetBuy??x?.organ_pure_buy_quant??x?.institutionalValue??keyValue(x,['organpurebuy','institutionpurebuy','institutionnetbuy','organnnetbuy','institutionalvalue','orgpurebuy','orgnetbuy']);
+  const individual=x?.individualPureBuyQuant??x?.personalPureBuyQuant??x?.individualNetBuyQuantity??x?.personalValue??x?.individualNetBuy??x?.indi_pure_buy_quant??keyValue(x,['individualpurebuy','personalpurebuy','individualnetbuy','personalvalue','individualnetbuy','personnetbuy']);
   const hold=x?.foreignerHoldRatio??x?.foreignHoldRatio??x?.foreignRate??keyValue(x,['foreignerholdratio','foreignholdratio','foreignrate']);
   if(foreign===undefined&&institution===undefined&&individual===undefined)return null;
   return {date,foreign:n(foreign),institution:n(institution),individual:individual===undefined?null:n(individual),holdRatio:n(hold),source};
@@ -147,6 +147,7 @@ async function trendPage(code,startIdx,pageSize){
 }
 async function loadTrendMobile(code){
   const urls=[
+    'https://m.stock.naver.com/api/item/getTrendList.nhn?code='+encodeURIComponent(code)+'&size=250',
     'https://m.stock.naver.com/api/stock/'+encodeURIComponent(code)+'/trend',
     'https://m.stock.naver.com/front-api/stock/domestic/trend?code='+encodeURIComponent(code),
     'https://m.stock.naver.com/front-api/stock/domestic/integration?code='+encodeURIComponent(code)+'&endType=stock'
