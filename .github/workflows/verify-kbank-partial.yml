@@ -17,7 +17,12 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pykrx pandas
-      - run: |
+      - name: Verify KRX authentication and collect
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          test -n "$KRX_ID" && test -n "$KRX_PW" || { echo 'KRX_SECRETS_NOT_CONFIGURED'; exit 1; }
           PYTHONPATH=scripts python - <<'PY'
           import json
           from pathlib import Path
