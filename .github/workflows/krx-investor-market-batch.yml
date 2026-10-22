@@ -1,5 +1,5 @@
 name: KRX full market investor batch
-# Switch to 20-ticker batches for more targeted retries; continue at index 300.
+# Switch to 20-ticker batches for more targeted retries; continue at index 320.
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ on:
       start:
         description: 'Start index in sorted KOSPI+KOSDAQ universe'
         required: true
-        default: '300'
+        default: '320'
       count:
         description: 'Batch size (1-100)'
         required: true
@@ -39,7 +39,7 @@ jobs:
         env:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
-          START: ${{ inputs.start || '300' }}
+          START: ${{ inputs.start || '320' }}
           COUNT: ${{ inputs.count || '20' }}
           DAYS: ${{ inputs.days || '240' }}
         run: |
