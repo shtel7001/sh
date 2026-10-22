@@ -1,0 +1,54 @@
+name: Audit collected KRX investor data
+on:
+  push:
+    branches:
+      - fix/investor-flex-240-diagnostics-20261022
+    paths:
+      - '.github/workflows/audit-krx-investor.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - name: Validate all KRX JSON and batch reports
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('public/krx-investor-data')
+          reports=list(root.glob('_batch_*.json'))
+          covered=set()
+          success=set()
+          failures=set()
+          for file in reports:
+              d=json.loads(file.read_text())
+              start=d['start']
+              for index in range(start,start+d['count']):
+                  assert index not in covered, ('duplicate index',index)
+                  covered.add(index)
+              success.update(d['success'])
+              failures.update(d['failures'])
+          invalid=[]
+          for code in success:
+              file=root/(code+'.json')
+              if not file.exists():
+                  invalid.append((code,'missing'))
+                  continue
+              d=json.loads(file.read_text())
+              rows=d.get('rows',[])
+              if d.get('ticker')!=code or d.get('source')!='KRX via pykrx' or len(rows)<240:
+                  invalid.append((code,'schema or length'))
+                  continue
+              if len({r.get('date') for r in rows})!=len(rows):
+                  invalid.append((code,'duplicate dates'))
+              keys=['외국인','개인','금융투자','보험','투신','사모','은행','기타금융','연기금']
+              if any(any(type(row.get('netBuyQuantity',{}).get(k)) is not int for k in keys) for row in rows):
+                  invalid.append((code,'missing quantities'))
+          summary={'expected':2695,'covered':len(covered),'success':len(success),'failed':len(failures),'unresolved':len(failures-success),'missingIndices':len(set(range(2695))-covered),'invalid':invalid[:30]}
+          print(json.dumps(summary,ensure_ascii=False,indent=2))
+          assert len(covered)==2695
+          assert not invalid
+          PY
