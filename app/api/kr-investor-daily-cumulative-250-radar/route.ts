@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import * as cheerio from 'cheerio';
 import iconv from 'iconv-lite';
+import krxSamsungSample from '../../../public/krx-investor-data/005930.json';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -183,13 +184,9 @@ function usableRows(rows,target){return [...new Map(rows.map(x=>[x.date,x])).val
 async function loadVerifiedKrxSample(code,target,needDays){
   // Only use separately collected, validated KRX samples. Never invent missing rows.
   if(code!=='005930')return null;
-  const fs=await import('node:fs/promises');
-  const path=await import('node:path');
-  let payload;
-  try{payload=JSON.parse(await fs.readFile(path.join(process.cwd(),'public','krx-investor-data',code+'.json'),'utf8'));}
-  catch{return null;}
+  const payload=krxSamsungSample;
   if(payload?.source!=='KRX via pykrx'||payload?.ticker!==code||!Array.isArray(payload.rows))return null;
-  const rows=payload.rows.filter(x=>/^\\d{8}$/.test(String(x.date))&&String(x.date)<=target)
+  const rows=payload.rows.filter(x=>/^\d{8}$/.test(String(x.date))&&String(x.date)<=target)
     .map(x=>{
       const q=x.netBuyQuantity||{};
       const groups=['금융투자','보험','투신','사모','은행','기타금융','연기금'];
