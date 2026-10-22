@@ -199,7 +199,7 @@ async function loadTrendLong(code,asOf,needDays){
   }
   const data=usableRows(all,target);
   if(data.length<needDays){
-    const detail=attempts.map(a=>a.error?'start='+a.start+':'+a.error:'start='+a.start+':rows='+a.rows+',added='+a.added).join(';');
+    const detail=attempts.filter(a=>String(a.start).startsWith('mobile')||a.start==='legacy').concat(attempts.filter(a=>!String(a.start).startsWith('mobile')&&a.start!=='legacy')).map(a=>a.error?'start='+a.start+':'+a.error:'start='+a.start+':rows='+a.rows+',added='+a.added).join(';');
     throw new Error('TREND_RANGE_SHORT_'+data.length+'_NEED_'+needDays+'|SOURCES='+[...new Set(data.map(x=>x.source))].join(',')+'|PAGES='+detail.slice(0,900));
   }
   trendCache.set(cacheKey,{time:Date.now(),data});
