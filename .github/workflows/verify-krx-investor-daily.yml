@@ -35,7 +35,13 @@ jobs:
         env:
           TICKER: ${{ inputs.ticker || '005930' }}
           DAYS: ${{ inputs.days || '120' }}
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
         run: |
+          if [ -z "$KRX_ID" ] || [ -z "$KRX_PW" ]; then
+            echo 'KRX credentials missing: set repository Actions secrets KRX_ID and KRX_PW' >&2
+            exit 3
+          fi
           python scripts/export_krx_investor_daily.py --ticker "$TICKER" --days "$DAYS" --output krx-investor-daily.json
       - name: Upload verified JSON artifact
         if: success()
