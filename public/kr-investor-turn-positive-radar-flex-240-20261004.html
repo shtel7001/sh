@@ -216,7 +216,7 @@ function rankList(){
 function reset(){
   STOP=false;SUMMARIES=[];ERRORS=[];SELECTED=null;SELECTED_FULL=null;$('bar').style.width='0%';['stUniverse','stScanned','stOk','stMatches','stErr'].forEach(id=>$(id).textContent='0');$('rows').innerHTML='<tr><td colspan="15" class="empty">검사 중...</td></tr>';$('excelBtn').disabled=true;$('errorBox').classList.add('hidden');clearChartsUI();
 }
-function errorSummary(){const m={};ERRORS.forEach(e=>{const k=String(e.scanError||'UNKNOWN').split(':')[0];m[k]=(m[k]||0)+1});return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>k+' : '+v+'건').join('\n')}
+function errorSummary(){const m={};ERRORS.forEach(e=>{const k=String(e.scanError||'UNKNOWN').split('|')[0].split(':')[0];m[k]=(m[k]||0)+1});const counts=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>k+' : '+v+'건').join('\n');const example=ERRORS[0];return counts+'\n\n첫 번째 오류 상세 (복사하여 전달 가능)\n종목: '+String(example?.code||example?.codes||'미확인')+'\n'+String(example?.scanError||'UNKNOWN');}
 async function scanStocks(stocks){
   for(let i=0;i<stocks.length;i+=10){
     if(STOP)break;const batch=stocks.slice(i,i+10),end=Math.min(i+10,stocks.length);
