@@ -245,7 +245,7 @@ async function runDirect(){
 function render(){
   $('periodCumHead').textContent=ACTIVE_DAYS+'일 누적';
   const list=rankList(),limit=Number($('displayLimit').value)||300,tb=$('rows');$('stMatches').textContent=list.length;tb.innerHTML='';
-  const eb=$('errorBox');if(ERRORS.length){eb.textContent='오류 유형\n'+errorSummary();eb.classList.remove('hidden')}else eb.classList.add('hidden');
+  const eb=$('errorBox');eb.style.whiteSpace='pre-wrap';eb.style.overflowWrap='anywhere';eb.style.wordBreak='break-word';eb.style.maxWidth='100%';if(ERRORS.length){eb.textContent='오류 유형\n'+errorSummary();eb.classList.remove('hidden')}else eb.classList.add('hidden');
   if(!list.length){tb.innerHTML='<tr><td colspan="15" class="empty">현재 조건에서 '+MODE_LABEL[MODE]+' 누적값의 최근 양수 전환 종목이 없습니다.</td></tr>';return}
   list.slice(0,limit).forEach((r,i)=>{
     const s=r.signals[MODE],tr=document.createElement('tr');if(i<20)tr.className='toprank';
