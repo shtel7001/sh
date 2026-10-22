@@ -180,9 +180,30 @@ async function loadTrendLegacy(code,maxPages=40){
   return [...new Map(out.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
 }
 function usableRows(rows,target){return [...new Map(rows.map(x=>[x.date,x])).values()].filter(x=>!target||x.date<=target).sort((a,b)=>b.date.localeCompare(a.date));}
+async function loadVerifiedKrxSample(code,target,needDays){
+  // Only use separately collected, validated KRX samples. Never invent missing rows.
+  if(code!=='005930')return null;
+  const fs=await import('node:fs/promises');
+  const path=await import('node:path');
+  let payload;
+  try{payload=JSON.parse(await fs.readFile(path.join(process.cwd(),'public','krx-investor-data',code+'.json'),'utf8'));}
+  catch{return null;}
+  if(payload?.source!=='KRX via pykrx'||payload?.ticker!==code||!Array.isArray(payload.rows))return null;
+  const rows=payload.rows.filter(x=>/^\\d{8}$/.test(String(x.date))&&String(x.date)<=target)
+    .map(x=>{
+      const q=x.netBuyQuantity||{};
+      const groups=['금융투자','보험','투신','사모','은행','기타금융','연기금'];
+      if(!Number.isSafeInteger(q['외국인'])||!Number.isSafeInteger(q['개인'])||groups.some(g=>!Number.isSafeInteger(q[g])))return null;
+      return {date:String(x.date),foreign:q['외국인'],institution:groups.reduce((sum,g)=>sum+q[g],0),individual:q['개인'],source:'KRX verified daily quantity'};
+    }).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date));
+  if(new Set(rows.map(x=>x.date)).size!==rows.length||rows.length<needDays)return null;
+  return rows;
+}
 async function loadTrendLong(code,asOf,needDays){
   const target=ymd(asOf),cacheKey=code+'|'+target+'|'+needDays;
   const cached=trendCache.get(cacheKey);if(cached&&Date.now()-cached.time<CACHE_TTL)return cached.data;
+  const verifiedKrx=await loadVerifiedKrxSample(code,target,needDays);
+  if(verifiedKrx){trendCache.set(cacheKey,{time:Date.now(),data:verifiedKrx});return verifiedKrx;}
   let all=[],attempts=[],pageSize=clamp(Math.max(120,needDays+20),120,320);
   const starts=[0,1,2,3,pageSize,pageSize*2,100,200,300,400,500];
   for(const start of starts){
