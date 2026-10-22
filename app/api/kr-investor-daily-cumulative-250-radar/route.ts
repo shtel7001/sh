@@ -148,7 +148,8 @@ async function trendPage(code,startIdx,pageSize){
 async function loadTrendMobile(code){
   const urls=[
     'https://m.stock.naver.com/api/stock/'+encodeURIComponent(code)+'/trend',
-    'https://m.stock.naver.com/front-api/stock/domestic/trend?code='+encodeURIComponent(code)
+    'https://m.stock.naver.com/front-api/stock/domestic/trend?code='+encodeURIComponent(code),
+    'https://m.stock.naver.com/front-api/stock/domestic/integration?code='+encodeURIComponent(code)+'&endType=stock'
   ];
   let all=[];
   for(const u of urls){try{all=all.concat(extractTrendRows(await fetchJson(u,11000),'Naver mobile trend'));}catch{}}
