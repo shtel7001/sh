@@ -26,7 +26,12 @@ def run(ticker: str, days: int, asof: str) -> dict:
     val.index = val.index.strftime("%Y%m%d")
     common = sorted(set(vol.index).intersection(val.index), reverse=True)
     if len(common) < days:
-        raise RuntimeError(f"KRX_RANGE_SHORT_{len(common)}_NEED_{days}")
+        if len(common) < 60:
+            raise RuntimeError(f"KRX_RANGE_SHORT_{len(common)}_MIN_60")
+        # Partial history is accepted only when there is no earlier listing history.
+        # This collector cannot prove IPO status from short KRX history alone.
+        # The batch collector must verify the listing date before accepting it.
+        print(f"KRX_PARTIAL_HISTORY_{len(common)}_NEED_{days}", flush=True)
     rows = []
     for date in common[:days]:
         quantities, values = {}, {}
@@ -42,7 +47,7 @@ def run(ticker: str, days: int, asof: str) -> dict:
                 raise RuntimeError(f"KRX_MISSING_INVESTOR_{mandatory}")
         rows.append({"date": date, "netBuyQuantity": quantities, "netBuyValueKRW": values})
     return {"source": "KRX via pykrx", "ticker": ticker, "asOf": asof, "requestedDays": days,
-            "actualDays": len(rows), "unitQuantity": "shares", "unitValue": "KRW",
+            "actualDays": len(rows), "partialHistory": len(rows)<days, "unitQuantity": "shares", "unitValue": "KRW",
             "newest": rows[0]["date"], "oldest": rows[-1]["date"], "rows": rows}
 
 def main():
