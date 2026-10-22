@@ -1,4 +1,5 @@
 name: KRX full market investor batch
+# Verify the full 240-trading-day horizon on the isolated preview branch.
 on:
   push:
     branches:
@@ -18,7 +19,7 @@ on:
       days:
         description: 'Trading days (1-250)'
         required: true
-        default: '120'
+        default: '240'
 jobs:
   collect:
     runs-on: ubuntu-latest
@@ -40,7 +41,7 @@ jobs:
           KRX_PW: ${{ secrets.KRX_PW }}
           START: ${{ inputs.start || '0' }}
           COUNT: ${{ inputs.count || '20' }}
-          DAYS: ${{ inputs.days || '120' }}
+          DAYS: ${{ inputs.days || '240' }}
         run: |
           python scripts/export_krx_investor_market_batch.py --market BOTH --start "$START" --count "$COUNT" --days "$DAYS"
       - name: Save validated data only to isolated branch
