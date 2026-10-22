@@ -142,7 +142,7 @@ function extractTrendRows(j,source){
   return best;
 }
 async function trendPage(code,startIdx,pageSize){
-  const url='https://stock.naver.com/api/domestic/detail/'+encodeURIComponent(code)+'/trend?tradeType=KRX&startIdx='+startIdx+'&pageSize='+pageSize;
+  const url='https://m.stock.naver.com/api/domestic/detail/'+encodeURIComponent(code)+'/trend?tradeType=KRX&startIdx='+startIdx+'&pageSize='+pageSize;
   return extractTrendRows(await fetchJson(url,14000),'Naver stock.naver trend');
 }
 async function loadTrendMobile(code){
