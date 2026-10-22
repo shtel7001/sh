@@ -86,6 +86,7 @@
   </div>
   <div id="errorBox" class="errorbox hidden"></div>
   <div class="filters">
+    <select id="transitionFilter" onchange="render()"><option value="all">기간 내 전환 전체</option><option value="positive">현재 양수 유지</option><option value="today">최근 거래일 전환</option><option value="todayPositive">최근 거래일 전환 + 양수 유지</option><option value="negative">재음수 전환 이력</option></select>
     <input id="stockSearch" placeholder="종목명/코드 검색" oninput="render()">
     <select id="marketFilter" onchange="render()"><option value="ALL">시장 전체</option><option value="KOSPI">KOSPI</option><option value="KOSDAQ">KOSDAQ</option></select>
   </div>
@@ -208,8 +209,8 @@ function summarize(r,days=ACTIVE_DAYS){
     infostock:'https://infostock.co.kr/stockitem?code='+r.code};
 }
 function rankList(){
-  const q=$('stockSearch').value.trim().toLowerCase(),mf=$('marketFilter').value;
-  const a=SUMMARIES.filter(r=>r.signals?.[MODE]&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q)));
+  const q=$('stockSearch').value.trim().toLowerCase(),mf=$('marketFilter').value,tf=$('transitionFilter').value;
+  const a=SUMMARIES.filter(r=>r.signals?.[MODE]&&(tf==='all'||(tf==='positive'&&r.cumPeriod[MODE]>0)||(tf==='today'&&r.signals[MODE].tradingDaysAgo===0)||(tf==='todayPositive'&&r.signals[MODE].tradingDaysAgo===0&&r.cumPeriod[MODE]>0)||(tf==='negative'&&r.cumPeriod[MODE]<=0))&&(mf==='ALL'||r.market===mf)&&(!q||String(r.name).toLowerCase().includes(q)||String(r.code).includes(q)));
   a.sort((x,y)=>{const a=x.signals[MODE],b=y.signals[MODE];return a.tradingDaysAgo-b.tradingDaysAgo||b.negativeRun-a.negativeRun||Number(y.cumPeriod[MODE]||0)-Number(x.cumPeriod[MODE]||0)});
   return a;
 }
@@ -310,8 +311,8 @@ function clearChartsUI(){
 }
 function exportExcel(){
   const list=rankList();if(!list.length)return alert('현재 정렬 주체의 전환 종목이 없습니다.');
-  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
-  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',정렬주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일_누적순매도_양수전환_레이더_'+$('asOf').value+'.xlsx',{compression:true});
+  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],현재양수유지:r.cumPeriod[MODE]>0?'예':'아니오',분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
+  const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',정렬주체:MODE_LABEL[MODE],전환상태필터:$('transitionFilter').selectedOptions[0].text,대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일_누적순매도_양수전환_레이더_'+$('asOf').value+'.xlsx',{compression:true});
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function money(v){const x=Number(v);return Number.isFinite(x)&&x?x.toLocaleString():'-'}
