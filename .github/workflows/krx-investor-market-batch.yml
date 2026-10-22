@@ -1,5 +1,5 @@
 name: KRX full market investor batch
-# Validate SPAC ETF ETN exclusion against the 240-day KRX market batch.
+# Continue 240-day KRX collection with next 100 eligible stocks.
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ on:
       start:
         description: 'Start index in sorted KOSPI+KOSDAQ universe'
         required: true
-        default: '0'
+        default: '100'
       count:
         description: 'Batch size (1-100)'
         required: true
@@ -39,7 +39,7 @@ jobs:
         env:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
-          START: ${{ inputs.start || '0' }}
+          START: ${{ inputs.start || '100' }}
           COUNT: ${{ inputs.count || '100' }}
           DAYS: ${{ inputs.days || '240' }}
         run: |
