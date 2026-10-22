@@ -202,7 +202,8 @@ async function loadVerifiedKrxSample(code,target,needDays){
       if(!Number.isSafeInteger(q['외국인'])||!Number.isSafeInteger(q['개인'])||groups.some(g=>!Number.isSafeInteger(q[g])))return null;
       return {date:String(x.date),foreign:q['외국인'],institution:groups.reduce((sum,g)=>sum+q[g],0),individual:q['개인'],source:'KRX verified daily quantity'};
     }).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date));
-  if(new Set(rows.map(x=>x.date)).size!==rows.length||rows.length<needDays)return null;
+  if(new Set(rows.map(x=>x.date)).size!==rows.length||rows.length<Math.min(needDays,60))return null;
+  if(rows.length<needDays && !(payload.newListingVerified===true && payload.partialHistory===true && payload.listingFirstTradingDate===payload.oldest))return null;
   return rows;
 }
 async function loadTrendLong(code,asOf,needDays){
@@ -268,9 +269,9 @@ export async function POST(req){
       const rr=await Promise.all(stocks.slice(i,i+5).map(async s=>{
         const code=String(s?.code||'').replace(/\D/g,'').slice(0,6);
         try{
-          const trends=await loadTrendLong(code,asOf,needDays),windows=buildWindows(trends,minDays,maxDays),w60=windows['60'];
+          const trends=await loadTrendLong(code,asOf,needDays),actualDays=Math.min(maxDays,trends.length),windows=buildWindows(trends,minDays,actualDays),w60=windows['60'];
           if(!w60)throw new Error('WINDOW_60_MISSING');
-          return {...s,code,asOf:dashDate(trends[0]?.date),minDays,maxDays,windows,
+          return {...s,code,asOf:dashDate(trends[0]?.date),minDays,maxDays:actualDays,requestedDays:maxDays,actualDays,partialHistory:actualDays<maxDays,windows,
             foreign60:w60.foreignSum,institution60:w60.institutionSum,combined60:w60.combinedSum,individual60:w60.individualSum,
             individual250Known:trends.slice(0,maxDays).filter(x=>x.individual!==null&&x.individual!==undefined).length,
             source:w60.source||trends[0]?.source||'',
