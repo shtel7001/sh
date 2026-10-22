@@ -176,7 +176,7 @@ function metric(w,mode){
 }
 function finiteOrNull(v){const x=Number(v);return Number.isFinite(x)?x:null}
 function buildSeries(r,mode,days=ACTIVE_DAYS){
-  const N=Math.max(1,Math.min(240,Math.round(Number(days)||ACTIVE_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
+  const N=Math.max(1,Math.min(240,Number(r?.actualDays||days),Math.round(Number(days)||ACTIVE_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
   if(total===null)return [];
   const out=[];
   for(let d=N;d>=1;d--){
@@ -203,7 +203,7 @@ function detectTransition(series){
 function summarize(r,days=ACTIVE_DAYS){
   const signals={},cumPeriod={};
   ['combined','foreign','institution','individual'].forEach(m=>{const s=buildSeries(r,m,days);signals[m]=detectTransition(s);cumPeriod[m]=s.length?finiteOrNull(s[s.length-1].cumulative):null});
-  return {code:r.code,name:r.name,market:r.market,currentPrice:r.currentPrice,marketValue:r.marketValue,asOf:r.asOf,analysisDays:days,signals,cumPeriod,
+  return {code:r.code,name:r.name,market:r.market,currentPrice:r.currentPrice,marketValue:r.marketValue,asOf:r.asOf,analysisDays:days,actualDays:r.actualDays||days,partialHistory:!!r.partialHistory,signals,cumPeriod,
     naver:r.naver||('https://stock.naver.com/domestic/stock/'+r.code+'/price'),
     investor:r.investor||('https://stock.naver.com/domestic/stock/'+r.code+'/investmentinfo'),
     infostock:'https://infostock.co.kr/stockitem?code='+r.code};
@@ -251,7 +251,7 @@ function render(){
   list.slice(0,limit).forEach((r,i)=>{
     const s=r.signals[MODE],tr=document.createElement('tr');if(i<20)tr.className='toprank';
     tr.innerHTML='<td class="sticky1 rank">'+(i+1)+'</td>'+
-      '<td class="sticky2 name">'+esc(r.name)+' <span class="small">'+r.code+'</span></td>'+
+      '<td class="sticky2 name">'+esc(r.name)+' <span class="small">'+r.code+'</span>'+(r.partialHistory?'<div class="small" style="color:#9a5b00">신규상장 · '+r.actualDays+'일 분석</div>':'')+'</td>'+
       '<td>'+esc(r.market)+'</td>'+
       '<td><span class="signal">'+esc(s.date)+'</span></td>'+
       '<td>'+s.tradingDaysAgo+'거래일 전</td>'+
@@ -311,7 +311,7 @@ function clearChartsUI(){
 }
 function exportExcel(){
   const list=rankList();if(!list.length)return alert('현재 정렬 주체의 전환 종목이 없습니다.');
-  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],현재양수유지:r.cumPeriod[MODE]>0?'예':'아니오',분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
+  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],현재양수유지:r.cumPeriod[MODE]>0?'예':'아니오',분석기간_거래일:r.actualDays,요청기간_거래일:ACTIVE_DAYS,신규상장_부분분석:r.partialHistory?'예':'아니오',외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
   const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',정렬주체:MODE_LABEL[MODE],전환상태필터:$('transitionFilter').selectedOptions[0].text,대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일_누적순매도_양수전환_레이더_'+$('asOf').value+'.xlsx',{compression:true});
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
