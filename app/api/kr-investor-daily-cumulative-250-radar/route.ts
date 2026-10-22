@@ -207,31 +207,13 @@ async function loadVerifiedKrxSample(code,target,needDays){
 }
 async function loadTrendLong(code,asOf,needDays){
   const target=ymd(asOf),cacheKey=code+'|'+target+'|'+needDays;
-  const cached=trendCache.get(cacheKey);if(cached&&Date.now()-cached.time<CACHE_TTL)return cached.data;
+  const cached=trendCache.get(cacheKey);
+  if(cached&&Date.now()-cached.time<CACHE_TTL)return cached.data;
   const verifiedKrx=await loadVerifiedKrxSample(code,target,needDays);
-  if(verifiedKrx){trendCache.set(cacheKey,{time:Date.now(),data:verifiedKrx});return verifiedKrx;}
-  let all=[],attempts=[],pageSize=clamp(Math.max(120,needDays+20),120,320);
-  const starts=[0,1,2,3,pageSize,pageSize*2,100,200,300,400,500];
-  for(const start of starts){
-    try{
-      const rows=await trendPage(code,start,pageSize);
-      const before=usableRows(all,target).length;all=all.concat(rows);const after=usableRows(all,target).length;
-      attempts.push({start,pageSize,rows:rows.length,added:after-before});
-      if(after>=needDays){const data=usableRows(all,target);trendCache.set(cacheKey,{time:Date.now(),data});return data;}
-    }catch(e){attempts.push({start,error:String(e?.message||e)});}
-  }
-  try{const mobile=await loadTrendMobile(code);all=all.concat(mobile.rows);attempts.push({start:'mobile',rows:mobile.rows.length,added:usableRows(all,target).length});for(const d of mobile.diagnostics)attempts.push({start:'mobile'+d.endpoint,error:d.error||('rows='+d.rows+',newest='+d.newest+',oldest='+d.oldest)});}catch(e){attempts.push({start:'mobile',error:String(e?.message||e)});}
-  if(usableRows(all,target).length<needDays){
-    try{const legacy=await loadTrendLegacy(code,Math.ceil(needDays/18)+6);all=all.concat(legacy);attempts.push({start:'legacy',rows:legacy.length,added:usableRows(all,target).length});}catch(e){attempts.push({start:'legacy',error:String(e?.message||e)});}
-  }
-  const data=usableRows(all,target);
-  if(data.length<needDays){
-    const detail=attempts.filter(a=>String(a.start).startsWith('mobile')||a.start==='legacy').concat(attempts.filter(a=>!String(a.start).startsWith('mobile')&&a.start!=='legacy')).map(a=>a.error?'start='+a.start+':'+a.error:'start='+a.start+':rows='+a.rows+',added='+a.added).join(';');
-    throw new Error('TREND_RANGE_SHORT_'+data.length+'_NEED_'+needDays+'|SOURCES='+[...new Set(data.map(x=>x.source))].join(',')+'|PAGES='+detail.slice(0,900));
-  }
-  trendCache.set(cacheKey,{time:Date.now(),data});
-  if(trendCache.size>600){const k=trendCache.keys().next().value;trendCache.delete(k);}
-  return data;
+  if(!verifiedKrx)throw new Error('KRX_DATA_UNAVAILABLE_OR_SHORT_NEED_'+needDays);
+  trendCache.set(cacheKey,{time:Date.now(),data:verifiedKrx});
+  if(trendCache.size>600)trendCache.delete(trendCache.keys().next().value);
+  return verifiedKrx;
 }
 function buildWindows(trends,minDays,maxDays){
   const windows={};
