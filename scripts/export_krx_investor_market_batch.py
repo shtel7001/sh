@@ -30,7 +30,23 @@ def main():
         tickers=stock.get_market_ticker_list(date=a.asof,market=m)
         if not tickers: raise RuntimeError("KRX_UNIVERSE_EMPTY_"+m)
         universe.extend(tickers)
-    universe=sorted(set(universe))
+    # Exclude exchange-traded funds, notes and special-purpose acquisition companies.
+    # KRX stock names provide an additional guard when ETF/ETN ticker lists are unavailable.
+    excluded=set()
+    for getter_name in ("get_etf_ticker_list","get_etn_ticker_list"):
+        getter=getattr(stock,getter_name,None)
+        if getter:
+            try:
+                excluded.update(getter(a.asof))
+            except Exception as exc:
+                print(f"WARN {getter_name} unavailable: {exc}",flush=True)
+    def is_excluded(ticker):
+        if ticker in excluded: return True
+        name=str(stock.get_market_ticker_name(ticker) or "").upper().replace(" ","")
+        return ("스팩" in name or "SPAC" in name or "ETF" in name or "ETN" in name)
+    before=len(set(universe))
+    universe=sorted(t for t in set(universe) if not is_excluded(t))
+    print(f"FILTER excluded={before-len(universe)} eligible={len(universe)}",flush=True)
     chosen=universe[a.start:a.start+a.count]
     if not chosen: raise RuntimeError("EMPTY_BATCH")
     out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
