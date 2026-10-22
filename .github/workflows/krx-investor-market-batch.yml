@@ -1,5 +1,5 @@
 name: KRX full market investor batch
-# Expand verified 240-day collection to a 100-ticker bounded batch on the preview branch.
+# Validate SPAC ETF ETN exclusion against the 240-day KRX market batch.
 on:
   push:
     branches:
