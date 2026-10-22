@@ -1,4 +1,5 @@
 name: Verify KRX investor daily data
+# Trigger a fresh run with the latest secret-aware workflow definition.
 on:
   push:
     branches:
