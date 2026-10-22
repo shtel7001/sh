@@ -1,0 +1,43 @@
+name: Verify Kbank partial KRX history
+on:
+  push:
+    branches: [fix/investor-flex-240-diagnostics-20261022]
+    paths: ['.github/workflows/verify-kbank-partial.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pykrx pandas
+      - run: |
+          PYTHONPATH=scripts python - <<'PY'
+          import json
+          from pathlib import Path
+          from pykrx import stock
+          from export_krx_investor_daily import run
+          d=run('279570',240,'20261022')
+          p=stock.get_market_ohlcv_by_date('20000101','20261022','279570')
+          assert p is not None and not p.empty
+          first=p.index.min().strftime('%Y%m%d')
+          assert d['partialHistory'] and d['actualDays']>=60
+          assert first==d['oldest'],(first,d['oldest'])
+          d['newListingVerified']=True
+          d['listingFirstTradingDate']=first
+          Path('public/krx-investor-data/279570.json').write_text(json.dumps(d,ensure_ascii=False))
+          print('VALIDATED',d['actualDays'],first)
+          PY
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/krx-investor-data/279570.json
+          git commit -m 'Add verified Kbank partial history'
+          git pull --rebase origin fix/investor-flex-240-diagnostics-20261022
+          git push origin HEAD:fix/investor-flex-240-diagnostics-20261022
