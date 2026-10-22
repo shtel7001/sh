@@ -1,0 +1,32 @@
+{
+  "asOf": "20261022",
+  "market": "BOTH",
+  "days": 240,
+  "start": 2640,
+  "count": 20,
+  "universeCount": 2695,
+  "success": [
+    "476060",
+    "476080",
+    "478560",
+    "479960",
+    "480370",
+    "481070",
+    "481850",
+    "482630",
+    "483650",
+    "484120",
+    "484590",
+    "484810",
+    "484870"
+  ],
+  "failures": {
+    "476830": "KRX_RANGE_SHORT_204_NEED_240",
+    "477850": "KRX_RANGE_SHORT_104_NEED_240",
+    "478340": "KRX_RANGE_SHORT_205_NEED_240",
+    "483350": "KRX_RANGE_SHORT_47_NEED_240",
+    "486510": "KRX_RANGE_SHORT_16_NEED_240",
+    "486990": "KRX_RANGE_SHORT_237_NEED_240",
+    "487400": "KRX_RANGE_SHORT_46_NEED_240"
+  }
+}
