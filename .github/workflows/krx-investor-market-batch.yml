@@ -1,5 +1,5 @@
 name: KRX full market investor batch
-# Verify the full 240-trading-day horizon on the isolated preview branch.
+# Expand verified 240-day collection to a 100-ticker bounded batch on the preview branch.
 on:
   push:
     branches:
@@ -15,7 +15,7 @@ on:
       count:
         description: 'Batch size (1-100)'
         required: true
-        default: '20'
+        default: '100'
       days:
         description: 'Trading days (1-250)'
         required: true
@@ -40,7 +40,7 @@ jobs:
           KRX_ID: ${{ secrets.KRX_ID }}
           KRX_PW: ${{ secrets.KRX_PW }}
           START: ${{ inputs.start || '0' }}
-          COUNT: ${{ inputs.count || '20' }}
+          COUNT: ${{ inputs.count || '100' }}
           DAYS: ${{ inputs.days || '240' }}
         run: |
           python scripts/export_krx_investor_market_batch.py --market BOTH --start "$START" --count "$COUNT" --days "$DAYS"
