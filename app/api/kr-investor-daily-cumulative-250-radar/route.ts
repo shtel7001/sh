@@ -184,9 +184,9 @@ async function loadTrendLong(code,asOf,needDays){
       if(after>=needDays){const data=usableRows(all,target);trendCache.set(cacheKey,{time:Date.now(),data});return data;}
     }catch(e){attempts.push({start,error:String(e?.message||e)});}
   }
-  try{all=all.concat(await loadTrendMobile(code));}catch{}
+  try{const mobile=await loadTrendMobile(code);all=all.concat(mobile);attempts.push({start:'mobile',rows:mobile.length,added:usableRows(all,target).length});}catch(e){attempts.push({start:'mobile',error:String(e?.message||e)});}
   if(usableRows(all,target).length<needDays){
-    try{all=all.concat(await loadTrendLegacy(code,Math.ceil(needDays/18)+6));}catch{}
+    try{const legacy=await loadTrendLegacy(code,Math.ceil(needDays/18)+6);all=all.concat(legacy);attempts.push({start:'legacy',rows:legacy.length,added:usableRows(all,target).length});}catch(e){attempts.push({start:'legacy',error:String(e?.message||e)});}
   }
   const data=usableRows(all,target);
   if(data.length<needDays){
