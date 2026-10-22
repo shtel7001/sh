@@ -1,5 +1,5 @@
 name: KRX investor full-market automatic continuation
-# Isolated branch only. Sequential checkpoints of 200 stocks, each collected in groups of 20.
+# Relaunch after collector script was committed. Isolated branch only. Sequential checkpoints of 200 stocks, each collected in groups of 20.
 on:
   push:
     branches:
