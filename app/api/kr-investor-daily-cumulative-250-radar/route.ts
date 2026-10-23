@@ -85,11 +85,28 @@ function normalizeUniverse(x,market){
 // KRX-only universe: only securities backed by verified KRX datasets may be scanned.
 // A complete KRX universe manifest must be collected separately before full-market scanning.
 async function fetchUniverse(market){
-  const items=[{code:'005930',name:'삼성전자',market:'KOSPI',source:'KRX verified sample'}];
-  const verified=items.filter(x=>market==='ALL'||x.market===market);
-  if(market!=='ALL'&&market!=='KOSPI'&&market!=='KOSDAQ')throw new Error('INVALID_MARKET');
-  if(!verified.length)throw new Error('KRX_UNIVERSE_NOT_COLLECTED_'+market);
-  return verified;
+  if(!['ALL','KOSPI','KOSDAQ'].includes(market))throw new Error('INVALID_MARKET');
+  // Use only tickers for which the KRX collector wrote a validated data file.
+  // Never substitute Naver or an unverified whole-market list.
+  let stocks=[];
+  if(process.env.VERCEL_URL){
+    try {
+      const response=await fetch('https://'+process.env.VERCEL_URL+'/krx-investor-data/manifest.json',
+        {signal:AbortSignal.timeout(4000),cache:'no-store'});
+      if(response.ok){
+        const manifest=await response.json();
+        if(manifest.source==='KRX via pykrx' && Array.isArray(manifest.stocks))
+          stocks=manifest.stocks.filter(x=>/^\d{6}$/.test(String(x.code))&&['KOSPI','KOSDAQ'].includes(x.market))
+            .map(x=>({code:x.code,name:x.name,market:x.market,source:'KRX verified daily quantity'}));
+      }
+    } catch {}
+  }
+  // Existing verified sample remains usable while a full manifest is being prepared.
+  if(!stocks.some(x=>x.code==='005930'))
+    stocks.push({code:'005930',name:'삼성전자',market:'KOSPI',source:'KRX verified sample'});
+  const selected=stocks.filter(x=>market==='ALL'||x.market===market);
+  if(!selected.length)throw new Error('KRX_UNIVERSE_NOT_COLLECTED_'+market);
+  return selected;
 }
 
 function keyValue(o,hints){
