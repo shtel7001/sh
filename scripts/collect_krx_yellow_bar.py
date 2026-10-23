@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from pykrx import stock
 
-GROUPS = ("금융투자", "보험", "투신", "사모", "은행", "기타금융", "연기금", "기타법인", "개인", "외국인", "기타외국인")
+GROUPS = ("금융투자", "보험", "투신", "사모", "은행", "기타금융", "연기금", "기타법인", "개인", "외국인", "기타외국인")\nREQUIRED = ("금융투자", "보험", "투신", "사모", "은행", "기타금융", "연기금", "개인", "외국인")
 INSTITUTION = ("금융투자", "보험", "투신", "사모", "은행", "기타금융", "연기금")
 
 def normalize_frame(frame):
@@ -41,9 +41,9 @@ def collect_ticker(ticker, asof, days):
     rows = []
     for date in dates:
         q, v = quantities[date], values[date]
-        if any(q.get(g) is None or v.get(g) is None for g in GROUPS):
+        if any(q.get(g) is None or v.get(g) is None for g in REQUIRED):
             continue
-        rows.append({"date": date, "netBuyQuantity": q, "netBuyValueKRW": v})
+        rows.append({"date": date, "netBuyQuantity": {k: (0 if val is None else val) for k, val in q.items()}, "netBuyValueKRW": {k: (0 if val is None else val) for k, val in v.items()}})
     return rows
 
 def main():
