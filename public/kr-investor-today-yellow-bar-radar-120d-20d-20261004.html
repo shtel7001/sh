@@ -201,8 +201,8 @@ function summarize(r,days=ACTIVE_DAYS){
   const signals={},cumPeriod={};
   ['combined','foreign','institution','individual'].forEach(m=>{const s=buildSeries(r,m,days);signals[m]=detectTransition(s);cumPeriod[m]=s.length?finiteOrNull(s[s.length-1].cumulative):null});
   return {code:r.code,name:r.name,market:r.market,currentPrice:r.currentPrice,marketValue:r.marketValue,asOf:r.asOf,analysisDays:days,signals,cumPeriod,
-    naver:r.naver||('https://stock.naver.com/domestic/stock/'+r.code+'/price'),
-    investor:r.investor||('https://stock.naver.com/domestic/stock/'+r.code+'/investmentinfo'),
+    naver:null,
+    investor:null,
     infostock:'https://infostock.co.kr/stockitem?code='+r.code};
 }
 function rankList(){
@@ -258,14 +258,14 @@ function render(){
       '<td>'+sigDate(r.signals.foreign)+'</td><td>'+sigDate(r.signals.institution)+'</td><td>'+sigDate(r.signals.combined)+'</td><td>'+sigDate(r.signals.individual)+'</td>'+
       '<td>'+money(r.currentPrice)+'</td>'+
       '<td><button class="btn soft" style="padding:6px 9px" onclick="selectStock(\''+r.code+'\')">보기</button></td>'+
-      '<td><a target="_blank" href="'+r.naver+'">네이버</a> · <a target="_blank" href="'+r.infostock+'">인포스탁</a></td>';
+      '<td>KRX 검증 데이터</td>';
     tb.appendChild(tr);
   });
 }
 function sigDate(s){return s?'<span title="전환 전 '+s.negativeRun+'일 0이하">'+esc(s.date)+'</span>':'<span class="muted">-</span>'}
 
 async function selectStock(code){
-  const s=SUMMARIES.find(x=>x.code===code);if(!s)return;SELECTED=s;$('selectedTitle').textContent=s.name+' ('+s.code+') · '+s.market;$('selectedLinks').innerHTML='<a target="_blank" href="'+s.naver+'">네이버증권</a><a target="_blank" href="'+s.investor+'">투자자정보</a><a target="_blank" href="'+s.infostock+'">인포스탁 테마</a>';
+  const s=SUMMARIES.find(x=>x.code===code);if(!s)return;SELECTED=s;$('selectedTitle').textContent=s.name+' ('+s.code+') · '+s.market;$('selectedLinks').innerHTML='KRX 검증 데이터만 사용';
   $('chartPlaceholder').classList.remove('hidden');$('chartPlaceholder').textContent=ACTIVE_DAYS+'거래일 상세 수급을 불러오는 중...';$('charts').classList.add('hidden');
   try{
     const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:[{code:s.code,name:s.name,market:s.market,currentPrice:s.currentPrice,marketValue:s.marketValue}],cfg:{asOf:$('asOf').value,minDays:1,maxDays:ACTIVE_DAYS}})});
@@ -308,7 +308,7 @@ function clearChartsUI(){
 }
 function exportExcel(){
   const list=rankList();if(!list.length)return alert('현재 주체의 당일 노란막대 종목이 없습니다.');
-  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,네이버증권:r.naver,인포스탁:r.infostock}});
+  const rows=list.map((r,i)=>{const s=r.signals[MODE];return {순위:i+1,종목:r.name,코드:r.code,시장:r.market,정렬주체:MODE_LABEL[MODE],최근전환일:s.date,몇거래일전:s.tradingDaysAgo,전환전_0이하_지속일:s.negativeRun,전환값:s.transitionValue,선택기간_누적:r.cumPeriod[MODE],분석기간_거래일:ACTIVE_DAYS,외국인전환일:r.signals.foreign?.date||'',기관전환일:r.signals.institution?.date||'',외국인기관합산전환일:r.signals.combined?.date||'',개인전환일:r.signals.individual?.date||'',현재가:r.currentPrice,시가총액:r.marketValue,기준일:r.asOf,데이터출처:'KRX',인포스탁:r.infostock}});
   const wb=XLSX.utils.book_new(),s1=XLSX.utils.json_to_sheet(rows),s2=XLSX.utils.json_to_sheet([{기준일:$('asOf').value,시장:MARKET,분석기간:ACTIVE_DAYS+'거래일',정렬주체:MODE_LABEL[MODE],대상종목:Number($('stUniverse').textContent)||0,정상분석:SUMMARIES.length,전환종목:list.length,오류:ERRORS.length}]);s1['!freeze']={xSplit:3,ySplit:1};XLSX.utils.book_append_sheet(wb,s1,'전환순위');XLSX.utils.book_append_sheet(wb,s2,'검색조건');if(ERRORS.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRORS),'오류');XLSX.writeFile(wb,ACTIVE_DAYS+'일누적_'+MODE_LABEL[MODE]+'_당일노란막대_레이더_'+$('asOf').value+'.xlsx',{compression:true});
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
