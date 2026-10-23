@@ -82,37 +82,14 @@ function normalizeUniverse(x,market){
   const mk=normalizeMarket(x?.marketType??x?.market??x?.stockExchangeType?.name??market);
   return {code,name,market:mk!=='UNKNOWN'?mk:market,currentPrice:n(x?.closePrice??x?.currentPrice??x?.nowVal??x?.price)||null,marketValue:n(x?.marketValue??x?.marketCap??x?.marketSum)||null};
 }
-async function fetchUniverseNew(market){
-  const out=[],seen=new Set();
-  for(let page=0;page<30;page++){
-    const url='https://stock.naver.com/api/domestic/market/stock/default?tradeType=KRX&marketType='+market+'&orderType=marketSum&startIdx='+page+'&pageSize=100';
-    const rows=firstArray(await fetchJson(url));if(!rows.length)break;let added=0;
-    for(const x of rows){const r=normalizeUniverse(x,market);if(r&&!seen.has(r.code)){seen.add(r.code);out.push(r);added++;}}
-    if(!added||rows.length<100)break;
-  }
-  if(out.length<300)throw new Error('NEW_'+market+'_UNIVERSE_SHORT_'+out.length);
-  return out;
-}
-async function fetchUniverseOld(market){
-  const out=[],seen=new Set();
-  for(let page=1;page<=30;page++){
-    const rows=firstArray(await fetchJson('https://m.stock.naver.com/api/stocks/marketValue/'+market+'?page='+page+'&pageSize=100'));
-    if(!rows.length)break;let added=0;
-    for(const x of rows){const r=normalizeUniverse(x,market);if(r&&!seen.has(r.code)){seen.add(r.code);out.push(r);added++;}}
-    if(!added||rows.length<100)break;
-  }
-  if(out.length<300)throw new Error('OLD_'+market+'_UNIVERSE_SHORT_'+out.length);
-  return out;
-}
-async function fetchUniverseMarket(market){
-  const c=universeCache.get(market);if(c&&Date.now()-c.time<CACHE_TTL)return c.data;
-  let data=[];try{data=await fetchUniverseNew(market);}catch{data=await fetchUniverseOld(market);}
-  universeCache.set(market,{time:Date.now(),data});return data;
-}
+// KRX-only universe: only securities backed by verified KRX datasets may be scanned.
+// A complete KRX universe manifest must be collected separately before full-market scanning.
 async function fetchUniverse(market){
-  if(market==='KOSPI')return fetchUniverseMarket('KOSPI');
-  if(market==='KOSDAQ')return fetchUniverseMarket('KOSDAQ');
-  const [a,b]=await Promise.all([fetchUniverseMarket('KOSPI'),fetchUniverseMarket('KOSDAQ')]);return a.concat(b);
+  const items=[{code:'005930',name:'삼성전자',market:'KOSPI',source:'KRX verified sample'}];
+  const verified=items.filter(x=>market==='ALL'||x.market===market);
+  if(market!=='ALL'&&market!=='KOSPI'&&market!=='KOSDAQ')throw new Error('INVALID_MARKET');
+  if(!verified.length)throw new Error('KRX_UNIVERSE_NOT_COLLECTED_'+market);
+  return verified;
 }
 
 function keyValue(o,hints){
@@ -275,8 +252,8 @@ export async function POST(req){
             foreign60:w60.foreignSum,institution60:w60.institutionSum,combined60:w60.combinedSum,individual60:w60.individualSum,
             individual250Known:trends.slice(0,maxDays).filter(x=>x.individual!==null&&x.individual!==undefined).length,
             source:w60.source||trends[0]?.source||'',
-            naver:'https://stock.naver.com/domestic/stock/'+code+'/price',
-            investor:'https://stock.naver.com/domestic/stock/'+code+'/investmentinfo'};
+            naver:null,
+            investor:null};
         }catch(e){return {...s,code,scanError:String(e?.message||e)};}
       }));
       for(const r of rr){if(r.scanError)errors.push(r);else results.push(r);}
