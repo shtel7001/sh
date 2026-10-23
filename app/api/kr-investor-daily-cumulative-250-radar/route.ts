@@ -193,6 +193,7 @@ async function loadVerifiedKrxSample(code,target,needDays){
     .map(x=>{
       const q=x.netBuyQuantity||{};
       const groups=['금융투자','보험','투신','사모','은행','기타금융','연기금'];
+      // Never coerce absent investor figures to zero; reject incomplete institutional totals.
       if(!Number.isSafeInteger(q['외국인'])||!Number.isSafeInteger(q['개인'])||groups.some(g=>!Number.isSafeInteger(q[g])))return null;
       return {date:String(x.date),foreign:q['외국인'],institution:groups.reduce((sum,g)=>sum+q[g],0),individual:q['개인'],source:'KRX verified daily quantity'};
     }).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date));
