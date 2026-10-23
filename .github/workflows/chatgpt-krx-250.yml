@@ -1,0 +1,50 @@
+name: Collect KRX 250 days for private ChatGPT clone
+on:
+  push:
+    branches: [data/chatgpt-krx-250-20261023]
+    paths: [.github/workflows/chatgpt-krx-250.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        start: [0,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2100,2200,2300,2400,2500,2600]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --disable-pip-version-check pykrx pandas
+      - name: Collect verified full investor history
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: python scripts/export_krx_investor_market_batch.py --market BOTH --start ${{ matrix.start }} --count 100 --days 250 --asof 20261022 --out collected250
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: krx250-part-${{ matrix.start }}
+          path: collected250/
+          retention-days: 7
+          if-no-files-found: warn
+  assemble:
+    needs: collect
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: krx250-part-*
+          merge-multiple: true
+          path: collected250
+      - uses: actions/upload-artifact@v4
+        with:
+          name: krx250-complete
+          path: collected250/
+          retention-days: 7
