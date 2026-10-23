@@ -1,0 +1,39 @@
+name: Verify Samsung Electro-Mechanics historical rolling 250 days
+on:
+  push:
+    branches: [fix/investor-flex-240-diagnostics-20261022]
+    paths: ['.github/workflows/verify-009150-historical-250.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pykrx pandas
+      - name: Compare KRX rolling 250 days at historical broker date
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          test -n "$KRX_ID" && test -n "$KRX_PW"
+          PYTHONPATH=scripts python - <<'PY'
+          from export_krx_investor_daily import run
+          groups=['금융투자','보험','투신','사모','은행','기타금융','연기금']
+          for asof in ('20260422','20260424'):
+              d=run('009150',250,asof)
+              assert d['actualDays']==250
+              rows=d['rows']
+              sums={k:sum(x['netBuyQuantity'][k] for x in rows) for k in ('외국인','개인')}
+              sums['기관']=sum(sum(x['netBuyQuantity'][k] for k in groups) for x in rows)
+              print('HISTORICAL_250',asof,'start',d['oldest'],'end',d['newest'],'sums',sums,flush=True)
+              if asof=='20260422':
+                  print('BROKER_FOREIGN_250_REFERENCE',1262677,'KRX',sums['외국인'],'DIFFERENCE',sums['외국인']-1262677,flush=True)
+          PY
