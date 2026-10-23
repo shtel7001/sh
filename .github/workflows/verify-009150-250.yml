@@ -1,0 +1,58 @@
+name: Verify 250-day Samsung Electro-Mechanics investor comparison
+on:
+  push:
+    branches: [fix/investor-flex-240-diagnostics-20261022]
+    paths: ['.github/workflows/verify-009150-250.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/investor-flex-240-diagnostics-20261022
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pykrx pandas
+      - name: Fetch and verify 250 actual KRX investor sessions
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
+        run: |
+          test -n "$KRX_ID" && test -n "$KRX_PW"
+          PYTHONPATH=scripts python - <<'PY'
+          import json
+          from pathlib import Path
+          from export_krx_investor_daily import run
+          d=run('009150',250,'20261022')
+          assert d['actualDays']==250 and not d['partialHistory']
+          groups=['금융투자','보험','투신','사모','은행','기타금융','연기금']
+          for row in d['rows']:
+              q=row['netBuyQuantity']
+              assert sum(q[k] for k in groups)+sum(q[k] for k in ('외국인','개인','기타법인','기타외국인'))==0
+          for day in ('20260422','20260424'):
+              matching=[i for i,x in enumerate(d['rows']) if x['date']==day]
+              assert len(matching)==1
+              idx=matching[0]
+              subset=d['rows'][idx:]
+              foreign=sum(x['netBuyQuantity']['외국인'] for x in subset)
+              inst=sum(sum(x['netBuyQuantity'][k] for k in groups) for x in subset)
+              personal=sum(x['netBuyQuantity']['개인'] for x in subset)
+              print('CHECK',day,'foreign',foreign,'institution',inst,'individual',personal,'days',len(subset),flush=True)
+          p=Path('public/krx-investor-data/009150.json')
+          p.write_text(json.dumps(d,ensure_ascii=False),encoding='utf-8')
+          print('VERIFIED_250',d['oldest'],d['newest'],flush=True)
+          PY
+      - name: Commit verified 250-day data to isolated branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/krx-investor-data/009150.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'Verify Samsung Electro-Mechanics 250-day KRX investor data'
+          git pull --rebase origin fix/investor-flex-240-diagnostics-20261022
+          git push origin HEAD:fix/investor-flex-240-diagnostics-20261022
