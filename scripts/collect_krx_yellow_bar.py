@@ -43,7 +43,7 @@ def collect_ticker(ticker, asof, days):
         q, v = quantities[date], values[date]
         if any(q.get(g) is None or v.get(g) is None for g in REQUIRED):
             continue
-        rows.append({"date": date, "netBuyQuantity": {k: (0 if val is None else val) for k, val in q.items()}, "netBuyValueKRW": {k: (0 if val is None else val) for k, val in v.items()}})
+        rows.append({"date": date, "netBuyQuantity": q, "netBuyValueKRW": v})
     return rows
 
 def main():
