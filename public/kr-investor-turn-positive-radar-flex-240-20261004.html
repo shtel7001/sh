@@ -224,7 +224,7 @@ async function scanStocks(stocks){
     $('runMsg').textContent=ACTIVE_DAYS+'거래일 전환 분석 '+end+' / '+stocks.length;
     try{
       const j=await api(SCAN_API+'?op=longFlow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stocks:batch,cfg:{asOf:$('asOf').value,minDays:1,maxDays:ACTIVE_DAYS}})});
-      (j.results||[]).forEach(r=>SUMMARIES.push(summarize(r,ACTIVE_DAYS)));ERRORS=ERRORS.concat(j.errors||[]);
+      (j.results||[]).forEach(r=>SUMMARIES.push(summarize(r,Math.min(ACTIVE_DAYS,Number(r.actualDays)||ACTIVE_DAYS))));ERRORS=ERRORS.concat(j.errors||[]);
     }catch(e){ERRORS.push({scanError:'BATCH: '+e.message,codes:batch.map(x=>x.code).join(',')})}
     $('stScanned').textContent=end;$('stOk').textContent=SUMMARIES.length;$('stErr').textContent=ERRORS.length;$('bar').style.width=(100*end/Math.max(1,stocks.length))+'%';render();
   }
