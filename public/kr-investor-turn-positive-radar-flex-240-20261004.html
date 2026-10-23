@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
-<title>1~240일 누적순매도→누적순매수 전환 레이더</title>
+<title>1~250일 누적순매도→누적순매수 전환 레이더</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -36,9 +36,9 @@
 
 <div class="wrap">
 <section class="hero">
-  <h1>1~240일 누적순매도 → 누적순매수 전환 레이더</h1>
-  <p>분석기간을 <b>1~240거래일</b> 사이에서 직접 숫자로 정합니다. 선택한 기간의 가장 오래된 거래일부터 누적을 시작해, 누적값이 <b>0 이하 상태를 이어가다가 +1 이상으로 전환</b>된 종목을 찾습니다. 같은 종목에 전환점이 여러 번 있으면 오늘에서 가장 가까운 전환을 채택하고, 전환일이 가까운 종목부터 순위를 매깁니다.</p>
-  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">분석기간 1~240거래일</span><span class="tag">외국인·기관·개인</span><span class="tag">외국인+기관 합산</span><span class="tag">최근 전환일 순위</span><span class="tag">가격차트</span><span class="tag">누적수급 막대그래프</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
+  <h1>1~250일 누적순매도 → 누적순매수 전환 레이더</h1>
+  <p>분석기간을 <b>1~250거래일</b> 사이에서 직접 숫자로 정합니다. 선택한 기간의 가장 오래된 거래일부터 누적을 시작해, 누적값이 <b>0 이하 상태를 이어가다가 +1 이상으로 전환</b>된 종목을 찾습니다. 같은 종목에 전환점이 여러 번 있으면 오늘에서 가장 가까운 전환을 채택하고, 전환일이 가까운 종목부터 순위를 매깁니다.</p>
+  <div class="tags"><span class="tag">KOSPI 전종목</span><span class="tag">KOSDAQ 전종목</span><span class="tag">분석기간 1~250거래일</span><span class="tag">외국인·기관·개인</span><span class="tag">외국인+기관 합산</span><span class="tag">최근 전환일 순위</span><span class="tag">가격차트</span><span class="tag">누적수급 막대그래프</span><span class="tag">Excel .xlsx</span><span class="tag">1회 영구인증</span></div>
 </section>
 
 <section class="card">
@@ -56,7 +56,7 @@
   </div>
   <div class="grid">
     <div class="field"><label>기준일</label><input id="asOf" type="date"></div>
-    <div class="field"><label>분석기간 (1~240 거래일)</label><input id="analysisDays" type="number" min="1" max="240" step="1" value="120" inputmode="numeric" onchange="normalizeAnalysisDays()"></div>
+    <div class="field"><label>분석기간 (1~250 거래일)</label><input id="analysisDays" type="number" min="1" max="250" step="1" value="120" inputmode="numeric" onchange="normalizeAnalysisDays()"></div>
     <div class="field"><label>최대 스캔 종목 (0=전체)</label><input id="maxStocks" type="number" min="0" max="3000" value="0"></div>
     <div class="field"><label>우선주 제외</label><select id="excludePref"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
     <div class="field"><label>스팩 제외</label><select id="excludeSpac"><option value="1" selected>예</option><option value="0">아니오</option></select></div>
@@ -120,8 +120,8 @@
         <button class="periodbtn" data-days="120" onclick="setGraphDays(120,this)">120</button>
         <button class="periodbtn" data-days="160" onclick="setGraphDays(160,this)">160</button>
         <button class="periodbtn" data-days="200" onclick="setGraphDays(200,this)">200</button>
-        <button class="periodbtn" data-days="240" onclick="setGraphDays(240,this)">240</button>
-        <input id="customDays" type="number" min="1" max="240" placeholder="직접입력">
+        <button class="periodbtn" data-days="240" onclick="setGraphDays(240,this)">240</button><button class="periodbtn" data-days="250" onclick="setGraphDays(250,this)">250</button>
+        <input id="customDays" type="number" min="1" max="250" placeholder="직접입력">
         <button class="btn soft" onclick="applyCustomDays()">적용</button>
       </div>
     </div>
@@ -147,7 +147,7 @@ const MODE_LABEL={combined:'외국인+기관',foreign:'외국인',institution:'�
 
 function kstDate(){try{return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}catch{return new Date().toISOString().slice(0,10)}}
 $('asOf').value=kstDate();
-function getAnalysisDays(){const el=$('analysisDays');let d=Math.round(Number(el?.value)||120);d=Math.max(1,Math.min(240,d));if(el)el.value=d;return d}
+function getAnalysisDays(){const el=$('analysisDays');let d=Math.round(Number(el?.value)||120);d=Math.max(1,Math.min(250,d));if(el)el.value=d;return d}
 function updateRuleNote(days=getAnalysisDays()){const el=$('ruleNote');if(!el)return;el.innerHTML='<b>판정 방식:</b> 선택한 <b>'+days+'거래일</b> 중 가장 오래된 날부터 누적합니다. 누적값이 0 이하인 구간을 지나 <b>처음 +1 이상</b>으로 넘어서는 지점을 전환으로 잡고, 이후 다시 0 이하로 내려갔다가 재전환하면 <b>더 최근 전환</b>을 최종 신호로 사용합니다. 동률이면 전환 직전 0 이하 지속기간이 긴 종목을 앞에 둡니다.'}
 function normalizeAnalysisDays(){const d=getAnalysisDays();updateRuleNote(d);if(SUMMARIES.length&&d!==ACTIVE_DAYS)$('runMsg').textContent='분석기간이 '+d+'거래일로 변경되었습니다. 새 기간을 적용하려면 다시 스캔하세요.'}
 updateRuleNote(120);
@@ -176,7 +176,7 @@ function metric(w,mode){
 }
 function finiteOrNull(v){const x=Number(v);return Number.isFinite(x)?x:null}
 function buildSeries(r,mode,days=ACTIVE_DAYS){
-  const N=Math.max(1,Math.min(240,Number(r?.actualDays||days),Math.round(Number(days)||ACTIVE_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
+  const N=Math.max(1,Math.min(250,Number(r?.actualDays||days),Math.round(Number(days)||ACTIVE_DAYS))),wN=r?.windows?.[String(N)],total=metric(wN,mode);
   if(total===null)return [];
   const out=[];
   for(let d=N;d>=1;d--){
@@ -276,9 +276,9 @@ async function selectStock(code){
   }catch(e){$('chartPlaceholder').textContent='차트 불러오기 실패: '+e.message}
 }
 function setGraphDays(days,el){
-  const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
+  const cap=Math.max(1,Math.min(250,ACTIVE_DAYS||getAnalysisDays()));GRAPH_DAYS=Math.max(1,Math.min(cap,Math.round(Number(days)||Math.min(60,cap))));document.querySelectorAll('[data-days]').forEach(x=>x.classList.toggle('active',Number(x.dataset.days)===GRAPH_DAYS));if(el&&Number(el.dataset.days)===GRAPH_DAYS)el.classList.add('active');$('customDays').value=GRAPH_DAYS;if(SELECTED_FULL)drawSelected();
 }
-function applyCustomDays(){const cap=Math.max(1,Math.min(240,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(60,cap))));setGraphDays(d,null)}
+function applyCustomDays(){const cap=Math.max(1,Math.min(250,ACTIVE_DAYS||getAnalysisDays())),d=Math.max(1,Math.min(cap,Math.round(Number($('customDays').value)||Math.min(60,cap))));setGraphDays(d,null)}
 async function drawSelected(){
   if(!SELECTED||!SELECTED_FULL)return;
   $('chartPlaceholder').classList.add('hidden');$('charts').classList.remove('hidden');
@@ -292,8 +292,8 @@ async function drawSelected(){
   const flowIndividual=buildSeries(SELECTED_FULL,'individual',GRAPH_DAYS);
   // All four charts must use the exact same calendar-date axis, not independent 120/240-day ranges.
   const sharedDates=[...new Set([...flowInstitution,...flowForeign,...flowIndividual].map(x=>String(x.date)))].sort();
-  const price=await getPrice(SELECTED.code,240).catch(()=>[]);
-  // Price must show the full 240 trading sessions even when investor-flow graphs use fewer days.
+  const price=await getPrice(SELECTED.code,250).catch(()=>[]);
+  // Price must show the full 250 trading sessions even when investor-flow graphs use fewer days.
   drawPrice(price,selectedSignal?.date||'');
   drawFlow('institutionChart','기관',flowInstitution,signals.institution?.date||'',sharedDates);
   drawFlow('foreignChart','외국인',flowForeign,signals.foreign?.date||'',sharedDates);
@@ -309,7 +309,7 @@ function alignChartValues(rows,sharedDates,valueKey){
   return sharedDates.map(date=>lookup.has(normalizedChartDate(date))?lookup.get(normalizedChartDate(date)):null);
 }
 function drawPrice(rows,markDate){
-  destroyChart('priceChart');const ctx=$('priceChart').getContext('2d'),ordered=[...rows].sort((a,b)=>normalizedChartDate(a.date).localeCompare(normalizedChartDate(b.date))).slice(-240),labels=ordered.map(x=>x.date),vals=ordered.map(x=>x.close);
+  destroyChart('priceChart');const ctx=$('priceChart').getContext('2d'),ordered=[...rows].sort((a,b)=>normalizedChartDate(a.date).localeCompare(normalizedChartDate(b.date))).slice(-250),labels=ordered.map(x=>x.date),vals=ordered.map(x=>x.close);
   CHARTS.priceChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'종가',data:vals,borderColor:'#253fb7',backgroundColor:'rgba(37,63,183,.10)',fill:true,spanGaps:false,tension:.12,pointRadius:labels.map(d=>normalizedChartDate(d)===normalizedChartDate(markDate)?5:0),pointBackgroundColor:labels.map(d=>normalizedChartDate(d)===normalizedChartDate(markDate)?'#f59e0b':'#253fb7'),borderWidth:2}]},options:chartOptions('주가')});
 }
 function drawFlow(id,label,series,markDate,sharedDates){
