@@ -1,8 +1,6 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import * as cheerio from 'cheerio';
-import iconv from 'iconv-lite';
 import krxSamsungSample from '../../../public/krx-investor-data/005930.json';
 
 export const runtime = 'nodejs';
@@ -12,9 +10,7 @@ export const maxDuration = 60;
 // Daily-step version. Share the permanent-auth scope/code with the existing Korean flow radar.
 const SCOPE = 'gc-flow-accumulation-radar-20261002-v1';
 const ACCESS_CODE_HASH = '696db21cbff09ada1a61dce8499bd5de35f5f8a7f68a90ac294e091a131ca70f';
-const UA = 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36';
 const CACHE_TTL = 10 * 60 * 1000;
-const universeCache = new Map();
 const trendCache = new Map();
 
 function secret(){ return process.env.SESSION_SECRET || ''; }
@@ -42,48 +38,6 @@ function n(v){
 }
 function ymd(v){return String(v??'').replace(/\D/g,'').slice(0,8);}
 function dashDate(v){const s=ymd(v);return /^\d{8}$/.test(s)?s.replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3'):String(v??'');}
-const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
-
-async function fetchRaw(url,timeoutMs=12000,accept='application/json,text/plain,*/*'){
-  let last='';
-  for(let attempt=0;attempt<3;attempt++){
-    const c=new AbortController(),t=setTimeout(()=>c.abort(),timeoutMs);
-    try{
-      const r=await fetch(url,{signal:c.signal,cache:'no-store',redirect:'follow',headers:{
-        'User-Agent':UA,'Accept':accept,'Accept-Language':'ko-KR,ko;q=0.9,en;q=0.6',
-        'Referer':url.includes('finance.naver.com')?'https://finance.naver.com/':url.includes('stock.naver.com')?'https://stock.naver.com/':'https://m.stock.naver.com/'
-      }});
-      if(!r.ok){last='HTTP_'+r.status;if(r.status===429||r.status>=500)await sleep(160*(attempt+1));else break;continue;}
-      return r;
-    }catch(e){last=String(e?.message||e);await sleep(160*(attempt+1));}
-    finally{clearTimeout(t);}
-  }
-  throw new Error(last||'FETCH_FAILED');
-}
-async function fetchJson(url,timeoutMs=12000){const r=await fetchRaw(url,timeoutMs);const tx=await r.text();try{return JSON.parse(tx);}catch{throw new Error('JSON_PARSE_FAILED');}}
-async function fetchHtml(url,timeoutMs=12000){
-  const r=await fetchRaw(url,timeoutMs,'text/html,application/xhtml+xml,*/*');
-  const b=Buffer.from(await r.arrayBuffer()),ct=(r.headers.get('content-type')||'').toLowerCase();
-  return ct.includes('utf-8')?b.toString('utf8'):iconv.decode(b,'EUC-KR');
-}
-function normalizeMarket(v){const s=String(v||'').toUpperCase();if(s.includes('KOSDAQ')||s==='KQ'||s==='2')return 'KOSDAQ';if(s.includes('KOSPI')||s==='KS'||s==='1')return 'KOSPI';return 'UNKNOWN';}
-function firstArray(j){
-  if(Array.isArray(j))return j;
-  for(const k of ['items','stocks','content','data','result']){
-    if(Array.isArray(j?.[k]))return j[k];
-    if(Array.isArray(j?.result?.[k]))return j.result[k];
-  }
-  return [];
-}
-function normalizeUniverse(x,market){
-  const code=String(x?.itemCode??x?.itemcode??x?.stockCode??x?.code??'').match(/\d{6}/)?.[0]||'';
-  const name=String(x?.stockName??x?.name??x?.itemName??x?.itemname??'').trim();
-  if(!code||!name)return null;
-  const mk=normalizeMarket(x?.marketType??x?.market??x?.stockExchangeType?.name??market);
-  return {code,name,market:mk!=='UNKNOWN'?mk:market,currentPrice:n(x?.closePrice??x?.currentPrice??x?.nowVal??x?.price)||null,marketValue:n(x?.marketValue??x?.marketCap??x?.marketSum)||null};
-}
-// KRX-only universe: only securities backed by verified KRX datasets may be scanned.
-// A complete KRX universe manifest must be collected separately before full-market scanning.
 async function fetchUniverse(market){
   if(!['ALL','KOSPI','KOSDAQ'].includes(market))throw new Error('INVALID_MARKET');
   // Use only tickers for which the KRX collector wrote a validated data file.
@@ -109,72 +63,6 @@ async function fetchUniverse(market){
   return selected;
 }
 
-function keyValue(o,hints){
-  if(!o||typeof o!=='object')return undefined;
-  for(const [k,v] of Object.entries(o)){const s=k.toLowerCase().replace(/[_\-]/g,'');if(hints.some(h=>s.includes(h)))return v;}
-  return undefined;
-}
-function trendRow(x,source){
-  const date=ymd(x?.bizdate??x?.localDate??x?.date??x?.tradeDate??x?.businessDay??keyValue(x,['bizdate','tradedate','localdate','date']));
-  if(!/^\d{8}$/.test(date))return null;
-  const foreign=x?.foreignerPureBuyQuant??x?.foreignPureBuyQuant??x?.foreignerNetBuyQuantity??x?.foreignNetBuy??x?.foreignPureBuy??x?.frgn_pure_buy_quant??x?.foreignValue??keyValue(x,['foreignerpurebuy','foreignpurebuy','foreignnetbuy','foreignvalue','frgnpurebuy','frgnnetbuy']);
-  const institution=x?.organPureBuyQuant??x?.institutionPureBuyQuant??x?.institutionNetBuyQuantity??x?.organNetBuy??x?.organ_pure_buy_quant??x?.institutionalValue??keyValue(x,['organpurebuy','institutionpurebuy','institutionnetbuy','organnnetbuy','institutionalvalue','orgpurebuy','orgnetbuy']);
-  const individual=x?.individualPureBuyQuant??x?.personalPureBuyQuant??x?.individualNetBuyQuantity??x?.personalValue??x?.individualNetBuy??x?.indi_pure_buy_quant??keyValue(x,['individualpurebuy','personalpurebuy','individualnetbuy','personalvalue','individualnetbuy','personnetbuy']);
-  const hold=x?.foreignerHoldRatio??x?.foreignHoldRatio??x?.foreignRate??keyValue(x,['foreignerholdratio','foreignholdratio','foreignrate']);
-  if(foreign===undefined&&institution===undefined&&individual===undefined)return null;
-  return {date,foreign:n(foreign),institution:n(institution),individual:individual===undefined?null:n(individual),holdRatio:n(hold),source};
-}
-function collectArrays(v,depth=0,out=[]){
-  if(depth>5||v==null)return out;
-  if(Array.isArray(v)){if(v.length&&typeof v[0]==='object')out.push(v);for(const x of v.slice(0,5))collectArrays(x,depth+1,out);return out;}
-  if(typeof v==='object')for(const x of Object.values(v))collectArrays(x,depth+1,out);
-  return out;
-}
-function extractTrendRows(j,source){
-  const arrays=collectArrays(j);let best=[];
-  for(const a of arrays){const rows=a.map(x=>trendRow(x,source)).filter(Boolean);if(rows.length>best.length)best=rows;}
-  if(Array.isArray(j)){const rows=j.map(x=>trendRow(x,source)).filter(Boolean);if(rows.length>best.length)best=rows;}
-  return best;
-}
-async function trendPage(code,startIdx,pageSize){
-  const url='https://m.stock.naver.com/api/domestic/detail/'+encodeURIComponent(code)+'/trend?tradeType=KRX&startIdx='+startIdx+'&pageSize='+pageSize;
-  return extractTrendRows(await fetchJson(url,14000),'Naver stock.naver trend');
-}
-async function loadTrendMobile(code){
-  const urls=[
-    'https://m.stock.naver.com/api/item/getTrendList.nhn?code='+encodeURIComponent(code)+'&size=250',
-    'https://m.stock.naver.com/api/stock/'+encodeURIComponent(code)+'/trend',
-    'https://m.stock.naver.com/front-api/stock/domestic/trend?code='+encodeURIComponent(code),
-    'https://m.stock.naver.com/front-api/stock/domestic/integration?code='+encodeURIComponent(code)+'&endType=stock'
-  ];
-  let all=[];const diagnostics=[];
-  for(let i=0;i<urls.length;i++){
-    const u=urls[i];
-    try{
-      const rows=extractTrendRows(await fetchJson(u,11000),'Naver mobile trend');
-      diagnostics.push({endpoint:i+1,rows:rows.length,newest:rows[0]?.date||null,oldest:rows[rows.length-1]?.date||null});
-      all=all.concat(rows);
-    }catch(e){diagnostics.push({endpoint:i+1,error:String(e?.message||e).slice(0,100)});}
-  }
-  const deduped=[...new Map(all.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
-  return {rows:deduped,diagnostics};
-}
-async function loadTrendLegacy(code,maxPages=40){
-  const out=[];
-  for(let page=1;page<=maxPages;page++){
-    const html=await fetchHtml('https://finance.naver.com/item/frgn.naver?code='+encodeURIComponent(code)+'&page='+page,12000),$=cheerio.load(html);
-    let rows=0;
-    $('table.type2 tr').each((_,tr)=>{
-      const cells=$(tr).find('td').map((_,td)=>$(td).text().replace(/\s+/g,' ').trim()).get();
-      if(cells.length<7)return;
-      const date=ymd(cells[0]);if(!/^\d{8}$/.test(date))return;rows++;
-      out.push({date,foreign:n(cells[6]),institution:n(cells[5]),individual:null,holdRatio:n(cells[8]||0),source:'Naver PC investor'});
-    });
-    if(!rows)break;
-  }
-  return [...new Map(out.map(x=>[x.date,x])).values()].sort((a,b)=>b.date.localeCompare(a.date));
-}
-function usableRows(rows,target){return [...new Map(rows.map(x=>[x.date,x])).values()].filter(x=>!target||x.date<=target).sort((a,b)=>b.date.localeCompare(a.date));}
 async function loadVerifiedKrxSample(code,target,needDays){
   // Only use separately collected, validated KRX samples. Never invent missing rows.
   // Batch collector writes one public JSON file per ticker; missing tickers remain unverified.
